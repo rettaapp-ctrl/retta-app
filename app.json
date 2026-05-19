@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Retta",
+    "slug": "retta-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "retta",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "mx.retta.app",
+      "associatedDomains": [
+        "applinks:rettaapp.com",
+        "applinks:www.rettaapp.com"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "mx.retta.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "rettaapp.com",
+              "pathPrefix": "/partido"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rettaapp.com",
+              "pathPrefix": "/partido"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "fonts": []
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#7AB800"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-web-browser",
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5cb77489-94e7-40cc-ab40-e9a80723ff81"
+      }
+    }
+  }
+}
