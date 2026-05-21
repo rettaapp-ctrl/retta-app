@@ -4,10 +4,11 @@ import {
   ActivityIndicator, RefreshControl, TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/context/AuthContext';
-import { COLORS } from '@/constants';
+import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { isPartidoVisible } from '@/lib/partidos';
@@ -25,7 +26,7 @@ interface Partido {
   hora_inicio: string;
   tipo: string;
   precio_jugador: number;
-  precio_final?: number;          // viene de v_partidos con descuento aplicado
+  precio_final?: number;
   descuento_porcentaje?: number;
   jugadores_confirmados: number;
   max_jugadores: number;
@@ -38,18 +39,36 @@ interface Partido {
 
 function SearchIcon() {
   return (
-    <Svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <Circle cx="11" cy="11" r="7" stroke="rgba(0,0,0,0.3)" strokeWidth="2"/>
-      <Path d="M16.5 16.5L21 21" stroke="rgba(0,0,0,0.3)" strokeWidth="2" strokeLinecap="round"/>
+    <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="7" stroke={DT.onSurfaceVar} strokeWidth="2"/>
+      <Path d="M16.5 16.5L21 21" stroke={DT.onSurfaceVar} strokeWidth="2" strokeLinecap="round"/>
     </Svg>
   );
 }
 
 function BellIcon() {
   return (
-    <Svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      <Path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke={DT.onBg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M13.73 21a2 2 0 0 1-3.46 0" stroke={DT.onBg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <Svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="9" stroke={DT.onSurfaceVar} strokeWidth="1.8"/>
+      <Path d="M12 7V12L15 14" stroke={DT.onSurfaceVar} strokeWidth="1.8" strokeLinecap="round"/>
+    </Svg>
+  );
+}
+
+function PinIcon({ color = '#fff' }: { color?: string }) {
+  return (
+    <Svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke={color} strokeWidth="2"/>
+      <Circle cx="12" cy="9" r="2.5" stroke={color} strokeWidth="2"/>
     </Svg>
   );
 }
@@ -69,7 +88,7 @@ function getDays() {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     return {
-      iso:   toLocalISO(d),     // ← FIX timezone: usar local en lugar de toISOString (UTC)
+      iso:   toLocalISO(d),
       dia:   DIAS[d.getDay()],
       num:   d.getDate(),
       mes:   MESES[d.getMonth()],
@@ -116,13 +135,7 @@ export default function PartidosScreen() {
       );
       setInscritoIds(ids);
     } catch (err: any) {
-      // NO vaciamos el state — si ya teníamos partidos cargados, los
-      // mantenemos y mostramos banner de error. Esto evita que un
-      // error transitorio (rate limit, network, refresh token) borre
-      // visualmente las reservas del usuario.
       console.error('[partidos/load]', err?.message);
-      // Solo reportar a Sentry si NO es outage de infra — los outages
-      // de Railway son ruido (todos los usuarios los reportarían).
       if (!err?.isInfraOutage && !err?.isNetworkError) {
         Sentry.captureException(err, {
           tags: { screen: 'partidos', action: 'loadPartidos' },
@@ -148,7 +161,6 @@ export default function PartidosScreen() {
     setSearch('');
   }
 
-  // Memoizar para evitar recalcular en cada render (especialmente al teclear en buscador)
   const filtered = useMemo(() => {
     if (!search) return partidos;
     const q = search.toLowerCase();
@@ -159,363 +171,346 @@ export default function PartidosScreen() {
     );
   }, [partidos, search]);
 
-  const grouped = useMemo(() => {
-    return filtered.reduce((acc: Record<string, Partido[]>, p) => {
-      const key = p.complejo_nombre || 'Complejo';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(p);
-      return acc;
-    }, {});
-  }, [filtered]);
-
   function formatHora(hora: string) {
-    const [h, m] = hora.split(':');
-    const hour = parseInt(h);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const h12  = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    return { h: `${h12}:${m}`, ampm };
+    return (hora || '00:00').slice(0, 5);
   }
 
   const selectedDay = DAYS.find(d => d.iso === activeDate) || DAYS[0];
 
   return (
-    <SafeAreaView style={styles.root}>
-      {/* Header fijo */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.username}>
-              {(user?.nombre || '').toUpperCase()} {(user?.apellido || '').toUpperCase()}
+    <View style={styles.root}>
+      {/* Fondo con glow índigo arriba que se desvanece a oscuro */}
+      <LinearGradient
+        colors={GRADIENTS.pageBg}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <Text style={styles.bigTitle}>
+              <Text style={styles.bigTitleAccent}>Rettas</Text>
+              <Text style={styles.bigTitlePlain}> cerca de ti</Text>
             </Text>
+            <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notificaciones')}>
+              <BellIcon />
+              {notiCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeTxt}>{notiCount > 9 ? '9+' : notiCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notificaciones')}>
-            <BellIcon />
-            {notiCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeTxt}>{notiCount > 9 ? '9+' : notiCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
 
-        {/* Buscador */}
-        <View style={styles.searchBox}>
-          <SearchIcon />
-          <TextInput
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Buscar por complejo o cancha…"
-            placeholderTextColor="rgba(0,0,0,0.25)"
-          />
-        </View>
+          {/* Buscador glass */}
+          <View style={styles.searchBox}>
+            <SearchIcon />
+            <TextInput
+              style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Buscar por complejo o cancha…"
+              placeholderTextColor={DT.outline}
+            />
+          </View>
 
-        {/* Day tabs */}
-        <View style={styles.daysRow}>
-          {DAYS.map(d => (
-            <TouchableOpacity
-              key={d.iso}
-              style={[styles.dayTab, d.iso === activeDate && styles.dayTabActive]}
-              onPress={() => selectDay(d.iso)}
-            >
-              <Text style={[styles.dayTabName, d.iso === activeDate && styles.dayTabNameActive]}>
-                {d.today ? 'HOY' : d.dia.toUpperCase()}
-              </Text>
-              <Text style={[styles.dayTabNum, d.iso === activeDate && styles.dayTabNumActive]}>
-                {d.num}
-              </Text>
-              {d.today && d.iso === activeDate && (
-                <View style={styles.dayTabDot} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Lista */}
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={COLORS.accent} size="large" />
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
-          showsVerticalScrollIndicator={false}
-        >
-          {loadError && (
-            <TouchableOpacity
-              style={isInfraDown ? styles.outageBanner : styles.errBanner}
-              onPress={() => loadPartidos(activeDate)}
-              activeOpacity={0.85}
-            >
-              {isInfraDown ? (
-                <>
-                  <View style={styles.outageRow}>
-                    <Text style={styles.outageIcon}>⚠️</Text>
-                    <Text style={styles.outageTitle}>Retta no está disponible</Text>
-                  </View>
-                  <Text style={styles.outageSub}>
-                    Estamos trabajando para resolverlo. Intenta en unos minutos. Toca para reintentar.
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.errBannerTitle}>No se pudo actualizar</Text>
-                  <Text style={styles.errBannerSub}>Toca para reintentar</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {calPendientesCount > 0 && (
-            <TouchableOpacity
-              style={styles.calBanner}
-              onPress={() => router.push('/calificar')}
-              activeOpacity={0.85}
-            >
-              <View style={styles.calBannerStar}>
-                <Text style={{ fontSize: 18 }}>⭐</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.calBannerTitle}>
-                  Califica a tus compañeros
-                </Text>
-                <Text style={styles.calBannerSub}>
-                  Tienes {calPendientesCount} {calPendientesCount === 1 ? 'calificación pendiente' : 'calificaciones pendientes'}
-                </Text>
-              </View>
-              <Text style={styles.calBannerArrow}>›</Text>
-            </TouchableOpacity>
-          )}
-
-          <Text style={styles.sectionLabel}>
-            {selectedDay.today
-              ? 'Partidos disponibles hoy'
-              : `Partidos · ${selectedDay.dia} ${selectedDay.num} ${selectedDay.mes}`}
-          </Text>
-
-          {Object.keys(grouped).length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <View style={styles.emptyIcon}>
-                <Text style={{ fontSize: 32 }}>⚽</Text>
-              </View>
-              <Text style={styles.emptyTitle}>Sin partidos este día</Text>
-              <Text style={styles.emptySub}>Intenta con otro día o revisa más tarde</Text>
-            </View>
-          ) : (
-            Object.entries(grouped).map(([nombre, ps]) => (
-              <View key={nombre} style={styles.venueBlock}>
-                {/* Banner del complejo — clickeable */}
-                <TouchableOpacity
-                  style={styles.venueBanner}
-                  onPress={() => router.push(`/complejo/${ps[0]?.complejo_id}`)}
-                  activeOpacity={0.92}
-                >
-                  <View style={styles.venueBannerBg} />
-                  {ps[0]?.complejo_foto_url ? (
-                    <Image
-                      source={{ uri: ps[0].complejo_foto_url }}
-                      style={StyleSheet.absoluteFillObject}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      transition={150}
-                    />
-                  ) : null}
-                  <View style={styles.venueOverlay}>
-                    <Text style={styles.venueOverlayName}>{nombre}</Text>
-                    <Text style={styles.venueOverlaySub}>
-                      {ps[0]?.complejo_ciudad} · {ps.length} partido{ps.length !== 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.venueMapsBtn}
-                    onPress={(e) => { e.stopPropagation(); openMaps(buildMapQuery(ps[0]?.complejo_nombre, ps[0]?.complejo_ciudad, ps[0]?.complejo_direccion)); }}
-                    activeOpacity={0.85}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="#fff" strokeWidth="2"/>
-                      <Circle cx="12" cy="9" r="2.5" stroke="#fff" strokeWidth="2"/>
-                    </Svg>
-                    <Text style={styles.venueMapsBtnTxt}>Cómo llegar</Text>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-
-                {/* Cards de partido */}
-                {ps.map(p => {
-                  const { h, ampm } = formatHora(p.hora_inicio || '00:00');
-                  const libres   = p.max_jugadores - (p.jugadores_confirmados || 0);
-                  const pct      = (p.jugadores_confirmados || 0) / p.max_jugadores;
-                  const lleno    = libres <= 0;
-                  const inscrito = inscritoIds.has(p.id);
-                  return (
-                    <TouchableOpacity
-                      key={p.id}
-                      style={[
-                        styles.matchCard,
-                        lleno && !inscrito && styles.matchCardLleno,
-                      ]}
-                      onPress={() => router.push(`/partido/${p.id}`)}
-                      activeOpacity={0.75}
+          {/* Day tabs — scroll horizontal, pills limpios */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.daysRow}
+          >
+            {DAYS.map(d => {
+              const active = d.iso === activeDate;
+              const label  = d.today ? 'HOY' : `${d.dia.toUpperCase()} ${d.num}`;
+              if (active) {
+                return (
+                  <TouchableOpacity key={d.iso} onPress={() => selectDay(d.iso)} activeOpacity={0.85}>
+                    <LinearGradient
+                      colors={GRADIENTS.dayActive}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.dayPillActive}
                     >
-                      <View style={[styles.matchAccent, lleno && !inscrito && styles.matchAccentLleno]} />
+                      <Text style={styles.dayPillActiveTxt}>{label}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                );
+              }
+              return (
+                <TouchableOpacity
+                  key={d.iso}
+                  style={styles.dayPill}
+                  onPress={() => selectDay(d.iso)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.dayPillTxt}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-                      {/* Hora */}
-                      <View style={styles.matchTimeCol}>
-                        <Text style={[styles.matchTimeBig, lleno && !inscrito && styles.textMuted]}>{h}</Text>
-                        <Text style={styles.matchAmpm}>{ampm}</Text>
-                      </View>
+        {/* Lista */}
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={DT.primary} size="large" />
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={DT.primary} />}
+            showsVerticalScrollIndicator={false}
+          >
+            {loadError && (
+              <TouchableOpacity
+                style={isInfraDown ? styles.outageBanner : styles.errBanner}
+                onPress={() => loadPartidos(activeDate)}
+                activeOpacity={0.85}
+              >
+                {isInfraDown ? (
+                  <>
+                    <View style={styles.outageRow}>
+                      <Text style={styles.outageIcon}>⚠️</Text>
+                      <Text style={styles.outageTitle}>Retta no está disponible</Text>
+                    </View>
+                    <Text style={styles.outageSub}>
+                      Estamos trabajando para resolverlo. Intenta en unos minutos. Toca para reintentar.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.errBannerTitle}>No se pudo actualizar</Text>
+                    <Text style={styles.errBannerSub}>Toca para reintentar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
 
-                      <View style={styles.dividerV} />
+            {calPendientesCount > 0 && (
+              <TouchableOpacity
+                style={styles.calBanner}
+                onPress={() => router.push('/calificar')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.calBannerStar}>
+                  <Text style={{ fontSize: 18 }}>⭐</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.calBannerTitle}>Califica a tus compañeros</Text>
+                  <Text style={styles.calBannerSub}>
+                    Tienes {calPendientesCount} {calPendientesCount === 1 ? 'calificación pendiente' : 'calificaciones pendientes'}
+                  </Text>
+                </View>
+                <Text style={styles.calBannerArrow}>›</Text>
+              </TouchableOpacity>
+            )}
 
-                      {/* Info */}
-                      <View style={styles.matchInfo}>
-                        <Text style={[styles.matchTitle, lleno && !inscrito && styles.textMuted]} numberOfLines={1}>
-                          {p.cancha_nombre || 'Cancha'} · {p.tipo}
-                        </Text>
-                        <View style={styles.matchMeta}>
-                          {/* Si YA estás inscrito, no muestra el descuento (solo aplica a nuevos).
-                              Si NO estás inscrito y hay descuento vigente, muestra el badge. */}
-                          {(!inscrito && p.descuento_porcentaje && p.descuento_porcentaje > 0) ? (
-                            <View style={styles.tagDescuento}>
-                              {p.descuento_porcentaje === 100 ? (
-                                <Text style={styles.tagDescuentoGratisTxt}>¡GRATIS!</Text>
-                              ) : (
-                                <>
-                                  <Text style={styles.tagDescuentoOldTxt}>${p.precio_jugador}</Text>
-                                  <Text style={styles.tagDescuentoNewTxt}>${p.precio_final ?? p.precio_jugador} MXN</Text>
-                                  <Text style={styles.tagDescuentoPctTxt}>-{p.descuento_porcentaje}%</Text>
-                                </>
-                              )}
-                            </View>
+            <Text style={styles.sectionLabel}>
+              {selectedDay.today
+                ? 'PARTIDOS DISPONIBLES HOY'
+                : `PARTIDOS · ${selectedDay.dia.toUpperCase()} ${selectedDay.num} ${selectedDay.mes.toUpperCase()}`}
+            </Text>
+
+            {filtered.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Image
+                  source={require('../../assets/images/retta-logo-mark.png')}
+                  style={styles.emptyLogo}
+                  contentFit="contain"
+                  tintColor={DT.primary}
+                />
+                <Text style={styles.emptyTitle}>Sin <Text style={styles.emptyTitleAccent}>Rettas</Text> este día</Text>
+                <Text style={styles.emptySub}>Intenta con otro día o revisa más tarde</Text>
+              </View>
+            ) : (
+              filtered.map(p => {
+                const hora     = formatHora(p.hora_inicio);
+                const libres   = p.max_jugadores - (p.jugadores_confirmados || 0);
+                const pct      = (p.jugadores_confirmados || 0) / p.max_jugadores;
+                const lleno    = libres <= 0;
+                const inscrito = inscritoIds.has(p.id);
+                const tieneDescuento = !inscrito && (p.descuento_porcentaje || 0) > 0;
+
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[styles.card, lleno && !inscrito && styles.cardLleno]}
+                    onPress={() => router.push(`/partido/${p.id}`)}
+                    activeOpacity={0.88}
+                  >
+                    {/* Imagen header */}
+                    <View style={styles.cardImgWrap}>
+                      {p.complejo_foto_url ? (
+                        <Image
+                          source={{ uri: p.complejo_foto_url }}
+                          style={[StyleSheet.absoluteFillObject, lleno && !inscrito && { opacity: 0.5 }]}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                          transition={150}
+                        />
+                      ) : (
+                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DT.surfaceHigh }]} />
+                      )}
+                      <LinearGradient
+                        colors={['transparent', DT.bg]}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      {/* Chip precio arriba derecha */}
+                      <View style={styles.priceChip}>
+                        {tieneDescuento ? (
+                          p.descuento_porcentaje === 100 ? (
+                            <Text style={styles.priceChipFree}>¡GRATIS!</Text>
                           ) : (
-                            <View style={styles.tagPrice}>
-                              <Text style={styles.tagPriceTxt}>${p.precio_jugador} MXN</Text>
+                            <View style={styles.priceChipDescRow}>
+                              <Text style={styles.priceChipOld}>${p.precio_jugador}</Text>
+                              <Text style={styles.priceChipNew}>${p.precio_final ?? p.precio_jugador}</Text>
                             </View>
-                          )}
-                          <View style={[styles.tagFormat, lleno && !inscrito && styles.tagFormatLleno]}>
-                            <Text style={[styles.tagFormatTxt, lleno && !inscrito && styles.tagFormatTxtLleno]}>
-                              {lleno ? 'LLENO' : p.tipo}
-                            </Text>
-                          </View>
-                        </View>
-                        {/* Barra de ocupación */}
-                        <View style={styles.progressBar}>
-                          <View style={[
-                            styles.progressFill,
-                            { width: `${Math.min(pct * 100, 100)}%` },
-                            pct >= 0.9 && styles.progressFillRed,
-                          ]} />
-                        </View>
-                      </View>
-
-                      {/* Lugares libres / Inscrito */}
-                      <View style={styles.matchSpots}>
-                        {inscrito ? (
-                          <View style={styles.inscritoBadge}>
-                            <Text style={styles.inscritoBadgeTxt}>INSCRITO</Text>
-                          </View>
+                          )
                         ) : (
-                          <>
-                            <Text style={[styles.spotsCount, lleno && styles.textMuted]}>
-                              {lleno ? '—' : libres}
-                            </Text>
-                            <Text style={styles.spotsLabel}>
-                              {lleno ? 'lleno' : `lugar${libres !== 1 ? 'es' : ''}\nlibre${libres !== 1 ? 's' : ''}`}
-                            </Text>
-                          </>
+                          <Text style={styles.priceChipTxt}>${p.precio_jugador}</Text>
                         )}
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ))
-          )}
-        </ScrollView>
-      )}
-    </SafeAreaView>
+                      {/* Chip ubicación abajo izquierda */}
+                      <View style={styles.locChip}>
+                        <PinIcon />
+                        <Text style={styles.locChipTxt}>{(p.complejo_ciudad || 'GDL').toUpperCase()}</Text>
+                      </View>
+                    </View>
+
+                    {/* Cuerpo */}
+                    <View style={styles.cardBody}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {p.complejo_nombre || 'Complejo'}
+                      </Text>
+                      <Text style={styles.cardSub} numberOfLines={1}>
+                        {p.cancha_nombre || 'Cancha'}
+                      </Text>
+
+                      {/* Jugadores + formato */}
+                      <View style={styles.statRow}>
+                        <Text style={styles.statTxt}>
+                          {p.jugadores_confirmados || 0}/{p.max_jugadores} Jugadores
+                        </Text>
+                        <Text style={styles.statFormat}>{p.tipo}</Text>
+                      </View>
+
+                      {/* Barra de progreso con gradiente */}
+                      <View style={styles.progressBar}>
+                        <LinearGradient
+                          colors={pct >= 0.9 ? ['#E24B4A', '#ffb4ab'] : GRADIENTS.progress}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
+                        />
+                      </View>
+
+                      {/* Hora + botón */}
+                      <View style={styles.cardFooter}>
+                        <View style={styles.timeRow}>
+                          <ClockIcon />
+                          <Text style={styles.timeTxt}>{hora}</Text>
+                        </View>
+
+                        {inscrito ? (
+                          <View style={styles.inscritoBtn}>
+                            <Text style={styles.inscritoBtnTxt}>INSCRITO</Text>
+                          </View>
+                        ) : lleno ? (
+                          <View style={styles.fullBtn}>
+                            <Text style={styles.fullBtnTxt}>Lleno</Text>
+                          </View>
+                        ) : (
+                          <LinearGradient
+                            colors={GRADIENTS.button}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.joinBtn}
+                          >
+                            <Text style={styles.joinBtnTxt}>Unirse a Retta</Text>
+                          </LinearGradient>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:              { flex: 1, backgroundColor: '#F8F8F6' },
-  header:            { backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
-  headerTop:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  greeting:          { fontSize: 12, color: 'rgba(0,0,0,0.38)', letterSpacing: 0.4 },
-  username:          { fontSize: 20, fontWeight: '800', color: '#111', letterSpacing: 0.2, marginTop: 2 },
-  bellBtn:           { position: 'relative', padding: 4 },
-  bellDot:           { position: 'absolute', top: 2, right: 2, width: 8, height: 8, backgroundColor: COLORS.accent, borderRadius: 4, borderWidth: 1.5, borderColor: '#fff' },
-  bellBadge:         { position: 'absolute', top: -2, right: -4, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: '#D62B2B', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fff' },
-  bellBadgeTxt:      { fontSize: 10, fontWeight: '900', color: '#fff', lineHeight: 12 },
-  searchBox:         { backgroundColor: '#F2F1EF', borderRadius: 12, height: 42, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, marginBottom: 14 },
-  searchInput:       { flex: 1, fontSize: 14, color: '#111', letterSpacing: 0, fontFamily: undefined },
-  daysRow:           { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 14, gap: 5 },
-  dayTab:            { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 12, backgroundColor: '#F2F1EF' },
-  dayTabActive:      { backgroundColor: '#111' },
-  dayTabName:        { fontSize: 8, fontWeight: '700', color: 'rgba(0,0,0,0.35)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 },
-  dayTabNameActive:  { color: COLORS.accent },
-  dayTabNum:         { fontSize: 18, fontWeight: '900', color: '#111', lineHeight: 20 },
-  dayTabNumActive:   { color: '#fff' },
-  dayTabDot:         { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.accent, marginTop: 2 },
+  root:              { flex: 1, backgroundColor: DT.bg },
+  header:            { paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 4 },
+  headerTop:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 12 },
+  bellBtn:           { position: 'relative', width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  bellBadge:         { position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center' },
+  bellBadgeTxt:      { fontSize: 9, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 12 },
+  bigTitle:          { flex: 1 },
+  bigTitleAccent:    { fontSize: 32, color: DT.primary, fontFamily: FONTS.display, letterSpacing: -1, lineHeight: 36 },
+  bigTitlePlain:     { fontSize: 32, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -1, lineHeight: 36 },
+  searchBox:         { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, height: 46, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, marginBottom: 16 },
+  searchInput:       { flex: 1, fontSize: 14.5, color: DT.onBg, fontFamily: FONTS.body },
+  daysRow:           { gap: 10, paddingBottom: 6, paddingRight: 8 },
+  dayPill:           { paddingHorizontal: 18, paddingVertical: 10, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, justifyContent: 'center' },
+  dayPillTxt:        { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold, letterSpacing: 0.3 },
+  dayPillActive:     { paddingHorizontal: 22, paddingVertical: 10, borderRadius: RADIUS.full, justifyContent: 'center' },
+  dayPillActiveTxt:  { fontSize: 12.5, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
   center:            { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
-  scroll:            { padding: 20, paddingTop: 0, paddingBottom: 40 },
-  sectionLabel:      { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: 'rgba(0,0,0,0.3)', marginBottom: 14, marginTop: 20, paddingLeft: 2, textTransform: 'uppercase' },
-  errBanner:         { backgroundColor: '#FFEBEE', borderWidth: 1, borderColor: '#FFCDD2', borderRadius: 14, padding: 14, marginTop: 6, marginBottom: 4 },
-  errBannerTitle:    { fontSize: 13, fontWeight: '900', color: '#C62828', letterSpacing: 0.3 },
-  errBannerSub:      { fontSize: 11, color: '#C62828', marginTop: 2, opacity: 0.75 },
-  outageBanner:      { backgroundColor: '#FFF4E5', borderWidth: 1, borderColor: '#FFD180', borderRadius: 14, padding: 16, marginTop: 6, marginBottom: 8 },
+  scroll:            { paddingHorizontal: SPACING.gutter, paddingTop: 4, paddingBottom: 40 },
+  sectionLabel:      { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar, marginBottom: 16, marginTop: 16, paddingLeft: 2 },
+  errBanner:         { backgroundColor: 'rgba(255,180,171,0.12)', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', borderRadius: RADIUS.md, padding: 14, marginTop: 6, marginBottom: 4 },
+  errBannerTitle:    { fontSize: 13, fontFamily: FONTS.bodyBold, color: DT.error, letterSpacing: 0.3 },
+  errBannerSub:      { fontSize: 11, color: DT.error, marginTop: 2, opacity: 0.8, fontFamily: FONTS.body },
+  outageBanner:      { backgroundColor: 'rgba(250,199,117,0.12)', borderWidth: 1, borderColor: 'rgba(250,199,117,0.3)', borderRadius: RADIUS.md, padding: 16, marginTop: 6, marginBottom: 8 },
   outageRow:         { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   outageIcon:        { fontSize: 18 },
-  outageTitle:       { fontSize: 14, fontWeight: '900', color: '#A6541D', letterSpacing: 0.3 },
-  outageSub:         { fontSize: 12, color: '#A6541D', lineHeight: 17, opacity: 0.85 },
-  calBanner:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFE082', borderRadius: 14, padding: 14, marginTop: 6, marginBottom: 4, gap: 12 },
-  calBannerStar:     { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFB80022', alignItems: 'center', justifyContent: 'center' },
-  calBannerTitle:    { fontSize: 14, fontWeight: '900', color: '#111', letterSpacing: 0.2 },
-  calBannerSub:      { fontSize: 11, color: 'rgba(0,0,0,0.5)', marginTop: 2 },
-  calBannerArrow:    { fontSize: 26, fontWeight: '300', color: 'rgba(0,0,0,0.4)', marginRight: 4 },
-  emptyWrap:         { alignItems: 'center', paddingTop: 50 },
-  emptyIcon:         { width: 72, height: 72, borderRadius: 36, backgroundColor: '#F2F1EF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle:        { fontSize: 17, fontWeight: '800', color: '#111', marginBottom: 6 },
-  emptySub:          { fontSize: 13, color: 'rgba(0,0,0,0.38)', textAlign: 'center' },
-  venueBlock:        { marginBottom: 28 },
-  venueBanner:       { width: '100%', height: 100, borderRadius: 16, overflow: 'hidden', marginBottom: 10, position: 'relative' },
-  venueBannerBg:     { ...StyleSheet.absoluteFillObject, backgroundColor: '#1a2e1a' },
-  venueOverlay:      { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end', padding: 14 },
-  venueOverlayName:  { fontSize: 19, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
-  venueOverlaySub:   { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  venueMapsBtn:      { position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
-  venueMapsBtnTxt:   { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.2 },
-  matchCard:         { backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 14, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  matchCardLleno:    { opacity: 0.6 },
-  matchAccent:       { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: COLORS.accent, borderTopLeftRadius: 16, borderBottomLeftRadius: 16 },
-  matchAccentLleno:  { backgroundColor: 'rgba(0,0,0,0.15)' },
-  inscritoBadge:     { backgroundColor: COLORS.accent, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center' },
-  inscritoBadgeTxt:  { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 0.8 },
-  matchTimeCol:      { alignItems: 'center', minWidth: 46 },
-  matchTimeBig:      { fontSize: 17, fontWeight: '800', color: '#111', lineHeight: 20 },
-  matchAmpm:         { fontSize: 9, color: 'rgba(0,0,0,0.3)', marginTop: 1 },
-  dividerV:          { width: 1, height: 38, backgroundColor: 'rgba(0,0,0,0.07)' },
-  matchInfo:         { flex: 1 },
-  matchTitle:        { fontSize: 14, fontWeight: '700', color: '#111', letterSpacing: 0.2, marginBottom: 5 },
-  matchMeta:         { flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 7 },
-  tagPrice:          { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
-  tagPriceTxt:       { fontSize: 10, color: 'rgba(0,0,0,0.5)', fontWeight: '600' },
-  tagDescuento:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,107,53,0.10)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
-  tagDescuentoOldTxt:{ fontSize: 9, color: 'rgba(0,0,0,0.4)', fontWeight: '600', textDecorationLine: 'line-through' },
-  tagDescuentoNewTxt:{ fontSize: 10, color: '#D84315', fontWeight: '800' },
-  tagDescuentoPctTxt:{ fontSize: 9, color: '#fff', backgroundColor: '#FF6B35', fontWeight: '900', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 },
-  tagDescuentoGratisTxt:{ fontSize: 11, color: '#fff', backgroundColor: '#FF6B35', fontWeight: '900', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, letterSpacing: 0.5 },
-  tagFormat:         { backgroundColor: 'rgba(143,204,0,0.12)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
-  tagFormatTxt:      { fontSize: 10, color: '#2a3a00', fontWeight: '600' },
-  tagFormatLleno:    { backgroundColor: 'rgba(0,0,0,0.06)' },
-  tagFormatTxtLleno: { color: 'rgba(0,0,0,0.35)' },
-  progressBar:       { height: 3, backgroundColor: 'rgba(0,0,0,0.07)', borderRadius: 2, overflow: 'hidden' },
-  progressFill:      { height: '100%', backgroundColor: COLORS.accent, borderRadius: 2 },
-  progressFillRed:   { backgroundColor: '#E53935' },
-  matchSpots:        { alignItems: 'center', minWidth: 38 },
-  spotsCount:        { fontSize: 22, fontWeight: '900', color: '#111', lineHeight: 24 },
-  spotsLabel:        { fontSize: 8, color: 'rgba(0,0,0,0.3)', textAlign: 'center', lineHeight: 11 },
-  textMuted:         { color: 'rgba(0,0,0,0.35)' },
+  outageTitle:       { fontSize: 14, fontFamily: FONTS.bodyBold, color: DT.warning, letterSpacing: 0.3 },
+  outageSub:         { fontSize: 12, color: DT.warning, lineHeight: 17, opacity: 0.9, fontFamily: FONTS.body },
+  calBanner:         { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(190,194,255,0.10)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.25)', borderRadius: RADIUS.md, padding: 14, marginTop: 6, marginBottom: 4, gap: 12 },
+  calBannerStar:     { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(190,194,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  calBannerTitle:    { fontSize: 14, fontFamily: FONTS.bodyBold, color: DT.onBg, letterSpacing: 0.2 },
+  calBannerSub:      { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
+  calBannerArrow:    { fontSize: 26, color: DT.onSurfaceVar, marginRight: 4 },
+  emptyWrap:         { alignItems: 'center', paddingTop: 70 },
+  emptyLogo:         { width: 64, height: 64, marginBottom: 22, opacity: 0.9 },
+  emptyTitle:        { fontSize: 18, fontFamily: FONTS.heading, color: DT.onBg, marginBottom: 6 },
+  emptyTitleAccent:  { color: DT.primary, fontFamily: FONTS.heading },
+  emptySub:          { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', fontFamily: FONTS.body },
+
+  // ── Card de partido ──
+  card:              { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.xl, overflow: 'hidden', marginBottom: 16 },
+  cardLleno:         { opacity: 0.7 },
+  cardImgWrap:       { height: 130, position: 'relative', overflow: 'hidden' },
+  priceChip:         { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(10,12,20,0.82)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.35)', borderRadius: RADIUS.full, paddingHorizontal: 14, paddingVertical: 6, zIndex: 10 },
+  priceChipTxt:      { fontSize: 14, color: '#fff', fontFamily: FONTS.monoMed, letterSpacing: 0.5 },
+  priceChipFree:     { fontSize: 13, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
+  priceChipDescRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  priceChipOld:      { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: FONTS.mono, textDecorationLine: 'line-through' },
+  priceChipNew:      { fontSize: 14, color: DT.primary, fontFamily: FONTS.monoMed },
+  locChip:           { position: 'absolute', bottom: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: DT.chipBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5, zIndex: 10 },
+  locChipTxt:        { fontSize: 10, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },
+  cardBody:          { padding: SPACING.md, paddingTop: 14 },
+  cardTitle:         { fontSize: 22, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.5 },
+  cardSub:           { fontSize: 13, color: DT.onSurfaceVar, marginTop: 2, marginBottom: 14, fontFamily: FONTS.body },
+  statRow:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  statTxt:           { fontSize: 12, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.3 },
+  statFormat:        { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
+  progressBar:       { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden' },
+  progressFill:      { height: '100%', borderRadius: 3 },
+  cardFooter:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
+  timeRow:           { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeTxt:           { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
+  joinBtn:           { paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full },
+  joinBtnTxt:        { fontSize: 14, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.2 },
+  inscritoBtn:       { paddingHorizontal: 18, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: 'rgba(159,225,203,0.15)', borderWidth: 1, borderColor: 'rgba(159,225,203,0.4)' },
+  inscritoBtnTxt:    { fontSize: 12, color: DT.success, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
+  fullBtn:           { paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.surfaceHigh },
+  fullBtnTxt:        { fontSize: 13, color: DT.outline, fontFamily: FONTS.bodyBold },
 });

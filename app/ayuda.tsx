@@ -204,6 +204,29 @@ export default function AyudaScreen() {
           <Text style={styles.heroSub}>Estamos aquí para resolver tus dudas</Text>
         </View>
 
+        {/* Retta IA — destacado arriba de todo */}
+        <TouchableOpacity
+          style={styles.iaCard}
+          onPress={() => router.push('/chat-ia')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.iaIcon}>
+            <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <Path d="M12 2L14.39 8.26L21 9.27L16 14.14L17.18 21L12 17.77L6.82 21L8 14.14L3 9.27L9.61 8.26L12 2Z" stroke="#000" strokeWidth="1.8" strokeLinejoin="round"/>
+            </Svg>
+          </View>
+          <View style={styles.iaBody}>
+            <View style={styles.iaTitleRow}>
+              <Text style={styles.iaTitle}>Pregúntale a Retta IA</Text>
+              <View style={styles.iaBadge}><Text style={styles.iaBadgeTxt}>NUEVO</Text></View>
+            </View>
+            <Text style={styles.iaSub}>Resuelve dudas al instante sobre cómo funciona la app</Text>
+          </View>
+          <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <Path d="M9 18L15 12L9 6" stroke="rgba(0,0,0,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </Svg>
+        </TouchableOpacity>
+
         {/* Contacto Directo */}
         <Text style={styles.sectionLabel}>Contacto Directo</Text>
 
@@ -294,4 +317,12 @@ const styles = StyleSheet.create({
   faqArrow:      { fontSize: 22, color: 'rgba(0,0,0,0.25)' },
   faqBody:       { fontSize: 13, color: 'rgba(0,0,0,0.55)', lineHeight: 20, marginTop: 12, paddingLeft: 44 },
   faqDivider:    { height: 1, backgroundColor: 'rgba(0,0,0,0.05)', marginHorizontal: 16 },
+  iaCard:        { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderWidth: 1.5, borderColor: COLORS.accent, borderRadius: 18, padding: 16, marginBottom: 20, shadowColor: COLORS.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 2 },
+  iaIcon:        { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  iaBody:        { flex: 1 },
+  iaTitleRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
+  iaTitle:       { fontSize: 14.5, fontWeight: '900', color: '#111', letterSpacing: 0.2 },
+  iaBadge:       { backgroundColor: COLORS.accent, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 },
+  iaBadgeTxt:    { fontSize: 9, fontWeight: '900', color: '#000', letterSpacing: 0.8 },
+  iaSub:         { fontSize: 11.5, color: 'rgba(0,0,0,0.5)', lineHeight: 16 },
 });

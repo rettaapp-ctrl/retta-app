@@ -10,6 +10,10 @@ import * as SecureStore from 'expo-secure-store';
 import { TUTORIAL_SEEN_KEY } from './tutorial';
 import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { POSTHOG_CONFIG, registerAnalyticsClient } from '@/lib/analytics';
+// ── Fuentes del rediseño (rama `rediseno`) ──
+import { useFonts as useSpaceGrotesk, SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
+import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 
 // ─────────────────────────────────────────────────────────────
 // Sentry — solo activo en builds de producción (no en Expo Go dev).
@@ -85,7 +89,7 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#11131b' } }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="tutorial"     options={{ animation: 'fade' }} />
@@ -109,6 +113,26 @@ function AnalyticsBridge() {
 }
 
 function RootLayout() {
+  // Cargar las fuentes del rediseño. Mientras no estén listas, mostramos
+  // un loader para evitar el "flash" de fuente del sistema.
+  const [fontsLoaded] = useSpaceGrotesk({
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_700Bold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#11131b', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#bec2ff" size="large" />
+      </View>
+    );
+  }
+
   return (
     <PostHogProvider
       apiKey={POSTHOG_CONFIG.apiKey}

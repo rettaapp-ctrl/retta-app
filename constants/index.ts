@@ -1,5 +1,9 @@
 export const API_URL = 'https://retta-backend-production.up.railway.app/api';
 
+// Cloudflare Worker que hospeda al chatbot "Retta IA" (Llama 3.1 8B vía Workers AI).
+// Es público sin auth — el rate limiting vive del lado del Worker.
+export const CHAT_URL = 'https://retta-chat.rettaapp.workers.dev';
+
 // Supabase — anon key es público (no es secreto), pero centralizado para
 // que cualquier rotación futura toque un solo lugar.
 export const SUPABASE_URL      = 'https://nfdmnpkojrzqfkpdxuxb.supabase.co';
