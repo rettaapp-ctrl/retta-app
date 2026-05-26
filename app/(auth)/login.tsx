@@ -4,9 +4,10 @@ import {
   StyleSheet, ActivityIndicator, KeyboardAvoidingView,
   Platform, ScrollView, Image,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { COLORS } from '@/constants';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -25,7 +26,6 @@ export default function LoginScreen() {
       if ('requiere_verificacion' in result && result.requiere_verificacion) {
         router.replace({ pathname: '/(auth)/verificar', params: { email: result.email } });
       }
-      // Si fue {ok: true}, el cambio de auth state navega automáticamente al home
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -34,89 +34,92 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoWrap}>
-          <Image
-            source={require('@/assets/images/retta-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.logoSub}>FÚTBOL EN TU CIUDAD</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Iniciar sesión</Text>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>EMAIL</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@email.com"
-              placeholderTextColor={COLORS.txt3}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
+    <View style={styles.root}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.logoWrap}>
+            <Image
+              source={require('../../assets/images/retta-logo-mark.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              tintColor="#fff"
             />
+            <Text style={styles.logoSub}>FÚTBOL EN TU CIUDAD</Text>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>CONTRASEÑA</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={COLORS.txt3}
-              secureTextEntry
-              onSubmitEditing={handleLogin}
-            />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Iniciar sesión</Text>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>EMAIL</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="tu@email.com"
+                placeholderTextColor={DT.outline}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CONTRASEÑA</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor={DT.outline}
+                secureTextEntry
+                onSubmitEditing={handleLogin}
+              />
+            </View>
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.85}>
+              <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                {loading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.btnTxt}>INICIAR SESIÓN</Text>
+                }
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.forgotBtn} onPress={() => router.push('/(auth)/forgot-password')}>
+              <Text style={styles.forgotTxt}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.linkBtn} onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.linkTxt}>¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate</Text></Text>
+            </TouchableOpacity>
           </View>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
-            {loading
-              ? <ActivityIndicator color="#000" />
-              : <Text style={styles.btnTxt}>INICIAR SESIÓN</Text>
-            }
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.forgotBtn}
-            onPress={() => router.push('/(auth)/forgot-password')}
-          >
-            <Text style={styles.forgotTxt}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.linkBtn} onPress={() => router.push('/(auth)/register')}>
-            <Text style={styles.linkTxt}>¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate</Text></Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:       { flex: 1, backgroundColor: '#000' },
+  root:       { flex: 1, backgroundColor: DT.bg },
   scroll:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   logoWrap:   { alignItems: 'center', marginBottom: 40 },
-  logo:       { width: 160, height: 160 },
-  logoSub:    { fontSize: 11, fontWeight: '700', color: COLORS.txt3, letterSpacing: 3, marginTop: 12 },
-  card:       { width: '100%', maxWidth: 400, backgroundColor: COLORS.surface, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border2 },
-  cardTitle:  { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 24, letterSpacing: 1 },
+  logo:       { width: 120, height: 120 },
+  logoSub:    { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 3, marginTop: 14, fontFamily: FONTS.mono },
+  card:       { width: '100%', maxWidth: 400, backgroundColor: DT.glassBg, borderRadius: RADIUS.xl, padding: 24, borderWidth: 1, borderColor: DT.glassBorder },
+  cardTitle:  { fontSize: 24, color: DT.onBg, marginBottom: 24, fontFamily: FONTS.display, letterSpacing: -0.5 },
   field:      { marginBottom: 16 },
-  label:      { fontSize: 10, fontWeight: '800', color: COLORS.txt3, letterSpacing: 2, marginBottom: 8 },
-  input:      { height: 50, backgroundColor: COLORS.surface2, borderRadius: 12, paddingHorizontal: 16, fontSize: 15, color: COLORS.txt, borderWidth: 1, borderColor: COLORS.border },
-  error:      { color: '#FF6B6B', fontSize: 13, marginBottom: 12, textAlign: 'center' },
-  btn:        { height: 52, backgroundColor: COLORS.accent, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  btnTxt:     { fontSize: 14, fontWeight: '900', color: '#000', letterSpacing: 2 },
-  forgotBtn:  { marginTop: 14, alignItems: 'center' },
-  forgotTxt:  { fontSize: 13, color: COLORS.txt2, fontWeight: '600' },
+  label:      { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 8, fontFamily: FONTS.mono },
+  input:      { height: 52, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: RADIUS.md, paddingHorizontal: 16, fontSize: 15, color: DT.onBg, borderWidth: 1, borderColor: DT.glassBorder, fontFamily: FONTS.body },
+  error:      { color: DT.error, fontSize: 13, marginBottom: 12, textAlign: 'center', fontFamily: FONTS.body },
+  btn:        { height: 54, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  btnTxt:     { fontSize: 14, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+  forgotBtn:  { marginTop: 16, alignItems: 'center' },
+  forgotTxt:  { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body },
   linkBtn:    { marginTop: 20, alignItems: 'center' },
-  linkTxt:    { fontSize: 13, color: COLORS.txt2 },
-  linkAccent: { color: COLORS.accent, fontWeight: '700' },
+  linkTxt:    { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body },
+  linkAccent: { color: DT.primary, fontFamily: FONTS.bodyBold },
 });

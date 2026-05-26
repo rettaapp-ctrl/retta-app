@@ -1,4 +1,5 @@
-import { COLORS } from '@/constants';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApi } from '@/hooks/useApi';
 import { useRouter } from 'expo-router';
 import { track } from '@/lib/analytics';
@@ -40,7 +41,7 @@ interface UsuarioBusqueda {
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
@@ -48,8 +49,8 @@ function BackIcon() {
 function SearchIcon() {
   return (
     <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <Circle cx="11" cy="11" r="7" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8"/>
-      <Path d="M21 21L17 17" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8" strokeLinecap="round"/>
+      <Circle cx="11" cy="11" r="7" stroke={DT.onSurfaceVar} strokeWidth="1.8"/>
+      <Path d="M21 21L17 17" stroke={DT.onSurfaceVar} strokeWidth="1.8" strokeLinecap="round"/>
     </Svg>
   );
 }
@@ -223,7 +224,9 @@ export default function AmigosScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <View style={styles.topbar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -241,7 +244,7 @@ export default function AmigosScreen() {
             value={search}
             onChangeText={setSearch}
             placeholder="Busca un jugador por nombre"
-            placeholderTextColor="rgba(0,0,0,0.35)"
+            placeholderTextColor={DT.outline}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -296,13 +299,13 @@ export default function AmigosScreen() {
             </View>
 
             {loading ? (
-              <ActivityIndicator color={COLORS.accent} style={{ marginTop: 30 }} />
+              <ActivityIndicator color={DT.primary} style={{ marginTop: 30 }} />
             ) : tab === 'amigos' ? (
               <FlatList
                 data={amigos}
                 keyExtractor={i => i.id}
                 renderItem={renderAmigo}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={DT.primary} />}
                 ListEmptyComponent={
                   <View style={styles.emptyBlock}>
                     <Text style={styles.emptyTitle}>Aún no tienes amigos</Text>
@@ -316,7 +319,7 @@ export default function AmigosScreen() {
                 data={solicitudes}
                 keyExtractor={i => i.id}
                 renderItem={renderSolicitud}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={DT.primary} />}
                 ListHeaderComponent={
                   enviadas.length > 0 ? (
                     <>
@@ -342,44 +345,45 @@ export default function AmigosScreen() {
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: '#fff' },
+  root:           { flex: 1, backgroundColor: DT.bg },
   topbar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center' },
-  topbarTitle:    { fontSize: 16, fontWeight: '900', color: '#111', letterSpacing: 0.3 },
+  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  topbarTitle:    { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
 
-  searchWrap:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, paddingHorizontal: 14, height: 46, backgroundColor: '#F4F3EF', borderRadius: 14, marginBottom: 14 },
-  searchInput:    { flex: 1, fontSize: 14, fontWeight: '600', color: '#111' },
-  clearTxt:       { fontSize: 16, color: 'rgba(0,0,0,0.4)', paddingHorizontal: 6 },
+  searchWrap:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, paddingHorizontal: 14, height: 46, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 14, marginBottom: 14 },
+  searchInput:    { flex: 1, fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed },
+  clearTxt:       { fontSize: 16, color: DT.onSurfaceVar, paddingHorizontal: 6 },
 
   tabsRow:        { flexDirection: 'row', marginHorizontal: 20, marginBottom: 12, gap: 8 },
-  tab:            { flex: 1, height: 38, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
-  tabActive:      { backgroundColor: '#111' },
-  tabTxt:         { fontSize: 12, fontWeight: '800', color: 'rgba(0,0,0,0.5)', letterSpacing: 0.5 },
+  tab:            { flex: 1, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  tabActive:      { backgroundColor: DT.primaryContainer, borderColor: DT.primaryContainer },
+  tabTxt:         { fontSize: 12, color: DT.onSurfaceVar, letterSpacing: 0.5, fontFamily: FONTS.bodyBold },
   tabTxtActive:   { color: '#fff' },
-  badge:          { minWidth: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-  badgeTxt:       { fontSize: 10, fontWeight: '900', color: '#000' },
+  badge:          { minWidth: 18, height: 18, borderRadius: 9, backgroundColor: DT.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  badgeTxt:       { fontSize: 10, color: DT.bg, fontFamily: FONTS.bodyBold },
 
-  sectionLabel:   { fontSize: 11, fontWeight: '900', color: 'rgba(0,0,0,0.4)', letterSpacing: 1.5, textTransform: 'uppercase', paddingHorizontal: 20, marginBottom: 8 },
+  sectionLabel:   { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.4, textTransform: 'uppercase', paddingHorizontal: 20, marginBottom: 8, fontFamily: FONTS.mono },
 
   row:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 12 },
-  avatar:         { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarTxt:      { fontSize: 18, fontWeight: '900', color: '#fff' },
+  avatar:         { width: 48, height: 48, borderRadius: 24, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarTxt:      { fontSize: 18, color: '#fff', fontFamily: FONTS.bodyBold },
   rowInfo:        { flex: 1 },
-  rowName:        { fontSize: 15, fontWeight: '800', color: '#111', letterSpacing: 0.2 },
-  rowSub:         { fontSize: 12, color: 'rgba(0,0,0,0.45)', marginTop: 2 },
-  rowChev:        { fontSize: 20, color: 'rgba(0,0,0,0.25)', fontWeight: '700' },
+  rowName:        { fontSize: 15, color: DT.onBg, letterSpacing: 0.2, fontFamily: FONTS.bodyBold },
+  rowSub:         { fontSize: 12, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
+  rowChev:        { fontSize: 20, color: DT.outline, fontWeight: '700' },
 
-  btnAccept:      { paddingHorizontal: 14, height: 34, backgroundColor: COLORS.accent, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  btnAcceptTxt:   { fontSize: 11, fontWeight: '900', color: '#000', letterSpacing: 1 },
-  btnRej:         { width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },
-  btnRejTxt:      { fontSize: 16, color: 'rgba(0,0,0,0.45)', fontWeight: '700' },
+  btnAccept:      { paddingHorizontal: 14, height: 34, backgroundColor: DT.primaryContainer, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  btnAcceptTxt:   { fontSize: 11, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+  btnRej:         { width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  btnRejTxt:      { fontSize: 16, color: DT.onSurfaceVar, fontWeight: '700' },
 
   emptyBlock:     { paddingTop: 40, paddingHorizontal: 20, alignItems: 'center' },
-  emptyTitle:     { fontSize: 15, fontWeight: '800', color: '#111', marginBottom: 4 },
-  emptySub:       { fontSize: 13, color: 'rgba(0,0,0,0.45)', textAlign: 'center', lineHeight: 18 },
-  empty:          { fontSize: 13, color: 'rgba(0,0,0,0.4)', textAlign: 'center', paddingTop: 24 },
+  emptyTitle:     { fontSize: 15, color: DT.onBg, marginBottom: 4, fontFamily: FONTS.bodyBold },
+  emptySub:       { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 18, fontFamily: FONTS.body },
+  empty:          { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', paddingTop: 24, fontFamily: FONTS.body },
 });

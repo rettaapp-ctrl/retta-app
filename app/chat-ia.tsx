@@ -20,7 +20,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { COLORS, CHAT_URL } from '@/constants';
+import { CHAT_URL } from '@/constants';
+import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import { track } from '@/lib/analytics';
 
 interface Mensaje {
@@ -37,27 +38,17 @@ const MAX_HISTORIAL = 6; // turnos enviados al modelo
 function BackIcon() {
   return (
     <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <Path d="M15 18L9 12L15 6" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
 
 function SendIcon({ disabled }: { disabled: boolean }) {
+  const c = disabled ? DT.outline : '#fff';
   return (
     <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M22 2L11 13"
-        stroke={disabled ? 'rgba(0,0,0,0.25)' : '#000'}
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <Path
-        d="M22 2L15 22L11 13L2 9L22 2Z"
-        stroke={disabled ? 'rgba(0,0,0,0.25)' : '#000'}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <Path d="M22 2L11 13" stroke={c} strokeWidth="2" strokeLinecap="round" />
+      <Path d="M22 2L15 22L11 13L2 9L22 2Z" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -66,7 +57,7 @@ function BotAvatar() {
   return (
     <View style={styles.botAvatar}>
       <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <Path d="M12 2L14.39 8.26L21 9.27L16 14.14L17.18 21L12 17.77L6.82 21L8 14.14L3 9.27L9.61 8.26L12 2Z" stroke="#000" strokeWidth="1.8" strokeLinejoin="round"/>
+        <Path d="M12 2L14.39 8.26L21 9.27L16 14.14L17.18 21L12 17.77L6.82 21L8 14.14L3 9.27L9.61 8.26L12 2Z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/>
       </Svg>
     </View>
   );
@@ -222,7 +213,7 @@ export default function ChatIAScreen() {
         <View style={styles.headerCenter}>
           <View style={styles.headerAvatar}>
             <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <Path d="M12 2L14.39 8.26L21 9.27L16 14.14L17.18 21L12 17.77L6.82 21L8 14.14L3 9.27L9.61 8.26L12 2Z" stroke="#000" strokeWidth="1.8" strokeLinejoin="round"/>
+              <Path d="M12 2L14.39 8.26L21 9.27L16 14.14L17.18 21L12 17.77L6.82 21L8 14.14L3 9.27L9.61 8.26L12 2Z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/>
             </Svg>
           </View>
           <View>
@@ -235,7 +226,7 @@ export default function ChatIAScreen() {
         </View>
         <TouchableOpacity onPress={limpiarChat} style={styles.clearBtn}>
           <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <Path d="M3 6H21M8 6V4C8 3.4 8.4 3 9 3H15C15.6 3 16 3.4 16 4V6M19 6V20C19 20.6 18.6 21 18 21H6C5.4 21 5 20.6 5 20V6" stroke="rgba(0,0,0,0.45)" strokeWidth="1.8" strokeLinecap="round"/>
+            <Path d="M3 6H21M8 6V4C8 3.4 8.4 3 9 3H15C15.6 3 16 3.4 16 4V6M19 6V20C19 20.6 18.6 21 18 21H6C5.4 21 5 20.6 5 20V6" stroke={DT.onSurfaceVar} strokeWidth="1.8" strokeLinecap="round"/>
           </Svg>
         </TouchableOpacity>
       </View>
@@ -323,35 +314,35 @@ export default function ChatIAScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: '#FFFFFF' },
-  header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
+  root:           { flex: 1, backgroundColor: DT.bg },
+  header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, backgroundColor: DT.surfaceLow },
   backBtn:        { padding: 6, marginRight: 8 },
   headerCenter:   { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerAvatar:   { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:    { fontSize: 15, fontWeight: '900', color: '#111', letterSpacing: 0.3 },
+  headerAvatar:   { width: 36, height: 36, borderRadius: 18, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  headerTitle:    { fontSize: 15, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   headerStatusRow:{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
   statusDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
-  headerStatus:   { fontSize: 11, color: 'rgba(0,0,0,0.45)', fontWeight: '500' },
+  headerStatus:   { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.body },
   clearBtn:       { padding: 6 },
-  scroll:         { flex: 1, backgroundColor: '#F8F8F6' },
+  scroll:         { flex: 1, backgroundColor: DT.bg },
   scrollContent:  { padding: 16, paddingBottom: 8 },
   row:            { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
   rowUser:        { justifyContent: 'flex-end' },
   rowBot:         { justifyContent: 'flex-start', gap: 6 },
-  botAvatar:      { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  botAvatar:      { width: 24, height: 24, borderRadius: 12, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   bubble:         { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  bubbleUser:     { backgroundColor: COLORS.accent, borderBottomRightRadius: 6 },
-  bubbleBot:      { backgroundColor: '#fff', borderBottomLeftRadius: 6, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
-  bubbleError:    { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' },
+  bubbleUser:     { backgroundColor: DT.primaryContainer, borderBottomRightRadius: 6 },
+  bubbleBot:      { backgroundColor: DT.glassBg, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: DT.glassBorder },
+  bubbleError:    { backgroundColor: 'rgba(255,180,171,0.12)', borderColor: 'rgba(255,180,171,0.3)' },
   bubbleTyping:   { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  typingTxt:      { fontSize: 13, color: '#666' },
-  bubbleTxt:      { fontSize: 14.5, lineHeight: 20 },
-  bubbleTxtUser:  { color: '#000' },
-  bubbleTxtBot:   { color: '#111' },
-  bubbleTxtError: { color: '#C62828' },
-  inputBar:       { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 6 : 10, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' },
-  input:          { flex: 1, minHeight: 40, maxHeight: 120, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#F2F1EF', borderRadius: 20, fontSize: 14.5, color: '#111' },
-  sendBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
-  sendBtnDisabled:{ backgroundColor: 'rgba(0,0,0,0.06)' },
-  disclaimer:     { fontSize: 10.5, color: 'rgba(0,0,0,0.35)', textAlign: 'center', paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 4 : 10, paddingTop: 4, backgroundColor: '#FFFFFF' },
+  typingTxt:      { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body },
+  bubbleTxt:      { fontSize: 14.5, lineHeight: 20, fontFamily: FONTS.body },
+  bubbleTxtUser:  { color: '#fff' },
+  bubbleTxtBot:   { color: DT.onBg },
+  bubbleTxtError: { color: DT.error },
+  inputBar:       { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 6 : 10, backgroundColor: DT.surfaceLow, borderTopWidth: 1, borderTopColor: DT.glassBorder },
+  input:          { flex: 1, minHeight: 40, maxHeight: 120, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 20, fontSize: 14.5, color: DT.onBg, fontFamily: FONTS.body },
+  sendBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  sendBtnDisabled:{ backgroundColor: 'rgba(255,255,255,0.08)' },
+  disclaimer:     { fontSize: 10.5, color: DT.outline, textAlign: 'center', paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 4 : 10, paddingTop: 4, backgroundColor: DT.surfaceLow, fontFamily: FONTS.body },
 });

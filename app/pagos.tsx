@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS } from '@/constants';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useApi } from '@/hooks/useApi';
@@ -31,7 +32,7 @@ function formatFechaCorta(iso: string) {
 function BackIcon() {
   return (
     <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <Path d="M15 18L9 12L15 6" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
@@ -39,9 +40,9 @@ function BackIcon() {
 function ReceiptIcon() {
   return (
     <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="4" width="18" height="17" rx="3" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8"/>
-      <Path d="M8 2V6M16 2V6M3 9H21" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8" strokeLinecap="round"/>
-      <Path d="M7 13H12" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8" strokeLinecap="round"/>
+      <Rect x="3" y="4" width="18" height="17" rx="3" stroke={DT.outline} strokeWidth="1.8"/>
+      <Path d="M8 2V6M16 2V6M3 9H21" stroke={DT.outline} strokeWidth="1.8" strokeLinecap="round"/>
+      <Path d="M7 13H12" stroke={DT.outline} strokeWidth="1.8" strokeLinecap="round"/>
     </Svg>
   );
 }
@@ -65,7 +66,9 @@ export default function PagosScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <BackIcon />
@@ -79,9 +82,9 @@ export default function PagosScreen() {
         <View style={styles.stripeBanner}>
           <View style={styles.stripeBannerIcon}>
             <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <Rect x="2" y="5" width="20" height="14" rx="3" stroke="#8FCC00" strokeWidth="1.8"/>
-              <Path d="M2 10H22" stroke="#8FCC00" strokeWidth="1.8"/>
-              <Path d="M6 15H10" stroke="#8FCC00" strokeWidth="1.8" strokeLinecap="round"/>
+              <Rect x="2" y="5" width="20" height="14" rx="3" stroke={DT.primary} strokeWidth="1.8"/>
+              <Path d="M2 10H22" stroke={DT.primary} strokeWidth="1.8"/>
+              <Path d="M6 15H10" stroke={DT.primary} strokeWidth="1.8" strokeLinecap="round"/>
             </Svg>
           </View>
           <View style={{ flex: 1 }}>
@@ -93,7 +96,7 @@ export default function PagosScreen() {
         {/* Sección: Recibos recientes */}
         <Text style={styles.sectionLabel}>Recibos recientes</Text>
         {loading ? (
-          <ActivityIndicator color={COLORS.accent} style={{ marginTop: 20 }} />
+          <ActivityIndicator color={DT.primary} style={{ marginTop: 20 }} />
         ) : pagos.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Sin recibos todavía</Text>
@@ -129,33 +132,34 @@ export default function PagosScreen() {
         </View>
 
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:              { flex: 1, backgroundColor: '#fff' },
+  root:              { flex: 1, backgroundColor: DT.bg },
   topbar:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:           { marginRight: 12, padding: 2 },
-  topbarTitle:       { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '900', color: '#111', letterSpacing: 0.5 },
+  backBtn:           { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  topbarTitle:       { flex: 1, textAlign: 'center', fontSize: 18, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
   scroll:            { padding: 20, paddingTop: 8, paddingBottom: 40 },
-  stripeBanner:      { flexDirection: 'row', alignItems: 'flex-start', gap: 14, backgroundColor: 'rgba(143,204,0,0.08)', borderWidth: 1, borderColor: 'rgba(143,204,0,0.25)', borderRadius: 16, padding: 16, marginBottom: 24 },
-  stripeBannerIcon:  { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(143,204,0,0.12)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  stripeBannerTitle: { fontSize: 15, fontWeight: '800', color: '#111', marginBottom: 4 },
-  stripeBannerSub:   { fontSize: 12, color: 'rgba(0,0,0,0.45)', lineHeight: 17 },
-  sectionLabel:      { fontSize: 10, fontWeight: '800', color: 'rgba(0,0,0,0.28)', letterSpacing: 1.8, marginBottom: 8, textTransform: 'uppercase' },
-  card:              { backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 18, overflow: 'hidden', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  receiptRow:        { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)', gap: 12 },
-  receiptIcon:       { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center' },
+  stripeBanner:      { flexDirection: 'row', alignItems: 'flex-start', gap: 14, backgroundColor: 'rgba(190,194,255,0.06)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.22)', borderRadius: 16, padding: 16, marginBottom: 24 },
+  stripeBannerIcon:  { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(190,194,255,0.10)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  stripeBannerTitle: { fontSize: 15, color: DT.onBg, marginBottom: 4, fontFamily: FONTS.bodyBold },
+  stripeBannerSub:   { fontSize: 12, color: DT.onSurfaceVar, lineHeight: 17, fontFamily: FONTS.body },
+  sectionLabel:      { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.6, marginBottom: 8, textTransform: 'uppercase', fontFamily: FONTS.mono },
+  card:              { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 18, overflow: 'hidden', marginBottom: 16 },
+  receiptRow:        { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, gap: 12 },
+  receiptIcon:       { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   receiptInfo:       { flex: 1 },
-  receiptTitle:      { fontSize: 14, fontWeight: '800', color: '#111' },
-  receiptSub:        { fontSize: 11, color: 'rgba(0,0,0,0.38)', marginTop: 2 },
-  receiptAmount:     { fontSize: 15, fontWeight: '900', color: '#111' },
+  receiptTitle:      { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyBold },
+  receiptSub:        { fontSize: 11, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
+  receiptAmount:     { fontSize: 15, color: DT.onBg, fontFamily: FONTS.heading },
   verTodosRow:       { padding: 14, alignItems: 'center' },
-  verTodosTxt:       { fontSize: 12, fontWeight: '800', color: 'rgba(0,0,0,0.3)', letterSpacing: 0.8, textTransform: 'uppercase' },
+  verTodosTxt:       { fontSize: 12, color: DT.onSurfaceVar, letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: FONTS.bodyBold },
   poweredBy:         { alignItems: 'center', marginTop: 8 },
-  poweredByTxt:      { fontSize: 11, color: 'rgba(0,0,0,0.25)', fontWeight: '600' },
-  emptyCard:         { backgroundColor: '#F4F3EF', borderRadius: 16, padding: 22, alignItems: 'center', marginBottom: 16 },
-  emptyTitle:        { fontSize: 14, fontWeight: '800', color: '#111', marginBottom: 4 },
-  emptySub:          { fontSize: 12, color: 'rgba(0,0,0,0.45)', textAlign: 'center', lineHeight: 17 },
+  poweredByTxt:      { fontSize: 11, color: DT.outline, fontFamily: FONTS.bodyMed },
+  emptyCard:         { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 16, padding: 22, alignItems: 'center', marginBottom: 16 },
+  emptyTitle:        { fontSize: 14, color: DT.onBg, marginBottom: 4, fontFamily: FONTS.bodyBold },
+  emptySub:          { fontSize: 12, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 17, fontFamily: FONTS.body },
 });

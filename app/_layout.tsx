@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { COLORS } from '@/constants';
+import { DT } from '@/constants/designTokens';
 import * as Sentry from '@sentry/react-native';
 import * as SecureStore from 'expo-secure-store';
 import { TUTORIAL_SEEN_KEY } from './tutorial';
@@ -82,8 +82,8 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+      <View style={{ flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={DT.primary} size="large" />
       </View>
     );
   }

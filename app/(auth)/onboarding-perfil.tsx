@@ -11,7 +11,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useAuth, OnboardingPerfilData } from '@/context/AuthContext';
-import { COLORS } from '@/constants';
+import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import { supabase } from '@/lib/supabase';
 
 type Posicion = 'POR' | 'DEF' | 'MED' | 'DEL';
@@ -38,8 +38,8 @@ const GENEROS: { value: Genero; label: string }[] = [
 ];
 
 function PosIcon({ tipo, active }: { tipo: Posicion; active: boolean }) {
-  const stroke = active ? COLORS.accent : 'rgba(255,255,255,0.4)';
-  const fill   = active ? COLORS.accent : 'transparent';
+  const stroke = active ? DT.primary : 'rgba(255,255,255,0.4)';
+  const fill   = active ? DT.primary : 'transparent';
   if (tipo === 'POR') {
     return (
       <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -52,9 +52,9 @@ function PosIcon({ tipo, active }: { tipo: Posicion; active: boolean }) {
   if (tipo === 'DEF') {
     return (
       <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-        <Rect x="7" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(143,204,0,0.15)' : 'transparent'}/>
-        <Rect x="17" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(143,204,0,0.15)' : 'transparent'}/>
-        <Rect x="27" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(143,204,0,0.15)' : 'transparent'}/>
+        <Rect x="7" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(190,194,255,0.18)' : 'transparent'}/>
+        <Rect x="17" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(190,194,255,0.18)' : 'transparent'}/>
+        <Rect x="27" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(190,194,255,0.18)' : 'transparent'}/>
       </Svg>
     );
   }
@@ -77,7 +77,7 @@ function PosIcon({ tipo, active }: { tipo: Posicion; active: boolean }) {
 }
 
 function GenIcon({ tipo, active }: { tipo: Genero; active: boolean }) {
-  const stroke = active ? COLORS.accent : 'rgba(255,255,255,0.4)';
+  const stroke = active ? DT.primary : 'rgba(255,255,255,0.4)';
   if (tipo === 'M') {
     return (
       <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
@@ -376,7 +376,7 @@ export default function OnboardingPerfilScreen() {
                   >
                     {uploadingPhoto ? (
                       <View style={styles.fotoInner}>
-                        <ActivityIndicator color={COLORS.accent} size="large"/>
+                        <ActivityIndicator color={DT.primary} size="large"/>
                       </View>
                     ) : avatarUrl ? (
                       <Image source={{ uri: avatarUrl }} style={styles.fotoInner} contentFit="cover" cachePolicy="memory-disk" transition={150} />
@@ -437,7 +437,7 @@ export default function OnboardingPerfilScreen() {
                 activeOpacity={0.85}
               >
                 {loading
-                  ? <ActivityIndicator color="#000" />
+                  ? <ActivityIndicator color="#fff" />
                   : <Text style={styles.btnTxt}>LISTO</Text>
                 }
               </TouchableOpacity>
@@ -456,56 +456,56 @@ export default function OnboardingPerfilScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: '#000' },
+  root:           { flex: 1, backgroundColor: DT.bg },
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, justifyContent: 'space-between' },
   backBtn:        { paddingVertical: 6, paddingHorizontal: 4 },
-  backTxt:        { color: COLORS.accent, fontSize: 14, fontWeight: '700' },
+  backTxt:        { color: DT.primary, fontSize: 14, fontFamily: FONTS.bodyMed },
   steps:          { flexDirection: 'row', gap: 6 },
   stepDot:        { width: 24, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)' },
-  stepDotActive:  { backgroundColor: COLORS.accent, width: 32 },
-  stepDotDone:    { backgroundColor: 'rgba(143,204,0,0.5)' },
+  stepDotActive:  { backgroundColor: DT.primary, width: 32 },
+  stepDotDone:    { backgroundColor: 'rgba(190,194,255,0.5)' },
 
   scroll:         { padding: 24, paddingBottom: 40 },
-  eyebrow:        { fontSize: 11, fontWeight: '900', color: COLORS.accent, letterSpacing: 2, marginBottom: 14 },
-  title:          { fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: 0.3, marginBottom: 8, lineHeight: 30 },
-  subtitle:       { fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 24, lineHeight: 20 },
+  eyebrow:        { fontSize: 11, color: DT.primary, letterSpacing: 2, marginBottom: 14, fontFamily: FONTS.mono },
+  title:          { fontSize: 28, color: DT.onBg, letterSpacing: -0.5, marginBottom: 8, lineHeight: 32, fontFamily: FONTS.display },
+  subtitle:       { fontSize: 14, color: DT.onSurfaceVar, marginBottom: 24, lineHeight: 20, fontFamily: FONTS.body },
 
   cards:          { gap: 12 },
-  card:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 16, padding: 16, minHeight: 76 },
-  cardActive:     { borderColor: COLORS.accent, backgroundColor: 'rgba(143,204,0,0.08)' },
-  cardLabel:      { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
-  cardLabelActive:{ color: COLORS.accent },
-  cardSub:        { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 },
+  card:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, minHeight: 76 },
+  cardActive:     { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.10)' },
+  cardLabel:      { fontSize: 16, color: DT.onBg, letterSpacing: 0.2, fontFamily: FONTS.bodyBold },
+  cardLabelActive:{ color: DT.primary },
+  cardSub:        { fontSize: 12, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
 
   checkRing:      { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  checkRingActive:{ borderColor: COLORS.accent, backgroundColor: COLORS.accent },
-  checkMark:      { fontSize: 13, color: '#000', fontWeight: '900', lineHeight: 14 },
+  checkRingActive:{ borderColor: DT.primary, backgroundColor: DT.primary },
+  checkMark:      { fontSize: 13, color: DT.bg, fontFamily: FONTS.bodyBold, lineHeight: 14 },
 
   nivelBadge:     { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
-  nivelBadgeActive:{ borderColor: COLORS.accent, backgroundColor: COLORS.accent },
-  nivelBadgeTxt:  { fontSize: 16, fontWeight: '900', color: 'rgba(255,255,255,0.7)' },
+  nivelBadgeActive:{ borderColor: DT.primary, backgroundColor: DT.primary },
+  nivelBadgeTxt:  { fontSize: 16, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold },
 
-  telefonoBlock:  { marginTop: 24, paddingTop: 24, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
-  telLabel:       { fontSize: 11, fontWeight: '900', color: 'rgba(255,255,255,0.55)', letterSpacing: 1.5, marginBottom: 4 },
-  telSub:         { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 17 },
-  telInput:       { height: 52, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 14, paddingHorizontal: 16, fontSize: 15, color: '#fff', fontWeight: '600' },
+  telefonoBlock:  { marginTop: 24, paddingTop: 24, borderTopWidth: 1, borderTopColor: DT.glassBorder },
+  telLabel:       { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 4, fontFamily: FONTS.mono },
+  telSub:         { fontSize: 12, color: DT.outline, marginBottom: 12, lineHeight: 17, fontFamily: FONTS.body },
+  telInput:       { height: 52, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, paddingHorizontal: 16, fontSize: 15, color: DT.onBg, fontFamily: FONTS.body },
 
   fotoBlock:      { alignItems: 'center', paddingTop: 12 },
   fotoRing:       { width: 168, height: 168, borderRadius: 84, padding: 4, borderWidth: 2, borderColor: 'rgba(255,255,255,0.18)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
-  fotoRingActive: { borderColor: COLORS.accent, borderStyle: 'solid' },
+  fotoRingActive: { borderColor: DT.primary, borderStyle: 'solid' },
   fotoInner:      { width: '100%', height: '100%', borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  fotoBtn:        { paddingHorizontal: 22, paddingVertical: 13, backgroundColor: COLORS.accent, borderRadius: 12 },
-  fotoBtnSecundario:{ backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
-  fotoBtnTxt:     { fontSize: 12, fontWeight: '900', color: '#000', letterSpacing: 1.5 },
-  fotoBtnTxtSecundario:{ color: '#fff' },
-  fotoHint:       { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 18, textAlign: 'center', lineHeight: 17 },
+  fotoBtn:        { paddingHorizontal: 22, paddingVertical: 13, backgroundColor: DT.primaryContainer, borderRadius: RADIUS.full },
+  fotoBtnSecundario:{ backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder },
+  fotoBtnTxt:     { fontSize: 12, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+  fotoBtnTxtSecundario:{ color: DT.onBg },
+  fotoHint:       { fontSize: 12, color: DT.outline, marginTop: 18, textAlign: 'center', lineHeight: 17, fontFamily: FONTS.body },
 
-  error:          { color: '#FF6B6B', fontSize: 13, marginTop: 14, textAlign: 'center' },
+  error:          { color: DT.error, fontSize: 13, marginTop: 14, textAlign: 'center', fontFamily: FONTS.body },
 
-  footer:         { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  btn:            { height: 54, backgroundColor: COLORS.accent, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  avisoMini:      { fontSize: 11, color: COLORS.txt3, lineHeight: 16, marginTop: 12, textAlign: 'center', paddingHorizontal: 12 },
-  avisoLinkMini:  { color: COLORS.accent, fontWeight: '700', textDecorationLine: 'underline' },
-  btnDisabled:    { backgroundColor: 'rgba(143,204,0,0.25)' },
-  btnTxt:         { fontSize: 14, fontWeight: '900', color: '#000', letterSpacing: 2 },
+  footer:         { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12, borderTopWidth: 1, borderTopColor: DT.glassBorder },
+  btn:            { height: 54, backgroundColor: DT.primaryContainer, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
+  avisoMini:      { fontSize: 11, color: DT.outline, lineHeight: 16, marginTop: 12, textAlign: 'center', paddingHorizontal: 12, fontFamily: FONTS.body },
+  avisoLinkMini:  { color: DT.primary, fontFamily: FONTS.bodyMed, textDecorationLine: 'underline' },
+  btnDisabled:    { backgroundColor: 'rgba(80,92,230,0.3)' },
+  btnTxt:         { fontSize: 14, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
 });

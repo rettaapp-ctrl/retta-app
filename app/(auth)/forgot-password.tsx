@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { COLORS } from '@/constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 
 export default function ForgotPasswordScreen() {
   const { forgotPassword } = useAuth();
@@ -32,6 +33,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.back} onPress={() => router.back()}>
           <Text style={styles.backTxt}>← Regresar</Text>
@@ -50,7 +52,7 @@ export default function ForgotPasswordScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder="tu@email.com"
-              placeholderTextColor={COLORS.txt3}
+              placeholderTextColor={DT.outline}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
@@ -61,11 +63,13 @@ export default function ForgotPasswordScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity style={styles.btn} onPress={handleSubmit} disabled={loading}>
-            {loading
-              ? <ActivityIndicator color="#000" />
-              : <Text style={styles.btnTxt}>ENVIAR CÓDIGO</Text>
-            }
+          <TouchableOpacity onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
+            <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.btnTxt}>ENVIAR CÓDIGO</Text>
+              }
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -74,17 +78,17 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: '#000' },
+  root:     { flex: 1, backgroundColor: DT.bg },
   scroll:   { flexGrow: 1, padding: 24, paddingTop: 60 },
   back:     { marginBottom: 24 },
-  backTxt:  { color: COLORS.accent, fontSize: 14, fontWeight: '700' },
-  title:    { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 8, letterSpacing: 1 },
-  subtitle: { fontSize: 14, color: COLORS.txt2, marginBottom: 32, lineHeight: 20 },
-  card:     { backgroundColor: COLORS.surface, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border2 },
+  backTxt:  { color: DT.primary, fontSize: 14, fontFamily: FONTS.bodyMed },
+  title:    { fontSize: 30, color: DT.onBg, marginBottom: 8, fontFamily: FONTS.display, letterSpacing: -0.8 },
+  subtitle: { fontSize: 14, color: DT.onSurfaceVar, marginBottom: 32, lineHeight: 20, fontFamily: FONTS.body },
+  card:     { backgroundColor: DT.glassBg, borderRadius: RADIUS.xl, padding: 24, borderWidth: 1, borderColor: DT.glassBorder },
   field:    { marginBottom: 16 },
-  label:    { fontSize: 10, fontWeight: '800', color: COLORS.txt3, letterSpacing: 2, marginBottom: 8 },
-  input:    { height: 50, backgroundColor: COLORS.surface2, borderRadius: 12, paddingHorizontal: 16, fontSize: 15, color: COLORS.txt, borderWidth: 1, borderColor: COLORS.border },
-  error:    { color: '#FF6B6B', fontSize: 13, marginBottom: 12, textAlign: 'center' },
-  btn:      { height: 52, backgroundColor: COLORS.accent, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  btnTxt:   { fontSize: 14, fontWeight: '900', color: '#000', letterSpacing: 2 },
+  label:    { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 8, fontFamily: FONTS.mono },
+  input:    { height: 52, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: RADIUS.md, paddingHorizontal: 16, fontSize: 15, color: DT.onBg, borderWidth: 1, borderColor: DT.glassBorder, fontFamily: FONTS.body },
+  error:    { color: DT.error, fontSize: 13, marginBottom: 12, textAlign: 'center', fontFamily: FONTS.body },
+  btn:      { height: 54, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  btnTxt:   { fontSize: 14, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
 });

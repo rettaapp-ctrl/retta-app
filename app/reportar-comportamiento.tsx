@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { COLORS } from '@/constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -24,7 +25,7 @@ const REPORTES_EMAIL = 'rettaapp@gmail.com';
 function BackIcon() {
   return (
     <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <Path d="M15 18L9 12L15 6" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
@@ -95,12 +96,15 @@ Gracias por tomarse el tiempo de revisar este caso.`;
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <BackIcon />
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>Reportar comportamiento</Text>
+        <View style={{ width: 42 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -160,25 +164,22 @@ Gracias por tomarse el tiempo de revisar este caso.`;
         </View>
 
         {/* Botón principal */}
-        <TouchableOpacity
-          style={[styles.btn, enviando && { opacity: 0.6 }]}
-          onPress={enviarReporte}
-          disabled={enviando}
-          activeOpacity={0.85}
-        >
-          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <Path d="M22 2L11 13" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
-            <Path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </Svg>
-          <Text style={styles.btnTxt}>ABRIR CORREO Y REPORTAR</Text>
+        <TouchableOpacity onPress={enviarReporte} disabled={enviando} activeOpacity={0.85}>
+          <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.btn, enviando && { opacity: 0.6 }]}>
+            <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <Path d="M22 2L11 13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+              <Path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </Svg>
+            <Text style={styles.btnTxt}>ABRIR CORREO Y REPORTAR</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Aclaración */}
         <View style={styles.disclaimer}>
           <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <Circle cx="12" cy="12" r="9" stroke="rgba(0,0,0,0.3)" strokeWidth="1.8"/>
-            <Path d="M12 8V12" stroke="rgba(0,0,0,0.3)" strokeWidth="2" strokeLinecap="round"/>
-            <Circle cx="12" cy="16" r="1" fill="rgba(0,0,0,0.3)"/>
+            <Circle cx="12" cy="12" r="9" stroke={DT.outline} strokeWidth="1.8"/>
+            <Path d="M12 8V12" stroke={DT.outline} strokeWidth="2" strokeLinecap="round"/>
+            <Circle cx="12" cy="16" r="1" fill={DT.outline}/>
           </Svg>
           <Text style={styles.disclaimerTxt}>
             Si el comportamiento ocurrió en un partido específico, también puedes reportar al jugador directamente desde la pantalla de calificaciones después del partido. Esta opción es para casos generales o fuera de un partido.
@@ -186,32 +187,33 @@ Gracias por tomarse el tiempo de revisar este caso.`;
         </View>
 
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:          { flex: 1, backgroundColor: '#fff' },
-  topbar:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:       { marginRight: 12, padding: 2 },
-  topbarTitle:   { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '900', color: '#111', letterSpacing: 0.3 },
+  root:          { flex: 1, backgroundColor: DT.bg },
+  topbar:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
+  backBtn:       { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  topbarTitle:   { flex: 1, textAlign: 'center', fontSize: 17, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   scroll:        { padding: 20, paddingTop: 0, paddingBottom: 40 },
-  hero:          { backgroundColor: '#D62B2B', borderRadius: 20, padding: 22, alignItems: 'center', marginBottom: 24 },
-  heroIcon:      { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  heroTitle:     { fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: 0.3, textAlign: 'center', marginBottom: 6 },
-  heroSub:       { fontSize: 12, color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 17 },
-  sectionLabel:  { fontSize: 10, fontWeight: '800', color: 'rgba(0,0,0,0.28)', letterSpacing: 1.8, marginBottom: 10, marginLeft: 2, textTransform: 'uppercase' },
-  listCard:      { backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 16, padding: 14, marginBottom: 18 },
+  hero:          { backgroundColor: 'rgba(255,180,171,0.12)', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', borderRadius: RADIUS.xl, padding: 22, alignItems: 'center', marginBottom: 24 },
+  heroIcon:      { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,180,171,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  heroTitle:     { fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.2, textAlign: 'center', marginBottom: 6 },
+  heroSub:       { fontSize: 12.5, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 18, fontFamily: FONTS.body },
+  sectionLabel:  { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.8, marginBottom: 10, marginLeft: 2, fontFamily: FONTS.mono },
+  listCard:      { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 14, marginBottom: 18 },
   listItem:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6 },
-  bullet:        { width: 5, height: 5, borderRadius: 3, backgroundColor: '#D62B2B', marginTop: 7 },
-  listText:      { flex: 1, fontSize: 13, color: 'rgba(0,0,0,0.7)', lineHeight: 19 },
-  infoCard:      { backgroundColor: '#F8F8F6', borderRadius: 16, padding: 16, marginBottom: 20 },
+  bullet:        { width: 5, height: 5, borderRadius: 3, backgroundColor: DT.error, marginTop: 7 },
+  listText:      { flex: 1, fontSize: 13, color: DT.onBg, lineHeight: 19, fontFamily: FONTS.body },
+  infoCard:      { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 20 },
   infoRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 6 },
-  stepNum:       { width: 26, height: 26, borderRadius: 13, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  stepNumTxt:    { fontSize: 12, fontWeight: '900', color: '#fff' },
-  infoText:      { flex: 1, fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: 19, paddingTop: 3 },
-  btn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, backgroundColor: COLORS.accent, borderRadius: 14, marginBottom: 16 },
-  btnTxt:        { fontSize: 13, fontWeight: '900', color: '#000', letterSpacing: 1.5 },
-  disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 12, padding: 12 },
-  disclaimerTxt: { flex: 1, fontSize: 12, color: 'rgba(0,0,0,0.5)', lineHeight: 17 },
+  stepNum:       { width: 26, height: 26, borderRadius: 13, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  stepNumTxt:    { fontSize: 12, color: '#fff', fontFamily: FONTS.bodyBold },
+  infoText:      { flex: 1, fontSize: 13, color: DT.onSurfaceVar, lineHeight: 19, paddingTop: 3, fontFamily: FONTS.body },
+  btn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, borderRadius: RADIUS.full, marginBottom: 16 },
+  btnTxt:        { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+  disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: RADIUS.md, padding: 12 },
+  disclaimerTxt: { flex: 1, fontSize: 12, color: DT.onSurfaceVar, lineHeight: 17, fontFamily: FONTS.body },
 });

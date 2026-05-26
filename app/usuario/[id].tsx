@@ -1,4 +1,5 @@
-import { COLORS } from '@/constants';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -62,7 +63,7 @@ function FlameIcon({ size = 22, color = '#FF6B35' }: { size?: number; color?: st
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
@@ -162,13 +163,14 @@ export default function PerfilPublicoScreen() {
   if (loading || !perfil) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+        <ActivityIndicator color={DT.primary} size="large" />
       </View>
     );
   }
 
   const initials = ((perfil.nombre?.[0] || '') + (perfil.apellido?.[0] || '')).toUpperCase() || '?';
-  const avatarBg = perfil.color_hex || COLORS.accent;
+  const avatarBg = perfil.color_hex || DT.primaryContainer;
 
   // Decidir botón según estado de amistad
   function renderActionBtn() {
@@ -193,7 +195,7 @@ export default function PerfilPublicoScreen() {
           activeOpacity={0.85}
         >
           {actuando
-            ? <ActivityIndicator color="#000" />
+            ? <ActivityIndicator color="#fff" />
             : <Text style={styles.btnPrimaryTxt}>+  AGREGAR AMIGO</Text>
           }
         </TouchableOpacity>
@@ -204,7 +206,7 @@ export default function PerfilPublicoScreen() {
         <View style={{ gap: 10 }}>
           <View style={styles.btnAmigo}>
             <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <Path d="M5 12L10 17L19 8" stroke={COLORS.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <Path d="M5 12L10 17L19 8" stroke={DT.success} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </Svg>
             <Text style={styles.btnAmigoTxt}>YA SON AMIGOS</Text>
           </View>
@@ -236,7 +238,7 @@ export default function PerfilPublicoScreen() {
             disabled={actuando}
             activeOpacity={0.85}
           >
-            {actuando ? <ActivityIndicator color="#000" /> : <Text style={styles.btnPrimaryTxt}>ACEPTAR SOLICITUD</Text>}
+            {actuando ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryTxt}>ACEPTAR SOLICITUD</Text>}
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnSec} onPress={() => responderSolicitud('rechazar')} disabled={actuando}>
             <Text style={styles.btnSecTxt}>Rechazar</Text>
@@ -252,7 +254,7 @@ export default function PerfilPublicoScreen() {
           disabled={actuando}
           activeOpacity={0.85}
         >
-          {actuando ? <ActivityIndicator color="#000" /> : <Text style={styles.btnPrimaryTxt}>+  AGREGAR AMIGO</Text>}
+          {actuando ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryTxt}>+  AGREGAR AMIGO</Text>}
         </TouchableOpacity>
       );
     }
@@ -260,7 +262,9 @@ export default function PerfilPublicoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <BackIcon />
@@ -294,7 +298,7 @@ export default function PerfilPublicoScreen() {
         {/* Racha */}
         <View style={styles.rachaCard}>
           <View style={styles.rachaIcon}>
-            <FlameIcon size={28} color={(perfil.racha_actual ?? 0) > 0 ? '#FF6B35' : 'rgba(0,0,0,0.2)'} />
+            <FlameIcon size={28} color={(perfil.racha_actual ?? 0) > 0 ? '#FF6B35' : DT.outline} />
           </View>
           <View style={styles.rachaInfo}>
             <Text style={styles.rachaTitle}>RACHA</Text>
@@ -330,8 +334,8 @@ export default function PerfilPublicoScreen() {
           <View style={styles.row}>
             <View style={styles.rowIcon}>
               <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Circle cx="12" cy="12" r="9" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8"/>
-                <Path d="M3 12H21M12 3 V21" stroke="rgba(0,0,0,0.4)" strokeWidth="1.4"/>
+                <Circle cx="12" cy="12" r="9" stroke={DT.outline} strokeWidth="1.8"/>
+                <Path d="M3 12H21M12 3 V21" stroke={DT.outline} strokeWidth="1.4"/>
               </Svg>
             </View>
             <Text style={styles.rowLabel}>Posición</Text>
@@ -341,7 +345,7 @@ export default function PerfilPublicoScreen() {
           <View style={styles.row}>
             <View style={styles.rowIcon}>
               <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Path d="M5 13L9 17L19 7" stroke="rgba(0,0,0,0.4)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <Path d="M5 13L9 17L19 7" stroke={DT.outline} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </Svg>
             </View>
             <Text style={styles.rowLabel}>Nivel</Text>
@@ -351,61 +355,62 @@ export default function PerfilPublicoScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: '#fff' },
-  center:         { flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  root:           { flex: 1, backgroundColor: DT.bg },
+  center:         { flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' },
 
   topbar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center' },
-  topbarTitle:    { fontSize: 16, fontWeight: '900', color: '#111', letterSpacing: 0.3 },
+  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  topbarTitle:    { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
 
   scroll:         { paddingHorizontal: 20, paddingBottom: 30 },
 
   heroBlock:      { alignItems: 'center', paddingTop: 12, paddingBottom: 18 },
-  avatarRing:     { width: 110, height: 110, borderRadius: 55, padding: 4, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  avatarRing:     { width: 110, height: 110, borderRadius: 55, padding: 4, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   avatarInner:    { width: '100%', height: '100%', borderRadius: 50, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarTxt:      { fontSize: 36, fontWeight: '900', color: '#fff' },
-  nombre:         { fontSize: 24, fontWeight: '900', color: '#111', letterSpacing: 0.4, textAlign: 'center', marginBottom: 2 },
-  ciudad:         { fontSize: 13, color: 'rgba(0,0,0,0.45)', marginTop: 2 },
+  avatarTxt:      { fontSize: 36, color: '#fff', fontFamily: FONTS.heading },
+  nombre:         { fontSize: 24, color: DT.onBg, letterSpacing: 0.4, textAlign: 'center', marginBottom: 2, fontFamily: FONTS.heading },
+  ciudad:         { fontSize: 13, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
 
   actionWrap:     { marginBottom: 22 },
 
-  btnPrimary:     { height: 52, backgroundColor: COLORS.accent, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryTxt:  { fontSize: 13, fontWeight: '900', color: '#000', letterSpacing: 1.5 },
+  btnPrimary:     { height: 52, backgroundColor: DT.primaryContainer, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  btnPrimaryTxt:  { fontSize: 13, color: '#fff', letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
 
-  btnAmigo:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52, borderRadius: 14, backgroundColor: 'rgba(143,204,0,0.12)', borderWidth: 1, borderColor: 'rgba(143,204,0,0.45)' },
-  btnAmigoTxt:    { fontSize: 12, fontWeight: '900', color: COLORS.accent, letterSpacing: 1.5 },
+  btnAmigo:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52, borderRadius: 14, backgroundColor: 'rgba(159,225,203,0.10)', borderWidth: 1, borderColor: 'rgba(159,225,203,0.40)' },
+  btnAmigoTxt:    { fontSize: 12, color: DT.success, letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
 
-  btnPendiente:   { height: 52, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },
-  btnPendienteTxt:{ fontSize: 12, fontWeight: '800', color: 'rgba(0,0,0,0.45)', letterSpacing: 1.5 },
+  btnPendiente:   { height: 52, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: DT.glassBorder },
+  btnPendienteTxt:{ fontSize: 12, color: DT.onSurfaceVar, letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
 
   btnSec:         { height: 42, alignItems: 'center', justifyContent: 'center' },
-  btnSecTxt:      { fontSize: 13, fontWeight: '700', color: '#D62B2B', letterSpacing: 0.3 },
+  btnSecTxt:      { fontSize: 13, color: DT.error, letterSpacing: 0.3, fontFamily: FONTS.bodyMed },
 
-  solicitudHint:  { fontSize: 13, color: 'rgba(0,0,0,0.55)', textAlign: 'center', marginBottom: 4 },
+  solicitudHint:  { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', marginBottom: 4, fontFamily: FONTS.body },
 
-  rachaCard:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 16, padding: 16, marginBottom: 14 },
-  rachaIcon:      { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,107,53,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  rachaCard:      { flexDirection: 'row', alignItems: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 16, padding: 16, marginBottom: 14 },
+  rachaIcon:      { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,107,53,0.14)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   rachaInfo:      { flex: 1 },
-  rachaTitle:     { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, color: 'rgba(0,0,0,0.35)' },
-  rachaNum:       { fontSize: 20, fontWeight: '900', color: '#111', letterSpacing: 0.3, marginTop: 2 },
-  rachaRecord:    { fontSize: 11, color: 'rgba(0,0,0,0.4)', marginTop: 3 },
+  rachaTitle:     { fontSize: 10, letterSpacing: 1.5, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
+  rachaNum:       { fontSize: 20, color: DT.onBg, letterSpacing: 0.3, marginTop: 2, fontFamily: FONTS.heading },
+  rachaRecord:    { fontSize: 11, color: DT.onSurfaceVar, marginTop: 3, fontFamily: FONTS.body },
 
-  statsRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F4F3EF', borderRadius: 18, paddingVertical: 16, marginBottom: 22 },
+  statsRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 18, paddingVertical: 16, marginBottom: 22 },
   statBox:        { flex: 1, alignItems: 'center' },
-  statDiv:        { width: 1, height: 28, backgroundColor: 'rgba(0,0,0,0.08)' },
-  statNum:        { fontSize: 22, fontWeight: '900', color: '#111' },
-  statLbl:        { fontSize: 11, color: 'rgba(0,0,0,0.5)', marginTop: 2 },
+  statDiv:        { width: 1, height: 28, backgroundColor: DT.glassBorder },
+  statNum:        { fontSize: 22, color: DT.onBg, fontFamily: FONTS.heading },
+  statLbl:        { fontSize: 11, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
 
-  sectionLabel:   { fontSize: 11, fontWeight: '900', color: 'rgba(0,0,0,0.4)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4 },
-  card:           { backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 16, overflow: 'hidden', marginBottom: 14 },
+  sectionLabel:   { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4, fontFamily: FONTS.mono },
+  card:           { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 16, overflow: 'hidden', marginBottom: 14 },
   row:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   rowIcon:        { width: 28, alignItems: 'center', marginRight: 10 },
-  rowLabel:       { flex: 1, fontSize: 13, color: 'rgba(0,0,0,0.45)', fontWeight: '600' },
-  rowVal:         { fontSize: 14, fontWeight: '800', color: '#111' },
-  rowDivider:     { height: 1, backgroundColor: 'rgba(0,0,0,0.05)', marginLeft: 16 },
+  rowLabel:       { flex: 1, fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.bodyMed },
+  rowVal:         { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyBold },
+  rowDivider:     { height: 1, backgroundColor: DT.glassBorder, marginLeft: 16 },
 });

@@ -3,7 +3,8 @@
 // Modal/pantalla full para calificar a 3 compañeros del partido.
 // Se navega aquí desde Inicio cuando hay calificaciones pendientes.
 // ═══════════════════════════════════════════════
-import { COLORS } from '@/constants';
+import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApi } from '@/hooks/useApi';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -45,7 +46,7 @@ function StarIcon({ filled, size = 36 }: { filled: boolean; size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? '#FFB800' : 'none'}>
       <Path
         d="M12 2L14.85 8.6L22 9.27L16.5 14.14L18.18 21.02L12 17.27L5.82 21.02L7.5 14.14L2 9.27L9.15 8.6L12 2Z"
-        stroke={filled ? '#FFB800' : 'rgba(0,0,0,0.25)'}
+        stroke={filled ? '#FFB800' : DT.outline}
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
@@ -56,7 +57,7 @@ function StarIcon({ filled, size = 36 }: { filled: boolean; size?: number }) {
 function CloseIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6L18 18M6 18L18 6" stroke="#111" strokeWidth="2" strokeLinecap="round"/>
+      <Path d="M6 6L18 18M6 18L18 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round"/>
     </Svg>
   );
 }
@@ -136,24 +137,32 @@ export default function CalificarScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.center}>
-          <ActivityIndicator color={COLORS.accent} size="large" />
-        </View>
-      </SafeAreaView>
+      <View style={styles.root}>
+        <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.center}>
+            <ActivityIndicator color={DT.primary} size="large" />
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   if (!partidos.length) {
     return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.center}>
-          <Text style={styles.emptyTxt}>Sin calificaciones pendientes</Text>
-          <TouchableOpacity style={styles.btnVolver} onPress={() => router.back()}>
-            <Text style={styles.btnVolverTxt}>VOLVER</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.root}>
+        <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.center}>
+            <Text style={styles.emptyTxt}>Sin calificaciones pendientes</Text>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.85}>
+              <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnVolver}>
+                <Text style={styles.btnVolverTxt}>VOLVER</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
@@ -161,9 +170,12 @@ export default function CalificarScreen() {
   const cal = partido.calificaciones[calIdx];
   if (!partido || !cal) {
     return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.center}><ActivityIndicator color={COLORS.accent} /></View>
-      </SafeAreaView>
+      <View style={styles.root}>
+        <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.center}><ActivityIndicator color={DT.primary} /></View>
+        </SafeAreaView>
+      </View>
     );
   }
 
@@ -175,10 +187,12 @@ export default function CalificarScreen() {
 
   const u = cal.usuario;
   const initials = ((u.nombre?.[0] || '') + (u.apellido?.[0] || '')).toUpperCase() || '?';
-  const avatarBg = u.color_hex || COLORS.accent;
+  const avatarBg = u.color_hex || DT.primaryContainer;
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
+      <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }}>
       <View style={styles.topbar}>
         <TouchableOpacity style={styles.closeBtn} onPress={saltar}>
           <CloseIcon />
@@ -248,39 +262,40 @@ export default function CalificarScreen() {
         reportadoNombre={reporteTarget?.nombre || ''}
         onSent={() => setReporteOpen(false)}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: '#fff' },
+  root:           { flex: 1, backgroundColor: DT.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
-  emptyTxt:       { fontSize: 14, color: 'rgba(0,0,0,0.45)', marginBottom: 16 },
-  btnVolver:      { paddingHorizontal: 24, height: 44, borderRadius: 12, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
-  btnVolverTxt:   { fontSize: 13, fontWeight: '900', color: '#000', letterSpacing: 1.5 },
+  emptyTxt:       { fontSize: 14, color: DT.onSurfaceVar, marginBottom: 16, fontFamily: FONTS.body },
+  btnVolver:      { paddingHorizontal: 24, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  btnVolverTxt:   { fontSize: 13, color: '#fff', letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
 
   topbar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  closeBtn:       { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center' },
-  progress:       { fontSize: 12, fontWeight: '800', color: 'rgba(0,0,0,0.4)', letterSpacing: 1.5 },
+  closeBtn:       { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  progress:       { fontSize: 12, color: DT.onSurfaceVar, letterSpacing: 1.5, fontFamily: FONTS.mono },
 
   scroll:         { padding: 20, paddingBottom: 40, alignItems: 'center' },
-  kicker:         { fontSize: 11, fontWeight: '900', color: 'rgba(0,0,0,0.35)', letterSpacing: 2, marginBottom: 4 },
-  partidoLine:    { fontSize: 13, color: 'rgba(0,0,0,0.5)', marginBottom: 24, textAlign: 'center' },
+  kicker:         { fontSize: 11, color: DT.primary, letterSpacing: 2, marginBottom: 4, fontFamily: FONTS.mono },
+  partidoLine:    { fontSize: 13, color: DT.onSurfaceVar, marginBottom: 24, textAlign: 'center', fontFamily: FONTS.body },
 
   avatarBlock:    { alignItems: 'center', marginVertical: 14 },
   avatarRing:     { width: 130, height: 130, borderRadius: 65, padding: 4, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  avatarInner:    { width: '100%', height: '100%', borderRadius: 60, backgroundColor: '#F2F1EF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarTxt:      { fontSize: 42, fontWeight: '900', color: '#fff' },
-  nombre:         { fontSize: 22, fontWeight: '900', color: '#111', letterSpacing: 0.4, textAlign: 'center' },
-  posicion:       { fontSize: 12, color: 'rgba(0,0,0,0.4)', marginTop: 4, fontWeight: '700' },
+  avatarInner:    { width: '100%', height: '100%', borderRadius: 60, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarTxt:      { fontSize: 42, color: '#fff', fontFamily: FONTS.heading },
+  nombre:         { fontSize: 22, color: DT.onBg, letterSpacing: 0.4, textAlign: 'center', fontFamily: FONTS.heading },
+  posicion:       { fontSize: 12, color: DT.onSurfaceVar, marginTop: 4, fontFamily: FONTS.bodyMed },
 
-  preguntaLbl:    { fontSize: 14, fontWeight: '700', color: '#111', marginTop: 22, marginBottom: 16 },
+  preguntaLbl:    { fontSize: 14, color: DT.onBg, marginTop: 22, marginBottom: 16, fontFamily: FONTS.bodyMed },
 
   starsRow:       { flexDirection: 'row', gap: 6, marginBottom: 14 },
   starBtn:        { padding: 6 },
 
-  helperTxt:      { fontSize: 11, color: 'rgba(0,0,0,0.35)', textAlign: 'center', lineHeight: 16, marginTop: 8 },
-  anonTxt:        { fontSize: 11, color: 'rgba(0,0,0,0.3)', marginTop: 22, fontStyle: 'italic' },
+  helperTxt:      { fontSize: 11, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 16, marginTop: 8, fontFamily: FONTS.body },
+  anonTxt:        { fontSize: 11, color: DT.outline, marginTop: 22, fontStyle: 'italic', fontFamily: FONTS.body },
   reportarBtn:    { marginTop: 30, paddingVertical: 10, paddingHorizontal: 16 },
-  reportarBtnTxt: { fontSize: 12, color: 'rgba(0,0,0,0.4)', fontWeight: '600', textAlign: 'center', textDecorationLine: 'underline' },
+  reportarBtnTxt: { fontSize: 12, color: DT.onSurfaceVar, textAlign: 'center', textDecorationLine: 'underline', fontFamily: FONTS.bodyMed },
 });

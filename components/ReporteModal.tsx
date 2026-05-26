@@ -8,7 +8,7 @@ import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useApi } from '@/hooks/useApi';
-import { COLORS } from '@/constants';
+import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import { track } from '@/lib/analytics';
 
 type Razon = 'conducta_antideportiva' | 'agresion' | 'no_asistio' | 'lesion' | 'otro';
@@ -94,7 +94,7 @@ export default function ReporteModal({
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: '#111' }}>×</Text>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: DT.onBg }}>×</Text>
             </TouchableOpacity>
           </View>
 
@@ -122,7 +122,7 @@ export default function ReporteModal({
               value={comentario}
               onChangeText={setComentario}
               placeholder="Cuéntanos qué pasó. Sé breve y claro."
-              placeholderTextColor="rgba(0,0,0,0.3)"
+              placeholderTextColor={DT.outline}
               multiline
               numberOfLines={4}
               maxLength={1000}
@@ -138,7 +138,7 @@ export default function ReporteModal({
             activeOpacity={0.85}
           >
             {enviando
-              ? <ActivityIndicator color="#000" />
+              ? <ActivityIndicator color="#fff" />
               : <Text style={styles.btnTxt}>ENVIAR REPORTE</Text>
             }
           </TouchableOpacity>
@@ -154,22 +154,22 @@ export default function ReporteModal({
 }
 
 const styles = StyleSheet.create({
-  modal:        { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 30 },
+  modal:        { backgroundColor: DT.surfaceLow, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 30, borderWidth: 1, borderColor: DT.glassBorder },
   header:       { flexDirection: 'row', alignItems: 'center', padding: 20, paddingBottom: 12 },
-  title:        { fontSize: 14, fontWeight: '900', color: '#111', letterSpacing: 1 },
-  subtitle:     { fontSize: 12, color: 'rgba(0,0,0,0.5)', marginTop: 2 },
-  closeBtn:     { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },
-  sectionLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(0,0,0,0.45)', letterSpacing: 1.2, marginHorizontal: 20, marginBottom: 10 },
+  title:        { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
+  subtitle:     { fontSize: 12, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
+  closeBtn:     { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  sectionLabel: { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.2, marginHorizontal: 20, marginBottom: 10, fontFamily: FONTS.mono },
   razonRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  razonRowSel:  { backgroundColor: 'rgba(122,184,0,0.06)' },
-  radio:        { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center' },
-  radioSel:     { borderColor: COLORS.accent },
-  radioDot:     { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.accent },
-  razonTxt:     { fontSize: 14, color: 'rgba(0,0,0,0.7)', fontWeight: '600' },
-  razonTxtSel:  { color: '#111', fontWeight: '700' },
-  input:        { marginHorizontal: 20, padding: 12, fontSize: 13, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', borderRadius: 12, backgroundColor: '#FAFAFA', minHeight: 90, maxHeight: 140 },
-  counter:      { fontSize: 11, color: 'rgba(0,0,0,0.4)', textAlign: 'right', marginRight: 20, marginTop: 4 },
-  btn:          { height: 50, marginHorizontal: 20, marginTop: 18, backgroundColor: COLORS.accent, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  btnTxt:       { fontSize: 13, fontWeight: '900', color: '#000', letterSpacing: 1.2 },
-  disclaimer:   { fontSize: 10, color: 'rgba(0,0,0,0.35)', textAlign: 'center', marginTop: 10, paddingHorizontal: 30, lineHeight: 14 },
+  razonRowSel:  { backgroundColor: 'rgba(190,194,255,0.08)' },
+  radio:        { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  radioSel:     { borderColor: DT.primary },
+  radioDot:     { width: 10, height: 10, borderRadius: 5, backgroundColor: DT.primary },
+  razonTxt:     { fontSize: 14, color: DT.onSurfaceVar, fontFamily: FONTS.body },
+  razonTxtSel:  { color: DT.onBg, fontFamily: FONTS.bodyMed },
+  input:        { marginHorizontal: 20, padding: 12, fontSize: 13, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.06)', minHeight: 90, maxHeight: 140, color: DT.onBg, fontFamily: FONTS.body },
+  counter:      { fontSize: 11, color: DT.outline, textAlign: 'right', marginRight: 20, marginTop: 4, fontFamily: FONTS.mono },
+  btn:          { height: 52, marginHorizontal: 20, marginTop: 18, backgroundColor: DT.primaryContainer, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
+  btnTxt:       { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+  disclaimer:   { fontSize: 10, color: DT.outline, textAlign: 'center', marginTop: 10, paddingHorizontal: 30, lineHeight: 14, fontFamily: FONTS.body },
 });
