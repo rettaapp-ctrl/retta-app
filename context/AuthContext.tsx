@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import { API_URL } from '@/constants';
+import { API_URL, LEGAL_VERSION } from '@/constants';
 import { identify, resetAnalytics, track } from '@/lib/analytics';
 
 // Configura cómo se muestran las notificaciones cuando la app está abierta
@@ -35,6 +35,8 @@ interface User {
   expo_push_token?: string;
   email_verificado?: boolean;
   onboarding_completo?: boolean;
+  legal_aceptado_version?: string | null;
+  legal_aceptado_at?: string | null;
 }
 
 export interface OnboardingPerfilData {
@@ -66,6 +68,7 @@ interface AuthContextType {
   handleUnauthorized: () => Promise<void>;
   refreshAccessToken: () => Promise<string | null>;
   refreshUser: () => Promise<void>;
+  aceptarLegal: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -231,11 +234,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // ── Registro: SIEMPRE requiere verificación de email ──
+  // Manda legal_version porque el registro implica aceptar T&C + Aviso.
+  // El backend lo guarda con timestamp como prueba de consentimiento.
   async function register(registerData: RegisterData): Promise<AuthResult> {
     const res = await fetch(`${API_URL}/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(registerData),
+      body: JSON.stringify({ ...registerData, legal_version: LEGAL_VERSION }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al registrarse');
@@ -375,6 +380,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }
 
+  // ── Aceptar la versión actual de Términos + Aviso de Privacidad ──
+  // La llama la pantalla bloqueante /aceptar-legal cuando el usuario
+  // tap "Acepto y continúo". Persiste con timestamp en el backend.
+  //
+  // Maneja auto-refresh del access token igual que useApi: si el token
+  // local está caducado (401), pide uno nuevo con refreshAccessToken y
+  // reintenta UNA vez. Si el refresh falla, cierra sesión limpia.
+  // Es importante porque la pantalla bloqueante suele dispararse al abrir
+  // la app después de horas/días — es justo cuando los tokens caducan.
+  async function aceptarLegal() {
+    if (!token) throw new Error('Sesión inválida');
+
+    const doFetch = (tk: string) => fetch(`${API_URL}/usuarios/me/aceptar-legal`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tk}`,
+      },
+      body: JSON.stringify({ version: LEGAL_VERSION }),
+    });
+
+    let res = await doFetch(token);
+
+    // Token expirado → refresh transparente y reintento único
+    if (res.status === 401) {
+      const newToken = await refreshAccessToken();
+      if (!newToken) {
+        await handleUnauthorized();
+        throw new Error('Sesión expirada. Por favor inicia sesión de nuevo.');
+      }
+      res = await doFetch(newToken);
+      if (res.status === 401) {
+        await handleUnauthorized();
+        throw new Error('Sesión expirada. Por favor inicia sesión de nuevo.');
+      }
+    }
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'No se pudo registrar la aceptación');
+
+    const newUser = {
+      ...user,
+      legal_aceptado_version: json.legal_aceptado_version,
+      legal_aceptado_at:      json.legal_aceptado_at,
+    } as User;
+    setUser(newUser);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser));
+    track('legal_aceptado', { version: LEGAL_VERSION });
+  }
+
   async function updateUser(data: Partial<User>) {
     const res = await fetch(`${API_URL}/usuarios/me`, {
       method: 'PATCH',
@@ -400,6 +455,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       forgotPassword, resetPassword,
       logout, updateUser, completarOnboarding,
       handleUnauthorized, refreshAccessToken, refreshUser,
+      aceptarLegal,
     }}>
       {children}
     </AuthContext.Provider>

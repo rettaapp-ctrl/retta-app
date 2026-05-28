@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { DT } from '@/constants/designTokens';
+import { LEGAL_VERSION } from '@/constants';
 import * as Sentry from '@sentry/react-native';
 import * as SecureStore from 'expo-secure-store';
 import { TUTORIAL_SEEN_KEY } from './tutorial';
@@ -58,9 +59,10 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (loading || tutorialSeen === null) return;
-    const inAuthGroup  = segments[0] === '(auth)';
-    const inOnboarding = segments[1] === 'onboarding-perfil';
-    const inTutorial   = segments[0] === 'tutorial';
+    const inAuthGroup    = segments[0] === '(auth)';
+    const inOnboarding   = segments[1] === 'onboarding-perfil';
+    const inTutorial     = segments[0] === 'tutorial';
+    const inAceptarLegal = segments[0] === 'aceptar-legal';
 
     if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
@@ -70,12 +72,33 @@ function RootLayoutNav() {
       router.replace('/(auth)/onboarding-perfil');
       return;
     }
+    // Bloqueo legal: si el usuario no aceptó la versión vigente de T&C +
+    // Aviso de Privacidad, lo redirigimos a /aceptar-legal antes de cualquier
+    // otra pantalla. Esto incluye usuarios previos a esta feature (NULL) y
+    // a quienes les bumpeamos LEGAL_VERSION por cambios al texto.
+    if (
+      user &&
+      user.onboarding_completo !== false &&
+      user.legal_aceptado_version !== LEGAL_VERSION &&
+      !inAceptarLegal
+    ) {
+      router.replace('/aceptar-legal');
+      return;
+    }
     // Después de onboarding-perfil pero antes de tabs: mostrar tutorial 1 vez
-    if (user && user.onboarding_completo !== false && !tutorialSeen && !inTutorial) {
+    if (
+      user && user.onboarding_completo !== false &&
+      user.legal_aceptado_version === LEGAL_VERSION &&
+      !tutorialSeen && !inTutorial
+    ) {
       router.replace('/tutorial');
       return;
     }
-    if (user && user.onboarding_completo !== false && tutorialSeen && inAuthGroup) {
+    if (
+      user && user.onboarding_completo !== false &&
+      user.legal_aceptado_version === LEGAL_VERSION &&
+      tutorialSeen && (inAuthGroup || inAceptarLegal)
+    ) {
       router.replace('/(tabs)/partidos');
     }
   }, [user, loading, tutorialSeen, segments]);
@@ -93,6 +116,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="tutorial"     options={{ animation: 'fade' }} />
+      <Stack.Screen name="aceptar-legal" options={{ animation: 'fade', gestureEnabled: false }} />
       <Stack.Screen name="partido/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="usuario/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="amigos"       options={{ presentation: 'card' }} />

@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import Svg, { Path } from 'react-native-svg';
 
 const EDAD_MINIMA = 16;
 
@@ -47,6 +48,7 @@ export default function RegisterScreen() {
   const [showPicker, setShowPicker]   = useState(false);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState('');
+  const [aceptaLegal, setAceptaLegal] = useState(false);
 
   function update(key: string, val: string) { setForm(f => ({ ...f, [key]: val })); }
 
@@ -72,6 +74,10 @@ export default function RegisterScreen() {
     const edad = calcularEdad(fechaNac);
     if (edad < EDAD_MINIMA) {
       setError(`Debes tener al menos ${EDAD_MINIMA} años para usar Retta`); return;
+    }
+    if (!aceptaLegal) {
+      setError('Debes aceptar los Términos y el Aviso de Privacidad para continuar');
+      return;
     }
     setError('');
     setLoading(true);
@@ -171,8 +177,36 @@ export default function RegisterScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
-            <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+          {/* Checkbox obligatorio de aceptación legal — LFPDPPP / LFPC.
+              El usuario debe marcarlo activamente; el botón valida y bloquea
+              si no está marcado. La versión se manda al backend al registrar. */}
+          <TouchableOpacity
+            style={styles.legalRow}
+            onPress={() => setAceptaLegal(v => !v)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, aceptaLegal && styles.checkboxOn]}>
+              {aceptaLegal && (
+                <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <Path d="M5 12L10 17L19 8" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </Svg>
+              )}
+            </View>
+            <Text style={styles.legalTxt}>
+              He leído y acepto los{' '}
+              <Text style={styles.legalLink} onPress={() => router.push('/terminos')}>Términos y Condiciones</Text>
+              {' '}y el{' '}
+              <Text style={styles.legalLink} onPress={() => router.push('/privacidad')}>Aviso de Privacidad</Text>
+              {' '}de Retta.
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleRegister} disabled={loading || !aceptaLegal} activeOpacity={0.85}>
+            <LinearGradient
+              colors={aceptaLegal ? GRADIENTS.button : ['#3a3d4a', '#3a3d4a', '#3a3d4a'] as any}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={[styles.btn, !aceptaLegal && { opacity: 0.6 }]}
+            >
               {loading
                 ? <ActivityIndicator color="#fff" />
                 : <Text style={styles.btnTxt}>CREAR CUENTA</Text>
@@ -180,13 +214,8 @@ export default function RegisterScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Aviso simplificado — obligatorio al momento de recolectar datos (LFPDPPP) */}
           <Text style={styles.aviso}>
-            Al crear tu cuenta aceptas los{' '}
-            <Text style={styles.avisoLink} onPress={() => router.push('/terminos')}>Términos y Condiciones</Text>
-            {' '}y el{' '}
-            <Text style={styles.avisoLink} onPress={() => router.push('/privacidad')}>Aviso de Privacidad</Text>
-            {' '}de RETTA. Tus datos serán tratados para crear y administrar tu cuenta, gestionar tus partidos y mejorar el servicio, con apoyo de proveedores tecnológicos que pueden encontrarse fuera de México.
+            Tus datos serán tratados para crear y administrar tu cuenta, gestionar tus partidos y mejorar el servicio, con apoyo de proveedores tecnológicos que pueden encontrarse fuera de México.
           </Text>
         </View>
       </ScrollView>
@@ -212,6 +241,11 @@ const styles = StyleSheet.create({
   btnTxt:           { fontSize: 14, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
   pickerDoneBtn:    { height: 44, backgroundColor: DT.primaryContainer, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   pickerDoneTxt:    { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
-  aviso:            { fontSize: 11, color: DT.outline, lineHeight: 16, marginTop: 16, textAlign: 'center', fontFamily: FONTS.body },
+  aviso:            { fontSize: 11, color: DT.outline, lineHeight: 16, marginTop: 14, textAlign: 'center', fontFamily: FONTS.body },
   avisoLink:        { color: DT.primary, fontFamily: FONTS.bodyMed, textDecorationLine: 'underline' },
+  legalRow:         { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16, marginTop: 4, paddingVertical: 6 },
+  checkbox:         { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: DT.outline, backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
+  checkboxOn:       { backgroundColor: DT.primaryContainer, borderColor: DT.primaryContainer },
+  legalTxt:         { flex: 1, fontSize: 12, color: DT.onSurfaceVar, lineHeight: 17, fontFamily: FONTS.body },
+  legalLink:        { color: DT.primary, fontFamily: FONTS.bodyMed, textDecorationLine: 'underline' },
 });

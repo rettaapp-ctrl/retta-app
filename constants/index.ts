@@ -4,6 +4,17 @@ export const API_URL = 'https://retta-backend-production.up.railway.app/api';
 // Es público sin auth — el rate limiting vive del lado del Worker.
 export const CHAT_URL = 'https://retta-chat.rettaapp.workers.dev';
 
+// ─────────────────────────────────────────────────────────────────
+// LEGAL_VERSION
+// Versión actual de Términos y Aviso de Privacidad.
+// CUANDO ACTUALICES el texto de terminos.tsx o privacidad.tsx, sube
+// esta cadena (ej: '2026-08-15') — todos los usuarios verán la
+// pantalla bloqueante /aceptar-legal en la siguiente apertura y deberán
+// aceptar de nuevo para poder usar la app.
+// Convención: fecha ISO de la actualización.
+// ─────────────────────────────────────────────────────────────────
+export const LEGAL_VERSION = '2026-05-26';
+
 // Supabase — anon key es público (no es secreto), pero centralizado para
 // que cualquier rotación futura toque un solo lugar.
 export const SUPABASE_URL      = 'https://nfdmnpkojrzqfkpdxuxb.supabase.co';
