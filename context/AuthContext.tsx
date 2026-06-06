@@ -5,6 +5,34 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { API_URL, LEGAL_VERSION } from '@/constants';
 import { identify, resetAnalytics, track } from '@/lib/analytics';
+import {
+  isInfraOutage,
+  isNetworkError,
+  SERVICE_DOWN_MESSAGE,
+  NO_INTERNET_MESSAGE,
+} from '@/lib/serviceStatus';
+
+// Helper compartido por login/register/verifyEmail: cuando fetch crudo falla,
+// distinguir si fue por red caída del usuario o por infra de Retta caída,
+// y dar un mensaje claro. Usar este en vez de los catches genéricos.
+async function safeFetchJSON(url: string, init: RequestInit): Promise<{ res: Response; data: any }> {
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (err) {
+    // Sin internet vs infra caída
+    if (isNetworkError(err)) throw new Error(NO_INTERNET_MESSAGE);
+    throw new Error(SERVICE_DOWN_MESSAGE);
+  }
+  if (isInfraOutage(res)) throw new Error(SERVICE_DOWN_MESSAGE);
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    if (!res.ok) throw new Error(SERVICE_DOWN_MESSAGE);
+  }
+  return { res, data };
+}
 
 // Configura cómo se muestran las notificaciones cuando la app está abierta
 Notifications.setNotificationHandler({
@@ -56,6 +84,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
+  /** true cuando la sesión venció (token + refresh fallaron) y el usuario fue
+   *  redirigido al login. La pantalla de login lee este flag para mostrar un
+   *  mensaje amigable ("Tu sesión expiró"). Después de mostrarlo, debe llamar
+   *  clearSessionExpired() para que no se vuelva a mostrar. */
+  sessionExpired: boolean;
+  clearSessionExpired: () => void;
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (data: RegisterData) => Promise<AuthResult>;
   verifyEmail: (email: string, codigo: string) => Promise<void>;
@@ -90,6 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]   = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Flag: true cuando handleUnauthorized() acaba de correr (sesión expiró).
+  // La pantalla de login lo lee para mostrar un banner, después llama
+  // clearSessionExpired() para limpiarlo. Se resetea solo al loguear.
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   // Refs paralelos al state para que useApi pueda leer el valor actual
   // sin recrear el callback en cada cambio.
@@ -145,6 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
         refreshTokenRef.current = savedRefreshToken;
+        // Re-registrar el push token también al restaurar sesión vieja, no solo
+        // al loguear. Esto cubre el caso de usuarios que rechazaron permisos
+        // la primera vez y los aceptaron después manualmente — la próxima
+        // apertura sí guarda el token y empiezan a llegarles notifs.
+        registerPushToken(savedToken);
       }
     } catch {}
     setLoading(false);
@@ -160,6 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
+    // Si veníamos de una sesión expirada, ya entramos a una nueva — limpiar el flag.
+    setSessionExpired(false);
     registerPushToken(newToken);
 
     // Analytics: vincular eventos al usuario. NO mandamos email/teléfono/nombre
@@ -212,21 +257,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Login ──
+  // Errores claros: sin conexión, servicio caído, credenciales incorrectas.
   async function login(email: string, password: string): Promise<AuthResult> {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const { res, data } = await safeFetchJSON(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
 
     // Backend manda 403 con requiere_verificacion si el email aún no se verifica.
     // En ese caso ya mandó un nuevo código por email.
-    if (res.status === 403 && data.requiere_verificacion) {
+    if (res.status === 403 && data?.requiere_verificacion) {
       track('auth_login_requiere_verificacion');
       return { requiere_verificacion: true, email: data.email };
     }
-    if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
+    if (!res.ok) {
+      const fallback = res.status === 401
+        ? 'Email o contraseña incorrectos'
+        : res.status >= 500
+          ? SERVICE_DOWN_MESSAGE
+          : 'No se pudo iniciar sesión. Intenta de nuevo.';
+      throw new Error(data?.error || fallback);
+    }
 
     await persistSession(data.token, data.refresh_token || null, data.usuario);
     track('auth_login_completado');
@@ -236,14 +288,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Registro: SIEMPRE requiere verificación de email ──
   // Manda legal_version porque el registro implica aceptar T&C + Aviso.
   // El backend lo guarda con timestamp como prueba de consentimiento.
+  // Errores claros: sin conexión, servicio caído, email duplicado, validación.
   async function register(registerData: RegisterData): Promise<AuthResult> {
-    const res = await fetch(`${API_URL}/auth/registro`, {
+    const { res, data } = await safeFetchJSON(`${API_URL}/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...registerData, legal_version: LEGAL_VERSION }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al registrarse');
+    if (!res.ok) {
+      // Backend ya manda mensajes claros: "Este email ya está registrado",
+      // "La contraseña debe tener al menos 6 caracteres", etc.
+      // Si por algún motivo no llegó mensaje, damos uno útil con el status.
+      const fallback = res.status === 409
+        ? 'Este email ya está registrado'
+        : res.status >= 500
+          ? SERVICE_DOWN_MESSAGE
+          : 'No pudimos crear tu cuenta. Verifica los datos e intenta de nuevo.';
+      throw new Error(data?.error || fallback);
+    }
 
     track('auth_registro_completado', {
       ciudad: registerData.ciudad || null,
@@ -327,8 +389,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function handleUnauthorized() {
-    // Token expirado y refresh falló — limpiar sesión y mandar al login
+    // Token expirado y refresh falló — limpiar sesión, mandar al login,
+    // y marcar el flag para que login muestre el mensaje friendly.
     await clearLocalSession();
+    setSessionExpired(true);
+  }
+
+  function clearSessionExpired() {
+    setSessionExpired(false);
   }
 
   async function completarOnboarding(data: OnboardingPerfilData) {
@@ -450,6 +518,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, token, loading,
+      sessionExpired, clearSessionExpired,
       login, register,
       verifyEmail, resendCode,
       forgotPassword, resetPassword,

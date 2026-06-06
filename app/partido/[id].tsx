@@ -3,8 +3,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { confirmarCancelacion } from '@/lib/cancelacion';
 import { openMaps, buildMapQuery } from '@/lib/mapas';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState, useRef } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator, Alert, Image,
   ScrollView, StyleSheet, Text,
@@ -54,7 +54,7 @@ interface Partido {
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
@@ -191,7 +191,15 @@ export default function PartidoDetailScreen() {
     });
   }
 
-  useEffect(() => { load(); }, [id]);
+  // Refresca cada vez que la pantalla se enfoca, NO solo en mount.
+  // Esto soluciona el bug donde al confirmar inscripción y volver con
+  // router.back() el state local de jugadores quedaba stale (el avatar
+  // del usuario "desaparecía" en el slot porque yaInscrito era false).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [id])
+  );
 
   async function load() {
     try {

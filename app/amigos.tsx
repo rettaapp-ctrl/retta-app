@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { track } from '@/lib/analytics';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList,
+  ActivityIndicator, Alert, FlatList, ScrollView,
   RefreshControl, StyleSheet, Text, TextInput,
   TouchableOpacity, View, KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -41,11 +41,10 @@ interface UsuarioBusqueda {
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 function SearchIcon() {
   return (
     <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -113,6 +112,20 @@ export default function AmigosScreen() {
     }, 350);
     return () => clearTimeout(t);
   }, [search]);
+
+  // Cuando hay búsqueda activa, dividir resultados entre "Tus amigos" y
+  // "Descubrir personas" para que el usuario pueda distinguir rápido a quién
+  // ya conoce vs gente nueva (era un solo listado plano antes, confuso).
+  const amigoIds = new Set(amigos.map(a => a.amigo?.id).filter(Boolean) as string[]);
+  const q = search.trim().toLowerCase();
+  const amigosFiltrados = q.length >= 2
+    ? amigos.filter(a => {
+        if (!a.amigo) return false;
+        const full = `${a.amigo.nombre || ''} ${a.amigo.apellido || ''}`.toLowerCase();
+        return full.includes(q);
+      })
+    : [];
+  const descubrir = resultados.filter(u => !amigoIds.has(u.id));
 
   async function responder(amistadId: string, action: 'aceptar' | 'rechazar') {
     try {
@@ -255,22 +268,42 @@ export default function AmigosScreen() {
           )}
         </View>
 
-        {/* Si hay búsqueda activa, mostrar resultados */}
+        {/* Si hay búsqueda activa, mostrar dos secciones: amigos + descubrir */}
         {search.trim().length >= 2 ? (
-          <FlatList
-            data={resultados}
-            keyExtractor={i => i.id}
-            renderItem={renderResultadoBusqueda}
-            ListHeaderComponent={
-              <Text style={styles.sectionLabel}>
-                {buscando ? 'Buscando…' : `${resultados.length} resultado${resultados.length === 1 ? '' : 's'}`}
-              </Text>
-            }
-            ListEmptyComponent={
-              !buscando ? <Text style={styles.empty}>Sin resultados.</Text> : null
-            }
+          <ScrollView
             contentContainerStyle={{ paddingBottom: 30 }}
-          />
+            keyboardShouldPersistTaps="handled"
+          >
+            {buscando && (
+              <Text style={styles.sectionLabel}>Buscando…</Text>
+            )}
+
+            {!buscando && amigosFiltrados.length === 0 && descubrir.length === 0 && (
+              <Text style={styles.empty}>Sin resultados.</Text>
+            )}
+
+            {amigosFiltrados.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>
+                  Tus amigos · {amigosFiltrados.length}
+                </Text>
+                {amigosFiltrados.map(item => (
+                  <View key={item.id}>{renderAmigo({ item })}</View>
+                ))}
+              </>
+            )}
+
+            {descubrir.length > 0 && (
+              <>
+                <Text style={[styles.sectionLabel, amigosFiltrados.length > 0 && { marginTop: 18 }]}>
+                  Descubrir personas · {descubrir.length}
+                </Text>
+                {descubrir.map(item => (
+                  <View key={item.id}>{renderResultadoBusqueda({ item })}</View>
+                ))}
+              </>
+            )}
+          </ScrollView>
         ) : (
           <>
             {/* Tabs */}
@@ -352,7 +385,7 @@ export default function AmigosScreen() {
 const styles = StyleSheet.create({
   root:           { flex: 1, backgroundColor: DT.bg },
   topbar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:    { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
 
   searchWrap:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, paddingHorizontal: 14, height: 46, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 14, marginBottom: 14 },

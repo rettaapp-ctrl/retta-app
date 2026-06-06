@@ -8,6 +8,7 @@ import { DT } from '@/constants/designTokens';
 import { LEGAL_VERSION } from '@/constants';
 import * as Sentry from '@sentry/react-native';
 import * as SecureStore from 'expo-secure-store';
+import * as Notifications from 'expo-notifications';
 import { TUTORIAL_SEEN_KEY } from './tutorial';
 import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { POSTHOG_CONFIG, registerAnalyticsClient } from '@/lib/analytics';
@@ -43,6 +44,33 @@ function RootLayoutNav() {
     SecureStore.getItemAsync(TUTORIAL_SEEN_KEY)
       .then(v => setTutorialSeen(v === '1'))
       .catch(() => setTutorialSeen(true)); // si falla, asumimos visto (no molestar)
+  }, []);
+
+  // ─── Deep-link de notificaciones ───
+  // Cuando el usuario toca una notificación push, el backend mete data:
+  // { partido_id: '...' } en el payload. Aquí escuchamos ese tap y
+  // navegamos directo al partido en vez de dejarlo en la pantalla actual.
+  // Soporta:
+  //   • cold-start (app estaba cerrada y se abre tocando la notif)
+  //   • foreground/background (app abierta o suspendida)
+  useEffect(() => {
+    // 1) Cold-start: revisar si la última notif tocada al abrir trae partido_id
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      const partidoId = response?.notification?.request?.content?.data?.partido_id;
+      if (partidoId && typeof partidoId === 'string') {
+        // Delay para asegurar que el routing inicial terminó antes de navegar
+        setTimeout(() => router.push(`/partido/${partidoId}?desde=notificacion`), 600);
+      }
+    }).catch(() => {});
+
+    // 2) Foreground/background: listener vivo de cualquier notif tocada
+    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      const partidoId = response?.notification?.request?.content?.data?.partido_id;
+      if (partidoId && typeof partidoId === 'string') {
+        router.push(`/partido/${partidoId}?desde=notificacion`);
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   // Re-verifica el flag del tutorial cada vez que cambia la pantalla.

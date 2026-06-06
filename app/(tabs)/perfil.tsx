@@ -17,6 +17,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 interface Inscripcion {
   id: string;
   status: string;
+  equipo?: 'A' | 'B' | null;
   v_partidos: {
     id: string;
     fecha: string;
@@ -24,6 +25,9 @@ interface Inscripcion {
     tipo: string;
     complejo_nombre: string;
     cancha_nombre: string;
+    goles_a?: number | null;
+    goles_b?: number | null;
+    equipo_ganador?: 'A' | 'B' | 'EMPATE' | null;
   };
 }
 
@@ -267,8 +271,38 @@ export default function PerfilScreen() {
                 if (!p) return null;
                 const f = formatFecha(p.fecha);
                 const isLast = i === visibles.length - 1;
+
+                // Calcular resultado del usuario en este partido. Si no se reportó
+                // marcador, se queda como "JUGÓ" en gris. Si sí, se muestra el
+                // marcador real y un badge GANÓ/EMPATE/PERDIÓ con color contextual.
+                const tieneMarcador =
+                  typeof p.goles_a === 'number' && typeof p.goles_b === 'number' && p.equipo_ganador;
+                let resultado: 'GANÓ' | 'EMPATE' | 'PERDIÓ' | 'JUGÓ' = 'JUGÓ';
+                let resultColor = DT.onSurfaceVar;
+                let resultBg    = 'rgba(255,255,255,0.06)';
+                if (tieneMarcador && item.equipo) {
+                  if (p.equipo_ganador === 'EMPATE') {
+                    resultado = 'EMPATE';
+                    resultColor = DT.warning;
+                    resultBg    = 'rgba(250,199,117,0.12)';
+                  } else if (p.equipo_ganador === item.equipo) {
+                    resultado = 'GANÓ';
+                    resultColor = DT.success;
+                    resultBg    = 'rgba(159,225,203,0.12)';
+                  } else {
+                    resultado = 'PERDIÓ';
+                    resultColor = DT.error;
+                    resultBg    = 'rgba(255,180,171,0.10)';
+                  }
+                }
+
                 return (
-                  <View key={item.id} style={[styles.matchPrev, isLast && { borderBottomWidth: 0 }]}>
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => router.push(`/partido/${p.id}?desde=perfil`)}
+                    style={[styles.matchPrev, isLast && { borderBottomWidth: 0 }]}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.mpDate}>
                       <Text style={styles.mpDateDay}>{f.dia}</Text>
                       <Text style={styles.mpDateMes}>{f.mes}</Text>
@@ -276,12 +310,17 @@ export default function PerfilScreen() {
                     <View style={styles.mpDivider} />
                     <View style={styles.mpInfo}>
                       <Text style={styles.mpVenue} numberOfLines={1}>{p.complejo_nombre} — {p.cancha_nombre}</Text>
-                      <Text style={styles.mpDetail}>{p.tipo} · {p.hora_inicio?.slice(0, 5)}</Text>
+                      <Text style={styles.mpDetail}>
+                        {p.tipo} · {p.hora_inicio?.slice(0, 5)}
+                        {tieneMarcador && (
+                          <Text style={styles.mpScore}> · {p.goles_a}–{p.goles_b}</Text>
+                        )}
+                      </Text>
                     </View>
-                    <View style={styles.mpResult}>
-                      <Text style={styles.mpResultTxt}>JUGÓ</Text>
+                    <View style={[styles.mpResult, { backgroundColor: resultBg }]}>
+                      <Text style={[styles.mpResultTxt, { color: resultColor }]}>{resultado}</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -338,6 +377,7 @@ const styles = StyleSheet.create({
   mpInfo:         { flex: 1 },
   mpVenue:        { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2 },
   mpDetail:       { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
+  mpScore:        { color: DT.onBg, fontFamily: FONTS.bodyBold },
   mpResult:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
   mpResultTxt:    { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 0.5, color: DT.onSurfaceVar },
 });

@@ -1,95 +1,127 @@
 // ═══════════════════════════════════════════════════════════
 // RETTA — app/reportar-comportamiento.tsx
-// Pantalla para reportar comportamientos inadecuados fuera del
-// flujo normal de "reportar jugador" (que está en calificar y en
-// detalle de partido). Esta es para casos generales:
-// usuarios que no te tocaron en un partido, problemas con un
-// complejo, conducta sospechosa en mensajes, etc.
-// Se canaliza por email para que el equipo de Retta pueda
-// responder y dar seguimiento manual.
+// Formulario in-app de soporte / reporte general.
+//
+// 4 categorías: Bug, Conducta de jugador, Sugerencia, Otro.
+// Texto libre 10-1500 chars. Envío directo al backend (sin pasar
+// por cliente de correo del teléfono — antes era mailto: y Rafael
+// notó que muchos usuarios no tienen Gmail/Mail configurado y
+// abandonaban).
+//
+// Backend: POST /api/reportes/soporte → guarda en tabla `reportes`
+// con origen='sistema' para que el admin los filtre como soporte.
 // ═══════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Linking,
+  TextInput, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
+import { useApi } from '@/hooks/useApi';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 
-const REPORTES_EMAIL = 'rettaapp@gmail.com';
+type Categoria = 'bug' | 'conducta' | 'sugerencia' | 'otro';
+
+const CATEGORIAS: Array<{
+  id: Categoria;
+  label: string;
+  desc: string;
+  icon: React.ReactNode;
+  color: string;
+  bg: string;
+}> = [
+  {
+    id: 'conducta',
+    label: 'Conducta',
+    desc: 'Reportar jugador, agresión, acoso',
+    color: '#ffb4ab',
+    bg: 'rgba(255,180,171,0.12)',
+    icon: (
+      <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <Path d="M12 9v4M12 17h.01" stroke="#ffb4ab" strokeWidth="2" strokeLinecap="round"/>
+        <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#ffb4ab" strokeWidth="1.8" strokeLinejoin="round"/>
+      </Svg>
+    ),
+  },
+  {
+    id: 'bug',
+    label: 'Bug',
+    desc: 'Algo no funciona bien en la app',
+    color: '#bec2ff',
+    bg: 'rgba(190,194,255,0.12)',
+    icon: (
+      <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <Path d="M8 2L9.88 5.76M16 2L14.12 5.76" stroke="#bec2ff" strokeWidth="2" strokeLinecap="round"/>
+        <Path d="M12 22a6 6 0 0 0 6-6V9H6v7a6 6 0 0 0 6 6z" stroke="#bec2ff" strokeWidth="1.8" strokeLinejoin="round"/>
+        <Path d="M2 12h4M18 12h4M3 6l3 2M21 6l-3 2M3 18l3-2M21 18l-3-2" stroke="#bec2ff" strokeWidth="1.8" strokeLinecap="round"/>
+      </Svg>
+    ),
+  },
+  {
+    id: 'sugerencia',
+    label: 'Sugerencia',
+    desc: 'Idea para mejorar Retta',
+    color: '#7dd3a0',
+    bg: 'rgba(125,211,160,0.12)',
+    icon: (
+      <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <Path d="M12 2L13.09 8.26L19 7L14.74 12L19 17L13.09 15.74L12 22L10.91 15.74L5 17L9.26 12L5 7L10.91 8.26L12 2Z" stroke="#7dd3a0" strokeWidth="1.6" strokeLinejoin="round"/>
+      </Svg>
+    ),
+  },
+  {
+    id: 'otro',
+    label: 'Otro',
+    desc: 'Cualquier otra cosa que quieras contarnos',
+    color: '#e4e6f0',
+    bg: 'rgba(255,255,255,0.06)',
+    icon: (
+      <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#e4e6f0" strokeWidth="1.8" strokeLinejoin="round"/>
+      </Svg>
+    ),
+  },
+];
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
 
+const MIN_CHARS = 10;
+const MAX_CHARS = 1500;
+
 export default function ReportarComportamientoScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [enviando, setEnviando] = useState(false);
+  const { request } = useApi();
+  const [categoria, setCategoria] = useState<Categoria | null>(null);
+  const [mensaje, setMensaje]     = useState('');
+  const [enviando, setEnviando]   = useState(false);
 
-  // Plantilla pre-generada. El usuario solo llena el "Descripción"
-  // dentro de su app de correo antes de enviar.
-  function construirPlantilla() {
-    const fecha = new Date().toLocaleString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const subject = 'Reporte de comportamiento inadecuado';
-    const body =
-`Hola equipo de Retta,
+  const len   = mensaje.trim().length;
+  const valid = categoria !== null && len >= MIN_CHARS && len <= MAX_CHARS;
 
-Quiero reportar un comportamiento inadecuado.
-
-— DESCRIPCIÓN DEL INCIDENTE —
-(Describe aquí qué pasó, cuándo, dónde y con quién. Mientras más detalles, mejor podremos ayudarte.)
-
-
-— TIPO DE REPORTE —
-(Elige uno: conducta antideportiva · agresión física o verbal · acoso · discriminación · suplantación · spam o mensajes inapropiados · otro)
-
-
-— PERSONA(S) O COMPLEJO INVOLUCRADO —
-(Nombre, usuario o complejo si lo recuerdas.)
-
-
-— EVIDENCIA (opcional) —
-(Puedes adjuntar capturas de pantalla a este correo si las tienes.)
-
-
-— DATOS DE QUIEN REPORTA (automáticos) —
-Nombre: ${user?.nombre || ''} ${user?.apellido || ''}
-Email: ${user?.email || ''}
-ID de usuario: ${user?.id || ''}
-Fecha del reporte: ${fecha}
-
-Gracias por tomarse el tiempo de revisar este caso.`;
-    return { subject, body };
-  }
-
-  async function enviarReporte() {
+  async function enviar() {
+    if (!valid || enviando) return;
     setEnviando(true);
     try {
-      const { subject, body } = construirPlantilla();
-      const url = `mailto:${REPORTES_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) {
-        Alert.alert(
-          'No se pudo abrir el correo',
-          `Escríbenos directamente a ${REPORTES_EMAIL} con los detalles del incidente.`,
-        );
-        return;
-      }
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert('Error', `No pudimos abrir tu app de correo. Escríbenos a ${REPORTES_EMAIL}.`);
+      await request('/reportes/soporte', {
+        method: 'POST',
+        body: JSON.stringify({ categoria, mensaje: mensaje.trim() }),
+      });
+      Alert.alert(
+        '¡Recibido!',
+        'Gracias por escribirnos. Revisamos cada mensaje y te respondemos lo antes posible.',
+        [{ text: 'OK', onPress: () => router.back() }],
+      );
+    } catch (e: any) {
+      Alert.alert('No se pudo enviar', e?.message || 'Intenta de nuevo en un momento.');
     } finally {
       setEnviando(false);
     }
@@ -99,94 +131,111 @@ Gracias por tomarse el tiempo de revisar este caso.`;
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <View style={styles.topbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <BackIcon />
-        </TouchableOpacity>
-        <Text style={styles.topbarTitle}>Reportar comportamiento</Text>
-        <View style={{ width: 42 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Hero */}
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <Path d="M12 9v4M12 17h.01" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-              <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/>
-            </Svg>
-          </View>
-          <Text style={styles.heroTitle}>Reportar comportamiento inadecuado</Text>
-          <Text style={styles.heroSub}>Tu reporte es confidencial. Lo revisaremos y tomaremos las acciones necesarias.</Text>
+        <View style={styles.topbar}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <BackIcon />
+          </TouchableOpacity>
+          <Text style={styles.topbarTitle}>Contactar a Retta</Text>
+          <View style={{ width: 42 }} />
         </View>
 
-        {/* Qué se puede reportar */}
-        <Text style={styles.sectionLabel}>Qué puedes reportar</Text>
-        <View style={styles.listCard}>
-          <View style={styles.listItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.listText}>Conducta antideportiva durante un partido</Text>
-          </View>
-          <View style={styles.listItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.listText}>Agresión física o verbal, acoso o discriminación</Text>
-          </View>
-          <View style={styles.listItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.listText}>Suplantación de identidad o cuentas falsas</Text>
-          </View>
-          <View style={styles.listItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.listText}>Mensajes inapropiados o spam entre usuarios</Text>
-          </View>
-          <View style={styles.listItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.listText}>Problemas con un complejo o sus instalaciones</Text>
-          </View>
-        </View>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Intro corto */}
+            <Text style={styles.intro}>
+              ¿Algo no funcionó? ¿Tienes una idea? ¿Pasó algo con otro jugador?
+              Escríbenos directo y lo revisamos.
+            </Text>
 
-        {/* Cómo funciona */}
-        <Text style={styles.sectionLabel}>Cómo funciona</Text>
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <View style={styles.stepNum}><Text style={styles.stepNumTxt}>1</Text></View>
-            <Text style={styles.infoText}>Tocas el botón y se abre tu app de correo con un mensaje pre-llenado.</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={styles.stepNum}><Text style={styles.stepNumTxt}>2</Text></View>
-            <Text style={styles.infoText}>Completas los detalles del incidente (qué pasó, cuándo, con quién).</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={styles.stepNum}><Text style={styles.stepNumTxt}>3</Text></View>
-            <Text style={styles.infoText}>Lo envías. El equipo de Retta te responderá en máximo 48 horas hábiles.</Text>
-          </View>
-        </View>
+            {/* Categorías */}
+            <Text style={styles.sectionLabel}>¿De qué se trata?</Text>
+            <View style={styles.catGrid}>
+              {CATEGORIAS.map(c => {
+                const selected = categoria === c.id;
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    onPress={() => setCategoria(c.id)}
+                    activeOpacity={0.85}
+                    style={[
+                      styles.catCard,
+                      { backgroundColor: selected ? c.bg : 'rgba(255,255,255,0.04)' },
+                      selected && { borderColor: c.color },
+                    ]}
+                  >
+                    <View style={[styles.catIconWrap, { backgroundColor: c.bg }]}>
+                      {c.icon}
+                    </View>
+                    <Text style={[styles.catLabel, selected && { color: c.color }]}>
+                      {c.label}
+                    </Text>
+                    <Text style={styles.catDesc} numberOfLines={2}>
+                      {c.desc}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-        {/* Botón principal */}
-        <TouchableOpacity onPress={enviarReporte} disabled={enviando} activeOpacity={0.85}>
-          <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.btn, enviando && { opacity: 0.6 }]}>
-            <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <Path d="M22 2L11 13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-              <Path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </Svg>
-            <Text style={styles.btnTxt}>ABRIR CORREO Y REPORTAR</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            {/* Mensaje */}
+            <View style={styles.msjHeader}>
+              <Text style={styles.sectionLabel}>Cuéntanos qué pasó</Text>
+              <Text style={[
+                styles.counter,
+                len > MAX_CHARS && { color: DT.error },
+              ]}>
+                {len}/{MAX_CHARS}
+              </Text>
+            </View>
+            <TextInput
+              value={mensaje}
+              onChangeText={setMensaje}
+              placeholder="Mientras más detalles nos des, mejor podemos ayudarte. Si es sobre otra persona, escribe su nombre o usuario."
+              placeholderTextColor={DT.outline}
+              multiline
+              textAlignVertical="top"
+              maxLength={MAX_CHARS + 50}
+              style={styles.textarea}
+            />
 
-        {/* Aclaración */}
-        <View style={styles.disclaimer}>
-          <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <Circle cx="12" cy="12" r="9" stroke={DT.outline} strokeWidth="1.8"/>
-            <Path d="M12 8V12" stroke={DT.outline} strokeWidth="2" strokeLinecap="round"/>
-            <Circle cx="12" cy="16" r="1" fill={DT.outline}/>
-          </Svg>
-          <Text style={styles.disclaimerTxt}>
-            Si el comportamiento ocurrió en un partido específico, también puedes reportar al jugador directamente desde la pantalla de calificaciones después del partido. Esta opción es para casos generales o fuera de un partido.
-          </Text>
-        </View>
+            {/* Botón */}
+            <TouchableOpacity onPress={enviar} disabled={!valid || enviando} activeOpacity={0.85}>
+              <LinearGradient
+                colors={valid ? GRADIENTS.button : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.06)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={[styles.btn, (!valid || enviando) && { opacity: 0.7 }]}
+              >
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <Path d="M22 2L11 13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                  <Path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </Svg>
+                <Text style={styles.btnTxt}>{enviando ? 'ENVIANDO...' : 'ENVIAR REPORTE'}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-      </ScrollView>
+            {/* Disclaimer */}
+            <View style={styles.disclaimer}>
+              <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <Circle cx="12" cy="12" r="9" stroke={DT.outline} strokeWidth="1.8"/>
+                <Path d="M12 8V12" stroke={DT.outline} strokeWidth="2" strokeLinecap="round"/>
+                <Circle cx="12" cy="16" r="1" fill={DT.outline}/>
+              </Svg>
+              <Text style={styles.disclaimerTxt}>
+                Tu reporte es confidencial. Si es sobre un jugador de un partido específico,
+                también puedes reportarlo desde el perfil del jugador o desde la pantalla
+                de calificaciones después del partido.
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -195,25 +244,46 @@ Gracias por tomarse el tiempo de revisar este caso.`;
 const styles = StyleSheet.create({
   root:          { flex: 1, backgroundColor: DT.bg },
   topbar:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
-  backBtn:       { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  backBtn:       { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:   { flex: 1, textAlign: 'center', fontSize: 17, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
-  scroll:        { padding: 20, paddingTop: 0, paddingBottom: 40 },
-  hero:          { backgroundColor: 'rgba(255,180,171,0.12)', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', borderRadius: RADIUS.xl, padding: 22, alignItems: 'center', marginBottom: 24 },
-  heroIcon:      { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,180,171,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  heroTitle:     { fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.2, textAlign: 'center', marginBottom: 6 },
-  heroSub:       { fontSize: 12.5, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 18, fontFamily: FONTS.body },
+  scroll:        { padding: 20, paddingTop: 4, paddingBottom: 60 },
+
+  intro:         { fontSize: 14, color: DT.onSurfaceVar, lineHeight: 20, marginBottom: 22, fontFamily: FONTS.body },
+
   sectionLabel:  { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.8, marginBottom: 10, marginLeft: 2, fontFamily: FONTS.mono },
-  listCard:      { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 14, marginBottom: 18 },
-  listItem:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6 },
-  bullet:        { width: 5, height: 5, borderRadius: 3, backgroundColor: DT.error, marginTop: 7 },
-  listText:      { flex: 1, fontSize: 13, color: DT.onBg, lineHeight: 19, fontFamily: FONTS.body },
-  infoCard:      { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 20 },
-  infoRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 6 },
-  stepNum:       { width: 26, height: 26, borderRadius: 13, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  stepNumTxt:    { fontSize: 12, color: '#fff', fontFamily: FONTS.bodyBold },
-  infoText:      { flex: 1, fontSize: 13, color: DT.onSurfaceVar, lineHeight: 19, paddingTop: 3, fontFamily: FONTS.body },
+
+  catGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 22 },
+  catCard:       {
+    width: '48%',
+    padding: 14,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: DT.glassBorder,
+    minHeight: 110,
+  },
+  catIconWrap:   { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  catLabel:      { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyBold, letterSpacing: 0.1, marginBottom: 4 },
+  catDesc:       { fontSize: 11.5, color: DT.onSurfaceVar, lineHeight: 16, fontFamily: FONTS.body },
+
+  msjHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  counter:       { fontSize: 10, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 1 },
+  textarea:      {
+    minHeight: 160,
+    backgroundColor: DT.glassBg,
+    borderWidth: 1,
+    borderColor: DT.glassBorder,
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    fontSize: 14,
+    color: DT.onBg,
+    fontFamily: FONTS.body,
+    lineHeight: 21,
+    marginBottom: 22,
+  },
+
   btn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, borderRadius: RADIUS.full, marginBottom: 16 },
   btnTxt:        { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+
   disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: RADIUS.md, padding: 12 },
   disclaimerTxt: { flex: 1, fontSize: 12, color: DT.onSurfaceVar, lineHeight: 17, fontFamily: FONTS.body },
 });

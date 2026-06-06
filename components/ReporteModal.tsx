@@ -24,7 +24,10 @@ const RAZONES: { value: Razon; label: string }[] = [
 interface Props {
   visible: boolean;
   onClose: () => void;
-  partidoId: string;
+  /** Opcional: si el reporte viene del contexto de un partido. Si es undefined
+   *  (ej. desde el perfil de un usuario), el reporte se manda sin partido_id
+   *  y el backend lo trata como reporte "global" contra esa persona. */
+  partidoId?: string;
   reportadoId: string | null;        // null = reporte general (incidente sin jugador)
   reportadoNombre?: string;
   onSent?: () => void;
@@ -53,14 +56,14 @@ export default function ReporteModal({
       await request('/reportes', {
         method: 'POST',
         body: JSON.stringify({
-          partido_id:   partidoId,
+          partido_id:   partidoId || undefined,
           reportado_id: reportadoId,
           razon,
           comentario:   comentario.trim() || undefined,
         }),
       });
       track('reporte_enviado', {
-        partido_id:        partidoId,
+        partido_id:        partidoId || null,
         razon,
         contra_jugador:    !!reportadoId,
         con_comentario:    comentario.trim().length > 0,

@@ -13,6 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import ReporteModal from '@/components/ReporteModal';
 
 interface AmistadInfo {
   id: string;
@@ -63,11 +64,10 @@ function FlameIcon({ size = 22, color = '#FF6B35' }: { size?: number; color?: st
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 const POSICION_LABEL: Record<string, string> = {
   POR: 'Portero', DEF: 'Defensa', MED: 'Mediocampista', DEL: 'Delantero',
 };
@@ -81,6 +81,7 @@ export default function PerfilPublicoScreen() {
   const [perfil, setPerfil]   = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(true);
   const [actuando, setActuando] = useState(false);
+  const [reporteOpen, setReporteOpen] = useState(false);
 
   useEffect(() => { load(); }, [id]);
 
@@ -270,7 +271,30 @@ export default function PerfilPublicoScreen() {
           <BackIcon />
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>Perfil</Text>
-        <View style={{ width: 36 }} />
+        {perfil.es_yo ? (
+          <View style={{ width: 40 }} />
+        ) : (
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                `Reportar a ${perfil.nombre}`,
+                'Si esta persona tuvo conducta inadecuada, dañó el espíritu del juego o cometió algún acto grave, repórtala. El equipo de Retta revisará el caso.',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Reportar', style: 'destructive', onPress: () => setReporteOpen(true) },
+                ]
+              );
+            }}
+            style={styles.menuBtn}
+            hitSlop={8}
+          >
+            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <Circle cx="12" cy="5"  r="1.6" fill={DT.onBg} />
+              <Circle cx="12" cy="12" r="1.6" fill={DT.onBg} />
+              <Circle cx="12" cy="19" r="1.6" fill={DT.onBg} />
+            </Svg>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -356,6 +380,15 @@ export default function PerfilPublicoScreen() {
         </View>
       </ScrollView>
       </SafeAreaView>
+
+      {/* Modal de reporte (sin partidoId — modo perfil global) */}
+      <ReporteModal
+        visible={reporteOpen}
+        onClose={() => setReporteOpen(false)}
+        reportadoId={perfil.id}
+        reportadoNombre={`${perfil.nombre || ''}${perfil.apellido ? ' ' + perfil.apellido : ''}`.trim()}
+        onSent={() => setReporteOpen(false)}
+      />
     </View>
   );
 }
@@ -365,7 +398,8 @@ const styles = StyleSheet.create({
   center:         { flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' },
 
   topbar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:        { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  menuBtn:        { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:    { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
 
   scroll:         { paddingHorizontal: 20, paddingBottom: 30 },
