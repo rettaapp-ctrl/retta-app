@@ -8,9 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
+import Svg, { Path } from 'react-native-svg';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, sessionExpired, clearSessionExpired } = useAuth();
   const router    = useRouter();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +27,7 @@ export default function LoginScreen() {
       if ('requiere_verificacion' in result && result.requiere_verificacion) {
         router.replace({ pathname: '/(auth)/verificar', params: { email: result.email } });
       }
+      // El flag sessionExpired se limpia automáticamente en persistSession.
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -47,6 +49,24 @@ export default function LoginScreen() {
             />
             <Text style={styles.logoSub}>FÚTBOL EN TU CIUDAD</Text>
           </View>
+
+          {sessionExpired ? (
+            <View style={styles.banner}>
+              <View style={styles.bannerIcon}>
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <Path d="M12 8v4M12 16h.01" stroke={DT.primary} strokeWidth="2" strokeLinecap="round"/>
+                  <Path d="M12 22c5.5 0 10-4.5 10-10S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10z" stroke={DT.primary} strokeWidth="1.8"/>
+                </Svg>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bannerTitle}>Tu sesión expiró</Text>
+                <Text style={styles.bannerSub}>Por favor inicia sesión de nuevo para continuar.</Text>
+              </View>
+              <TouchableOpacity onPress={clearSessionExpired} hitSlop={8}>
+                <Text style={styles.bannerClose}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Iniciar sesión</Text>
@@ -122,4 +142,9 @@ const styles = StyleSheet.create({
   linkBtn:    { marginTop: 20, alignItems: 'center' },
   linkTxt:    { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body },
   linkAccent: { color: DT.primary, fontFamily: FONTS.bodyBold },
+  banner:        { width: '100%', maxWidth: 400, marginBottom: 14, padding: 14, borderRadius: RADIUS.md, backgroundColor: 'rgba(190,194,255,0.10)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.30)', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  bannerIcon:    { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(190,194,255,0.15)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  bannerTitle:   { fontSize: 13, color: DT.onBg, fontFamily: FONTS.bodyBold },
+  bannerSub:     { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 2 },
+  bannerClose:   { fontSize: 20, color: DT.onSurfaceVar, paddingHorizontal: 4, fontFamily: FONTS.bodyBold },
 });

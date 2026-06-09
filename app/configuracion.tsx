@@ -10,7 +10,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
@@ -174,7 +174,7 @@ export default function ConfiguracionScreen() {
 const styles = StyleSheet.create({
   root:         { flex: 1, backgroundColor: DT.bg },
   topbar:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.gutter, paddingVertical: 14 },
-  backBtn:      { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:  { flex: 1, textAlign: 'center', fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   scroll:       { padding: SPACING.gutter, paddingTop: 0, paddingBottom: 40 },
   profileBlock: { alignItems: 'center', paddingVertical: 24 },

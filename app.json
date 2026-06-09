@@ -27,6 +27,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png",
         "backgroundColor": "#000000"
       },
+      "navigationBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#000000"
+      },
       "package": "mx.retta.app",
       "intentFilters": [
         {
@@ -63,7 +67,7 @@
       [
         "expo-notifications",
         {
-          "color": "#7AB800"
+          "color": "#bec2ff"
         }
       ],
       "@react-native-community/datetimepicker",
@@ -77,6 +81,12 @@
       "eas": {
         "projectId": "5cb77489-94e7-40cc-ab40-e9a80723ff81"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5cb77489-94e7-40cc-ab40-e9a80723ff81"
     }
   }
 }

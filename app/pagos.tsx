@@ -31,12 +31,11 @@ function formatFechaCorta(iso: string) {
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 function ReceiptIcon() {
   return (
     <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -140,7 +139,7 @@ export default function PagosScreen() {
 const styles = StyleSheet.create({
   root:              { flex: 1, backgroundColor: DT.bg },
   topbar:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:           { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, marginRight: 12 },
   topbarTitle:       { flex: 1, textAlign: 'center', fontSize: 18, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
   scroll:            { padding: 20, paddingTop: 8, paddingBottom: 40 },
   stripeBanner:      { flexDirection: 'row', alignItems: 'flex-start', gap: 14, backgroundColor: 'rgba(190,194,255,0.06)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.22)', borderRadius: 16, padding: 16, marginBottom: 24 },

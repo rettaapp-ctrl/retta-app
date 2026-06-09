@@ -447,7 +447,7 @@ export default function PartidosScreen() {
 
 const styles = StyleSheet.create({
   root:              { flex: 1, backgroundColor: DT.bg },
-  header:            { paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 4 },
+  header:            { paddingHorizontal: SPACING.gutter, paddingTop: SPACING.gutter, paddingBottom: 4 },
   headerTop:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 12 },
   bellBtn:           { position: 'relative', width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   bellBadge:         { position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center' },

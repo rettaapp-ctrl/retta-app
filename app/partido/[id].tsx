@@ -469,7 +469,17 @@ export default function PartidoDetailScreen() {
   );
 
   const libres = partido.max_jugadores - (partido.jugadores_confirmados || 0);
-  const canUnirse = partido.status === 'abierto' && libres > 0 && !yaInscrito;
+  // Determinar si el partido ya pasó (terminado o cancelado). Si ya pasó,
+  // ocultamos todos los CTAs de acción (unirse, cancelar, invitar) porque
+  // no tienen sentido — el usuario sólo está viendo el detalle histórico.
+  // Combinamos fecha+hora real vs. ahora + cualquier status terminal.
+  const fechaHoraPartido = new Date(`${partido.fecha}T${partido.hora_inicio || '00:00'}:00`);
+  const partidoYaPaso =
+    fechaHoraPartido.getTime() < Date.now() ||
+    partido.status === 'finalizado' ||
+    partido.status === 'cancelado' ||
+    partido.status === 'cerrado';
+  const canUnirse = !partidoYaPaso && partido.status === 'abierto' && libres > 0 && !yaInscrito;
   const slotsA = getJugadoresByEquipo('A');
   const slotsB = getJugadoresByEquipo('B');
   const pct = (partido.jugadores_confirmados || 0) / partido.max_jugadores;
@@ -651,8 +661,8 @@ export default function PartidoDetailScreen() {
           {!yaInscrito && <View style={{ marginBottom: 130 }} />}
         </ScrollView>
 
-        {/* Botón inferior */}
-        {(desde === 'reservas' || yaInscrito) ? (
+        {/* Botón inferior — solo si el partido NO ha pasado todavía */}
+        {partidoYaPaso ? null : (desde === 'reservas' || yaInscrito) ? (
           <View style={[styles.joinBar, { paddingBottom: insets.bottom + 16 }]}>
             <TouchableOpacity style={[styles.invBar, { marginBottom: 8 }]} onPress={openInvitarAmigos} activeOpacity={0.85}>
               <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">

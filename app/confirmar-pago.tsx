@@ -13,7 +13,7 @@ import { track } from '@/lib/analytics';
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
@@ -275,7 +275,7 @@ export default function ConfirmarPagoScreen() {
 const styles = StyleSheet.create({
   root:               { flex: 1, backgroundColor: DT.bg },
   topbar:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.gutter, paddingVertical: 14 },
-  backBtn:            { width: 42, height: 42, borderRadius: 21, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:        { fontSize: 16, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   scroll:             { paddingHorizontal: SPACING.gutter, paddingBottom: 24 },
 

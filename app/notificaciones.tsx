@@ -23,16 +23,16 @@ interface Notif {
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 function TrashIcon() {
+  // Antes era un icono de basurero (muy "destructivo"). Cambiado a X sutil
+  // para que el botón se sienta más integrado y menos amenazante.
   return (
-    <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6H5H21" stroke={DT.outline} strokeWidth="2" strokeLinecap="round"/>
-      <Path d="M8 6V4C8 3.45 8.45 3 9 3H15C15.55 3 16 3.45 16 4V6M19 6L18.1 19.1C18.04 19.6 17.62 20 17.1 20H6.9C6.38 20 5.96 19.6 5.9 19.1L5 6H19Z" stroke={DT.outline} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <Path d="M6 6L18 18M6 18L18 6" stroke={DT.outline} strokeWidth="2" strokeLinecap="round"/>
     </Svg>
   );
 }
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   root:         { flex: 1, backgroundColor: DT.bg },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topbar:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.gutter, paddingVertical: 14, gap: 12 },
-  backBtn:      { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   title:        { flex: 1, fontSize: 26, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5 },
   markAll:      { fontSize: 11, color: DT.primary, letterSpacing: 0.5, fontFamily: FONTS.bodyBold },
   scroll:       { padding: SPACING.gutter, paddingTop: 4, paddingBottom: 40 },
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   notifTime:    { fontSize: 11, color: DT.outline, marginTop: 4, fontFamily: FONTS.mono },
   unreadDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: DT.primary, flexShrink: 0 },
   notifRight:   { alignItems: 'center', gap: 6, flexShrink: 0 },
-  deleteBtn:    { padding: 4 },
+  deleteBtn:    { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder },
   empty:        { alignItems: 'center', paddingTop: 70 },
   emptyLogo:    { width: 56, height: 56, marginBottom: 22, opacity: 0.9 },
   emptyTitle:   { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, marginBottom: 6 },

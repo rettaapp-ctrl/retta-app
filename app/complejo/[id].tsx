@@ -33,7 +33,7 @@ interface Complejo {
 function BackIcon() {
   return (
     <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   root:         { flex: 1, backgroundColor: DT.bg },
   center:       { flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' },
   topbar:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: DT.glassBorder },
-  backBtn:      { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:  { fontSize: 18, color: DT.onBg, letterSpacing: 0.3, flex: 1, fontFamily: FONTS.heading },
   scroll:       { paddingBottom: 40 },
   heroBanner:   { width: '100%', height: 220, position: 'relative', overflow: 'hidden' },

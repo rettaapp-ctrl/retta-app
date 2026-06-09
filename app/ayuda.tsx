@@ -14,12 +14,11 @@ const SOPORTE_EMAIL = 'rettaapp@gmail.com';
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 const FAQS = [
   {
     icon: (
@@ -166,18 +165,16 @@ export default function AyudaScreen() {
       `\n\n---\nUsuario: ${user?.nombre || ''} ${user?.apellido || ''}\nID: ${user?.id || ''}\nEmail: ${user?.email || ''}`
     );
     const url = `mailto:${SOPORTE_EMAIL}?subject=${subject}&body=${body}`;
+    // ⚠️ NO usar canOpenURL aquí: en Android 11+ (API 30) devuelve false para
+    // mailto: aunque haya app de correo instalada, por package visibility.
+    // Mejor intentar abrir directamente y capturar el error si realmente no hay app.
     try {
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) {
-        Alert.alert(
-          'No se pudo abrir el correo',
-          `Escríbenos directamente a ${SOPORTE_EMAIL}.`
-        );
-        return;
-      }
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Error', `No se pudo abrir la app de correo. Escríbenos a ${SOPORTE_EMAIL}.`);
+      Alert.alert(
+        'No se pudo abrir el correo',
+        `Escríbenos directamente a ${SOPORTE_EMAIL}.`
+      );
     }
   }
 
@@ -292,7 +289,7 @@ export default function AyudaScreen() {
 const styles = StyleSheet.create({
   root:          { flex: 1, backgroundColor: DT.bg },
   topbar:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
-  backBtn:       { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   topbarTitle:   { flex: 1, textAlign: 'center', fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   scroll:        { padding: 20, paddingTop: 0, paddingBottom: 40 },
   hero:          { backgroundColor: DT.surfaceLow, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.xl, padding: 24, alignItems: 'center', marginBottom: 24 },

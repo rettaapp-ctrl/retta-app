@@ -37,12 +37,11 @@ const MAX_HISTORIAL = 6; // turnos enviados al modelo
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 function SendIcon({ disabled }: { disabled: boolean }) {
   const c = disabled ? DT.outline : '#fff';
   return (
@@ -233,7 +232,7 @@ export default function ChatIAScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Conversación */}
@@ -289,7 +288,7 @@ export default function ChatIAScreen() {
             value={texto}
             onChangeText={setTexto}
             placeholder="Pregúntame algo sobre Retta…"
-            placeholderTextColor="rgba(0,0,0,0.35)"
+            placeholderTextColor={DT.outline}
             multiline
             maxLength={1000}
             editable={!enviando}
@@ -316,7 +315,7 @@ export default function ChatIAScreen() {
 const styles = StyleSheet.create({
   root:           { flex: 1, backgroundColor: DT.bg },
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, backgroundColor: DT.surfaceLow },
-  backBtn:        { padding: 6, marginRight: 8 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, marginRight: 8 },
   headerCenter:   { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerAvatar:   { width: 36, height: 36, borderRadius: 18, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center' },
   headerTitle:    { fontSize: 15, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },

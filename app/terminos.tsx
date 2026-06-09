@@ -9,13 +9,11 @@ import { TERMINOS_SECCIONES } from '@/lib/legalContent';
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
-
 export default function TerminosScreen() {
   const router = useRouter();
 
@@ -71,7 +69,7 @@ export default function TerminosScreen() {
 const styles = StyleSheet.create({
   root:           { flex: 1, backgroundColor: DT.bg },
   topbar:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:        { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, marginRight: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, marginRight: 12 },
   topbarTitle:    { flex: 1, textAlign: 'center', fontSize: 17, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2, marginRight: 52 },
   scroll:         { padding: 20, paddingTop: 8, paddingBottom: 40 },
   headerCard:     { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: DT.surfaceLow, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 16 },

@@ -16,12 +16,11 @@ import { supabase } from '@/lib/supabase';
 
 function BackIcon() {
   return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
 }
-
 const NIVELES = ['Principiante', 'Intermedio', 'Avanzado'];
 const POSICIONES = ['DEL', 'MED', 'DEF', 'POR'];
 // Backend usa códigos M/F/O. UI muestra labels en español.
@@ -241,18 +240,18 @@ export default function EditarPerfilScreen() {
         {/* Género */}
         <Text style={styles.sectionLabel}>Género</Text>
         <View style={styles.card}>
-          <View style={[styles.field, { minHeight: 62 }]}>
-            <View style={styles.fieldIcon}>
-              <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <Circle cx="12" cy="8" r="4" stroke={DT.outline} strokeWidth="1.8"/>
-                <Path d="M4 20C4 17 7.6 14.5 12 14.5C16.4 14.5 20 17 20 20" stroke={DT.outline} strokeWidth="1.8" strokeLinecap="round"/>
-              </Svg>
-            </View>
-            <Text style={styles.fieldLabel}>Soy</Text>
-            <View style={styles.toggleGroup}>
+          <View style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
+            <Text style={styles.sportSubLabel}>Soy</Text>
+            <View style={styles.chipGroup}>
               {GENERO_OPCIONES.map(g => (
-                <TouchableOpacity key={g.code} style={[styles.toggleBtn, genero === g.code && styles.toggleBtnActive]} onPress={() => setGenero(g.code)}>
-                  <Text style={[styles.toggleBtnTxt, genero === g.code && styles.toggleBtnTxtActive]}>{g.label}</Text>
+                <TouchableOpacity
+                  key={g.code}
+                  style={[styles.chip, genero === g.code && styles.chipActive]}
+                  onPress={() => setGenero(g.code)}
+                >
+                  <Text style={[styles.chipTxt, genero === g.code && styles.chipTxtActive]}>
+                    {g.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -303,7 +302,7 @@ export default function EditarPerfilScreen() {
 const styles = StyleSheet.create({
   root:             { flex: 1, backgroundColor: DT.bg },
   topbar:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn:          { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, marginRight: 8 },
   topbarTitle:      { flex: 1, textAlign: 'center', fontSize: 18, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
   saveBtn:          { paddingHorizontal: 4, minWidth: 60, alignItems: 'flex-end' },
   saveBtnTxt:       { fontSize: 14, color: DT.primary, letterSpacing: 0.3, fontFamily: FONTS.bodyBold },
