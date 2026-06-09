@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useNotificacionesCount } from '@/hooks/useNotificacionesCount';
 import { isPartidoVisible } from '@/lib/partidos';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, RefreshControl,
@@ -97,7 +97,13 @@ export default function PerfilScreen() {
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const { count: notiCount } = useNotificacionesCount();
 
-  useEffect(() => { load(); }, []);
+  // useFocusEffect: refresca stats, amigos y partidos cada vez que vuelves
+  // al perfil. Antes había que hacer pull-to-refresh manual.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [])
+  );
 
   async function load() {
     try {

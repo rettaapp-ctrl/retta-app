@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/context/AuthContext';
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
@@ -90,7 +90,13 @@ export default function ReservasScreen() {
   const [isInfraDown, setIsInfraDown]   = useState(false);
   const { count: notiCount }            = useNotificacionesCount();
 
-  useEffect(() => { load(); }, []);
+  // useFocusEffect: re-carga cada vez que el usuario vuelve a Mis Rettas.
+  // Sin esto, las inscripciones quedaban estancadas hasta refresh manual.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [])
+  );
 
   async function load() {
     setLoadError(null);

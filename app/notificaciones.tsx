@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,7 +96,13 @@ export default function NotificacionesScreen() {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  // useFocusEffect: re-carga notificaciones cada vez que el usuario entra
+  // a esta pantalla. Sin esto las notifs quedaban viejas hasta refresh.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [])
+  );
 
   async function load() {
     try {

@@ -1,7 +1,7 @@
 import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApi } from '@/hooks/useApi';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { track } from '@/lib/analytics';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -74,7 +74,13 @@ export default function AmigosScreen() {
   const [resultados, setResultados] = useState<UsuarioBusqueda[]>([]);
   const [buscando, setBuscando] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  // useFocusEffect: refresca amigos + solicitudes pendientes cada vez que
+  // vuelves a esta pantalla. Antes había que hacer pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [])
+  );
 
   async function load() {
     setLoading(true);

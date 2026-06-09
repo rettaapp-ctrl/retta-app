@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/context/AuthContext';
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
@@ -149,7 +149,14 @@ export default function PartidosScreen() {
     setRefreshing(false);
   }
 
-  useEffect(() => { loadPartidos(activeDate); }, [activeDate]);
+  // useFocusEffect en vez de useEffect: re-carga cada vez que el usuario
+  // vuelve a esta tab. Sin esto, los partidos quedaban estancados hasta
+  // que el usuario hacía pull-to-refresh manual.
+  useFocusEffect(
+    useCallback(() => {
+      loadPartidos(activeDate);
+    }, [activeDate])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
