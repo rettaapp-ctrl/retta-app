@@ -5,7 +5,7 @@
 //   3-12h antes  → reembolso 60% (se retiene 40%)
 //   < 3h antes   → sin reembolso
 // ─────────────────────────────────────────────────────────────
-import { Alert } from 'react-native';
+import { AppAlert } from '@/lib/appAlert';
 
 export interface PartidoMin {
   id: string;
@@ -83,11 +83,11 @@ export function confirmarCancelacion(
   const info = calcularReembolso(partido.fecha, partido.hora_inicio, partido.precio_jugador);
 
   if (!info.puedeCancelar) {
-    Alert.alert('No se puede cancelar', info.mensaje);
+    AppAlert.alert('No se puede cancelar', info.mensaje);
     return;
   }
 
-  Alert.alert(
+  AppAlert.alert(
     '¿Cancelar tu lugar?',
     info.mensaje,
     [

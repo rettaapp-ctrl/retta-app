@@ -1,7 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Animated, Easing, ScrollView, Alert,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
+  Easing,
+  ScrollView
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
@@ -103,7 +110,7 @@ export default function ConfirmarPagoScreen() {
       track('partido_inscripcion_fallo', {
         partido_id, es_invitado: esInvitado, error: msg.slice(0, 100),
       });
-      Alert.alert('No se pudo completar', msg);
+      AppAlert.alert('No se pudo completar', msg);
     }
   }
 

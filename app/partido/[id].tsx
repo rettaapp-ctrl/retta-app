@@ -5,12 +5,21 @@ import { confirmarCancelacion } from '@/lib/cancelacion';
 import { openMaps, buildMapQuery } from '@/lib/mapas';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  ActivityIndicator, Alert, Image,
-  ScrollView, StyleSheet, Text,
-  TouchableOpacity, View,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
-  Share,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+  Share
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -132,7 +141,7 @@ export default function PartidoDetailScreen() {
       const data = await request('/amistades');
       setAmigosLista(data.amigos || []);
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudieron cargar tus amigos.');
+      AppAlert.alert('Error', e?.message || 'No se pudieron cargar tus amigos.');
     } finally {
       setCargandoAmigos(false);
     }
@@ -160,12 +169,12 @@ export default function PartidoDetailScreen() {
         cantidad:   res.invitados,
       });
       setModalAmigos(false);
-      Alert.alert(
+      AppAlert.alert(
         '¡Invitaciones enviadas!',
         `Invitaste a ${res.invitados} ${res.invitados === 1 ? 'amigo' : 'amigos'} a este partido. Recibirán una notificación.`
       );
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudieron enviar las invitaciones.');
+      AppAlert.alert('Error', e?.message || 'No se pudieron enviar las invitaciones.');
     } finally {
       setEnviandoAmigos(false);
     }
@@ -301,7 +310,7 @@ export default function PartidoDetailScreen() {
           await request(path, { method: 'DELETE' });
           await load();
         } catch (e: any) {
-          Alert.alert('Error', e?.message || 'No se pudo cancelar al invitado.');
+          AppAlert.alert('Error', e?.message || 'No se pudo cancelar al invitado.');
         }
       }
     );
@@ -315,7 +324,7 @@ export default function PartidoDetailScreen() {
   async function handleUnirse() {
     if (!user) { router.push('/(auth)/login'); return; }
     if (!equipoSeleccionado) {
-      Alert.alert('Elige un lugar', 'Toca un lugar libre en el equipo que quieras unirte.');
+      AppAlert.alert('Elige un lugar', 'Toca un lugar libre en el equipo que quieras unirte.');
       return;
     }
     track('partido_inscripcion_iniciada', {
@@ -358,11 +367,11 @@ export default function PartidoDetailScreen() {
             partido_id: partido.id,
             desde:      'detalle',
           });
-          Alert.alert('Lugar cancelado', 'Tu lugar fue liberado correctamente.', [
+          AppAlert.alert('Lugar cancelado', 'Tu lugar fue liberado correctamente.', [
             { text: 'OK', onPress: () => router.back() },
           ]);
         } catch (e: any) {
-          Alert.alert('Error', e?.message || 'No se pudo cancelar tu lugar.');
+          AppAlert.alert('Error', e?.message || 'No se pudo cancelar tu lugar.');
         } finally {
           setCancelando(false);
         }

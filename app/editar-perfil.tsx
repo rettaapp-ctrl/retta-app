@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -58,7 +65,7 @@ export default function EditarPerfilScreen() {
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para cambiar la foto.');
+      AppAlert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para cambiar la foto.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -87,7 +94,7 @@ export default function EditarPerfilScreen() {
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       setAvatarUrl(data.publicUrl + '?t=' + Date.now());
     } catch (e: any) {
-      Alert.alert('Error', 'No se pudo subir la foto: ' + (e.message || ''));
+      AppAlert.alert('Error', 'No se pudo subir la foto: ' + (e.message || ''));
     } finally {
       setUploadingPhoto(false);
     }
@@ -95,23 +102,23 @@ export default function EditarPerfilScreen() {
 
   async function handleSave() {
     if (!nombre.trim()) {
-      Alert.alert('Error', 'El nombre no puede estar vacío.');
+      AppAlert.alert('Error', 'El nombre no puede estar vacío.');
       return;
     }
     // Validar formato de email (mismo patrón que en register)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (email.trim() && !emailRegex.test(email.trim())) {
-      Alert.alert('Email inválido', 'Ingresa un email válido (ej. tu@email.com).');
+      AppAlert.alert('Email inválido', 'Ingresa un email válido (ej. tu@email.com).');
       return;
     }
     setSaving(true);
     try {
       await updateUser({ nombre, apellido, email, telefono, ciudad, nivel, posicion, genero, avatar_url: avatarUrl });
-      Alert.alert('✓ Guardado', 'Tu perfil fue actualizado correctamente.', [
+      AppAlert.alert('✓ Guardado', 'Tu perfil fue actualizado correctamente.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'No se pudo guardar el perfil.');
+      AppAlert.alert('Error', e.message || 'No se pudo guardar el perfil.');
     } finally {
       setSaving(false);
     }

@@ -12,9 +12,16 @@
 // con origen='sistema' para que el admin los filtre como soporte.
 // ═══════════════════════════════════════════════════════════
 import React, { useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
@@ -115,13 +122,13 @@ export default function ReportarComportamientoScreen() {
         method: 'POST',
         body: JSON.stringify({ categoria, mensaje: mensaje.trim() }),
       });
-      Alert.alert(
+      AppAlert.alert(
         '¡Recibido!',
         'Gracias por escribirnos. Revisamos cada mensaje y te respondemos lo antes posible.',
         [{ text: 'OK', onPress: () => router.back() }],
       );
     } catch (e: any) {
-      Alert.alert('No se pudo enviar', e?.message || 'Intenta de nuevo en un momento.');
+      AppAlert.alert('No se pudo enviar', e?.message || 'Intenta de nuevo en un momento.');
     } finally {
       setEnviando(false);
     }

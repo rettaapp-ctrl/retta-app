@@ -13,9 +13,14 @@
 // aceptar no queda atrapado; cierra sesión y listo.
 // ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,14 +68,14 @@ export default function AceptarLegalScreen() {
       // No navegamos manualmente — el routing en _layout.tsx ve el cambio
       // de user.legal_aceptado_version y manda a /(tabs)/partidos solo.
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo registrar tu aceptación. Intenta de nuevo.');
+      AppAlert.alert('Error', e?.message || 'No se pudo registrar tu aceptación. Intenta de nuevo.');
     } finally {
       setSending(false);
     }
   }
 
   function onCerrarSesion() {
-    Alert.alert(
+    AppAlert.alert(
       'Cerrar sesión',
       'Si no aceptas los Términos y el Aviso de Privacidad, cerraremos tu sesión. Puedes volver a iniciar sesión cuando estés listo.',
       [

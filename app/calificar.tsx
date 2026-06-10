@@ -8,9 +8,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useApi } from '@/hooks/useApi';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  ActivityIndicator, Alert, ScrollView, StyleSheet,
-  Text, TouchableOpacity, View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -104,7 +109,7 @@ export default function CalificarScreen() {
       track('peer_rating_enviado', { estrellas });
       avanzar();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo enviar');
+      AppAlert.alert('Error', e?.message || 'No se pudo enviar');
     } finally {
       setEnviando(false);
     }
@@ -125,7 +130,7 @@ export default function CalificarScreen() {
   }
 
   function saltar() {
-    Alert.alert(
+    AppAlert.alert(
       'Saltar calificación',
       'Si saltas, las calificaciones quedan pendientes. Las puedes hacer más tarde.',
       [

@@ -11,10 +11,17 @@
 //    adelante queremos streaming, hay que cambiar el Worker a ReadableStream.
 // ═══════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Alert,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,7 +117,7 @@ export default function ChatIAScreen() {
     const limpio = texto.trim();
     if (!limpio || enviando) return;
     if (limpio.length > 1000) {
-      Alert.alert('Mensaje muy largo', 'Máximo 1000 caracteres por mensaje.');
+      AppAlert.alert('Mensaje muy largo', 'Máximo 1000 caracteres por mensaje.');
       return;
     }
 
@@ -186,7 +193,7 @@ export default function ChatIAScreen() {
   }
 
   function limpiarChat() {
-    Alert.alert(
+    AppAlert.alert(
       'Borrar conversación',
       '¿Quieres empezar de cero? Se perderán todos los mensajes anteriores.',
       [

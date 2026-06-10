@@ -12,6 +12,7 @@ import * as Notifications from 'expo-notifications';
 import { TUTORIAL_SEEN_KEY } from './tutorial';
 import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { POSTHOG_CONFIG, registerAnalyticsClient } from '@/lib/analytics';
+import { AppAlertHost } from '@/lib/appAlert';
 // ── Fuentes del rediseño (rama `rediseno`) ──
 import { useFonts as useSpaceGrotesk, SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
@@ -201,6 +202,9 @@ function RootLayout() {
       <AuthProvider>
         <StatusBar style="light" />
         <RootLayoutNav />
+        {/* Host del AppAlert global: cualquier pantalla puede llamar
+            AppAlert.alert / .success / .error sin importar nada extra. */}
+        <AppAlertHost />
       </AuthProvider>
     </PostHogProvider>
   );

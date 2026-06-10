@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Alert,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -27,7 +34,7 @@ export default function ResetPasswordScreen() {
     setError(''); setLoading(true);
     try {
       await resetPassword(email, codigo, password);
-      Alert.alert(
+      AppAlert.alert(
         'Listo',
         'Tu contraseña fue restablecida. Inicia sesión con tu nueva contraseña.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]

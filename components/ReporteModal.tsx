@@ -3,9 +3,18 @@
 // Modal reutilizable para reportar a un jugador o un incidente.
 // ═══════════════════════════════════════════════
 import React, { useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
 } from 'react-native';
 import { useApi } from '@/hooks/useApi';
 import { DT, FONTS, RADIUS } from '@/constants/designTokens';
@@ -48,7 +57,7 @@ export default function ReporteModal({
 
   async function enviar() {
     if (!razon) {
-      Alert.alert('Falta razón', 'Selecciona el motivo del reporte.');
+      AppAlert.alert('Falta razón', 'Selecciona el motivo del reporte.');
       return;
     }
     setEnviando(true);
@@ -69,13 +78,13 @@ export default function ReporteModal({
         con_comentario:    comentario.trim().length > 0,
       });
       reset();
-      Alert.alert(
+      AppAlert.alert(
         'Reporte enviado',
         'Gracias. El equipo de Retta lo revisará pronto.',
         [{ text: 'OK', onPress: () => { onSent?.(); onClose(); } }]
       );
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo enviar el reporte.');
+      AppAlert.alert('Error', e?.message || 'No se pudo enviar el reporte.');
     } finally {
       setEnviando(false);
     }

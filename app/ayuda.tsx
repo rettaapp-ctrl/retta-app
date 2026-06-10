@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -171,7 +177,7 @@ export default function AyudaScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert(
+      AppAlert.alert(
         'No se pudo abrir el correo',
         `Escríbenos directamente a ${SOPORTE_EMAIL}.`
       );

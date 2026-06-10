@@ -1,8 +1,16 @@
 import React, { useState, useRef } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Animated, Alert,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Animated
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -160,7 +168,7 @@ export default function OnboardingPerfilScreen() {
     setError('');
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para subir tu foto.');
+      AppAlert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para subir tu foto.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -189,7 +197,7 @@ export default function OnboardingPerfilScreen() {
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       setAvatarUrl(data.publicUrl + '?t=' + Date.now());
     } catch (e: any) {
-      Alert.alert('Error', 'No se pudo subir la foto: ' + (e.message || ''));
+      AppAlert.alert('Error', 'No se pudo subir la foto: ' + (e.message || ''));
     } finally {
       setUploadingPhoto(false);
     }

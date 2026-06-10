@@ -5,10 +5,14 @@ import { useApi } from '@/hooks/useApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { track } from '@/lib/analytics';
 import React, { useEffect, useState } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  ActivityIndicator, Alert,
-  ScrollView, StyleSheet, Text,
-  TouchableOpacity, View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -91,7 +95,7 @@ export default function PerfilPublicoScreen() {
       const data = await request(`/usuarios/${id}/perfil`);
       setPerfil(data);
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo cargar el perfil.');
+      AppAlert.alert('Error', e?.message || 'No se pudo cargar el perfil.');
       router.back();
     } finally {
       setLoading(false);
@@ -107,10 +111,10 @@ export default function PerfilPublicoScreen() {
         body: JSON.stringify({ usuario_id: perfil.id }),
       });
       track('amigo_solicitud_enviada', { target_id: perfil.id });
-      Alert.alert('Solicitud enviada', `Le enviamos tu solicitud a ${perfil.nombre}.`);
+      AppAlert.alert('Solicitud enviada', `Le enviamos tu solicitud a ${perfil.nombre}.`);
       await load();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo enviar la solicitud.');
+      AppAlert.alert('Error', e?.message || 'No se pudo enviar la solicitud.');
     } finally {
       setActuando(false);
     }
@@ -127,7 +131,7 @@ export default function PerfilPublicoScreen() {
       track('amigo_solicitud_respondida', { action });
       await load();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo procesar.');
+      AppAlert.alert('Error', e?.message || 'No se pudo procesar.');
     } finally {
       setActuando(false);
     }
@@ -135,7 +139,7 @@ export default function PerfilPublicoScreen() {
 
   function eliminarAmistad() {
     if (!perfil?.amistad?.id) return;
-    Alert.alert(
+    AppAlert.alert(
       perfil.amistad.status === 'aceptada' ? 'Eliminar amigo' : 'Cancelar solicitud',
       perfil.amistad.status === 'aceptada'
         ? `¿Seguro que quieres eliminar a ${perfil.nombre} de tus amigos?`
@@ -151,7 +155,7 @@ export default function PerfilPublicoScreen() {
               await request(`/amistades/${perfil.amistad!.id}`, { method: 'DELETE' });
               await load();
             } catch (e: any) {
-              Alert.alert('Error', e?.message || 'No se pudo eliminar.');
+              AppAlert.alert('Error', e?.message || 'No se pudo eliminar.');
             } finally {
               setActuando(false);
             }
@@ -276,7 +280,7 @@ export default function PerfilPublicoScreen() {
         ) : (
           <TouchableOpacity
             onPress={() => {
-              Alert.alert(
+              AppAlert.alert(
                 `Reportar a ${perfil.nombre}`,
                 'Si esta persona tuvo conducta inadecuada, dañó el espíritu del juego o cometió algún acto grave, repórtala. El equipo de Retta revisará el caso.',
                 [

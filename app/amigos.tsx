@@ -4,10 +4,19 @@ import { useApi } from '@/hooks/useApi';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { track } from '@/lib/analytics';
 import React, { useEffect, useState, useCallback } from 'react';
+import { AppAlert } from '@/lib/appAlert';
 import {
-  ActivityIndicator, Alert, FlatList, ScrollView,
-  RefreshControl, StyleSheet, Text, TextInput,
-  TouchableOpacity, View, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -142,7 +151,7 @@ export default function AmigosScreen() {
       track('amigo_solicitud_respondida', { action });
       await load();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'No se pudo procesar.');
+      AppAlert.alert('Error', e?.message || 'No se pudo procesar.');
     }
   }
 
