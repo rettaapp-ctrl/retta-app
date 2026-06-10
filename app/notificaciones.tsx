@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
+  TouchableOpacity, ActivityIndicator, RefreshControl, Modal,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -89,12 +89,56 @@ function formatTiempo(created_at: string) {
   return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+// ─── Formateo del cuerpo de notificaciones ──────────────────────────────
+// El backend manda algunas notifs con fechas ISO crudas como
+// "2026-06-09 a las 17:00:00 en COMPLEJO X". Las parseamos para mostrar
+// "9 de junio a las 5:00 PM en COMPLEJO X" — más humano, menos data-leak.
+// Cuando arreglemos el backend para mandarlo ya formateado, este helper
+// seguirá siendo no-op (matchea el patrón ISO, no daña texto ya bonito).
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function formatFechaISO(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const [, , mm, dd] = m;
+  const mi = parseInt(mm, 10) - 1;
+  if (mi < 0 || mi > 11) return iso;
+  return `${parseInt(dd, 10)} de ${MESES[mi]}`;
+}
+
+function formatHoraISO(hhmmss: string): string {
+  const m = hhmmss.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return hhmmss;
+  const h = parseInt(m[1], 10);
+  const min = m[2];
+  const isPM = h >= 12;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${min} ${isPM ? 'PM' : 'AM'}`;
+}
+
+function prettifyCuerpo(cuerpo: string): string {
+  if (!cuerpo) return cuerpo;
+  let out = cuerpo;
+  // Fecha ISO YYYY-MM-DD seguida opcionalmente de "a las HH:MM:SS"
+  out = out.replace(/(\d{4}-\d{2}-\d{2})(\s+a las\s+)(\d{1,2}:\d{2}:\d{2})/gi,
+    (_full, fecha, conector, hora) => `${formatFechaISO(fecha)}${conector}${formatHoraISO(hora)}`);
+  // Fechas ISO sueltas
+  out = out.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (_full, fecha) => formatFechaISO(fecha));
+  // Horas con segundos sueltas
+  out = out.replace(/\b(\d{1,2}:\d{2}:\d{2})\b/g, (_full, hora) => formatHoraISO(hora));
+  return out;
+}
+
 export default function NotificacionesScreen() {
   const router      = useRouter();
   const { request } = useApi();
   const [notifs, setNotifs]         = useState<Notif[]>([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Modal de confirmación para eliminar. Antes era Alert.alert nativo de
+  // Android (gris con CTAs verde) que se veía viejo y rompía el tema dark.
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting]         = useState(false);
 
   // useFocusEffect: re-carga notificaciones cada vez que el usuario entra
   // a esta pantalla. Sin esto las notifs quedaban viejas hasta refresh.
@@ -129,23 +173,21 @@ export default function NotificacionesScreen() {
     await Promise.all(noLeidas.map(n => marcarLeida(n.id)));
   }
 
-  async function eliminarNotif(id: string) {
-    Alert.alert(
-      'Eliminar notificación',
-      '¿Quieres eliminar esta notificación?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar', style: 'destructive',
-          onPress: async () => {
-            try {
-              await request(`/usuarios/me/notificaciones/${id}`, { method: 'DELETE' });
-              setNotifs(prev => prev.filter(n => n.id !== id));
-            } catch {}
-          },
-        },
-      ]
-    );
+  // Solicitar confirmación: abre el modal custom en vez de Alert.alert.
+  function eliminarNotif(id: string) {
+    setDeleteTarget(id);
+  }
+
+  // Acción real cuando el usuario confirma en el modal.
+  async function confirmarEliminar() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      await request(`/usuarios/me/notificaciones/${deleteTarget}`, { method: 'DELETE' });
+      setNotifs(prev => prev.filter(n => n.id !== deleteTarget));
+    } catch {}
+    setDeleting(false);
+    setDeleteTarget(null);
   }
 
   const nuevas     = notifs.filter(n => !n.leida);
@@ -165,7 +207,7 @@ export default function NotificacionesScreen() {
         <View style={styles.notifBody}>
           <Text style={styles.notifMsg}>
             <Text style={{ color: DT.onBg, fontFamily: FONTS.bodyMed }}>{n.titulo}</Text>
-            {n.cuerpo ? ` — ${n.cuerpo}` : ''}
+            {n.cuerpo ? ` — ${prettifyCuerpo(n.cuerpo)}` : ''}
           </Text>
           <Text style={styles.notifTime}>{formatTiempo(n.created_at)}</Text>
         </View>
@@ -249,6 +291,55 @@ export default function NotificacionesScreen() {
             )}
           </ScrollView>
         )}
+
+        {/* Modal custom para confirmar eliminación. Reemplaza al Alert.alert
+            nativo de Android que se veía gris con CTAs verde — incompatible
+            con el dark theme. Ahora respeta el lenguaje visual de la app. */}
+        <Modal
+          visible={deleteTarget !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => !deleting && setDeleteTarget(null)}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => !deleting && setDeleteTarget(null)}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
+              <View style={styles.modalIcon}>
+                <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <Path d="M6 6L18 18M6 18L18 6" stroke={DT.error} strokeWidth="2" strokeLinecap="round"/>
+                </Svg>
+              </View>
+              <Text style={styles.modalTitle}>Eliminar notificación</Text>
+              <Text style={styles.modalBody}>
+                Esta acción no se puede deshacer.
+              </Text>
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalBtnGhost}
+                  onPress={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalBtnGhostTxt}>CANCELAR</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalBtnDanger}
+                  onPress={confirmarEliminar}
+                  disabled={deleting}
+                  activeOpacity={0.85}
+                >
+                  {deleting
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={styles.modalBtnDangerTxt}>ELIMINAR</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -278,4 +369,16 @@ const styles = StyleSheet.create({
   emptyLogo:    { width: 56, height: 56, marginBottom: 22, opacity: 0.9 },
   emptyTitle:   { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, marginBottom: 6 },
   emptySub:     { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 20, fontFamily: FONTS.body },
+
+  // Modal custom de confirmación (reemplaza Alert.alert nativo)
+  modalBackdrop:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  modalCard:        { width: '100%', maxWidth: 360, backgroundColor: '#1a1d28', borderRadius: RADIUS.xl, padding: 24, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center' },
+  modalIcon:        { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,180,171,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  modalTitle:       { fontSize: 17, color: DT.onBg, fontFamily: FONTS.heading, marginBottom: 6, textAlign: 'center' },
+  modalBody:        { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 19, marginBottom: 22 },
+  modalActions:     { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
+  modalBtnGhost:    { flex: 1, height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder },
+  modalBtnGhostTxt: { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
+  modalBtnDanger:   { flex: 1, height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.error },
+  modalBtnDangerTxt:{ fontSize: 12, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 1 },
 });
