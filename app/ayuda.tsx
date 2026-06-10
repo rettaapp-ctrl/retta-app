@@ -319,7 +319,11 @@ const styles = StyleSheet.create({
   faqArrow:      { fontSize: 22, color: DT.outline },
   faqBody:       { fontSize: 13, color: DT.onSurfaceVar, lineHeight: 20, marginTop: 12, paddingLeft: 44, fontFamily: FONTS.body },
   faqDivider:    { height: 1, backgroundColor: DT.glassBorder, marginHorizontal: 16 },
-  iaCard:        { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: DT.glassBg, borderWidth: 1.5, borderColor: DT.primary, borderRadius: RADIUS.lg, padding: 16, marginBottom: 20, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 3 },
+  // iaCard: antes tenía borderWidth 1.5 con borderColor primary + shadow grueso
+  // que en dark mode aparecía como un "recuadro azul" alrededor que interfería
+  // visualmente con el subtítulo. Lo reemplazamos por glassBorder sutil sin
+  // shadow para que se vea limpio.
+  iaCard:        { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 20 },
   iaIcon:        { width: 44, height: 44, borderRadius: RADIUS.md, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   iaBody:        { flex: 1 },
   iaTitleRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },

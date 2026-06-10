@@ -35,11 +35,17 @@ async function safeFetchJSON(url: string, init: RequestInit): Promise<{ res: Res
 }
 
 // Configura cómo se muestran las notificaciones cuando la app está abierta
+// Handler: cuando la app está en foreground, mostramos el banner moderno
+// (heads-up de Android 12+ y banner de iOS) además del badge y sonido.
+// shouldShowBanner + shouldShowList son los campos nuevos del SDK; los
+// viejos shouldShowAlert quedaron deprecated. Setear ambos por compat.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge:  true,
+    shouldShowBanner: true,
+    shouldShowList:   true,
+    shouldShowAlert:  true,
+    shouldPlaySound:  true,
+    shouldSetBadge:   true,
   }),
 });
 
@@ -151,10 +157,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (finalStatus !== 'granted') return;
 
       if (Platform.OS === 'android') {
+        // Canal "default" configurado para notificaciones modernas en Android
+        // 8+ (estilo heads-up + Material You). Sin esto se veían con el estilo
+        // antiguo gris/verde de Android pre-8.
+        // Importance MAX → aparece como heads-up encima de cualquier app.
+        // lightColor con el lavanda de Retta para el LED del teléfono.
+        // lockscreenVisibility PUBLIC para que se vea el contenido bloqueado.
+        // sound: 'default' usa el ringtone del sistema configurado por el user.
         await Notifications.setNotificationChannelAsync('default', {
-          name: 'Retta',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
+          name:                 'Notificaciones de Retta',
+          description:          'Invitaciones a partidos, mensajes y actualizaciones',
+          importance:           Notifications.AndroidImportance.MAX,
+          vibrationPattern:     [0, 250, 250, 250],
+          lightColor:           '#bec2ff',
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          enableLights:         true,
+          enableVibrate:        true,
+          showBadge:            true,
+          sound:                'default',
+          bypassDnd:            false,
         });
       }
 

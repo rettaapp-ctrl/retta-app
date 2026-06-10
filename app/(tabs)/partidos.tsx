@@ -149,12 +149,19 @@ export default function PartidosScreen() {
     setRefreshing(false);
   }
 
-  // useFocusEffect en vez de useEffect: re-carga cada vez que el usuario
-  // vuelve a esta tab. Sin esto, los partidos quedaban estancados hasta
-  // que el usuario hacía pull-to-refresh manual.
+  // useFocusEffect: refresca al volver a la tab + polling cada 30s mientras
+  // la pantalla está en foco. Sin esto, cuando un complejo agrega un partido
+  // nuevo el usuario tenía que cambiar de tab y volver para verlo. Ahora se
+  // refresca solo en background mientras está mirando la lista.
+  // Cleanup limpia el interval al perder foco (no consume batería en otras
+  // pantallas).
   useFocusEffect(
     useCallback(() => {
       loadPartidos(activeDate);
+      const interval = setInterval(() => {
+        loadPartidos(activeDate);
+      }, 30_000); // 30 segundos
+      return () => clearInterval(interval);
     }, [activeDate])
   );
 

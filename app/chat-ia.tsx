@@ -17,7 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { CHAT_URL } from '@/constants';
@@ -71,6 +71,7 @@ const MENSAJE_BIENVENIDA: Mensaje = {
 
 export default function ChatIAScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([MENSAJE_BIENVENIDA]);
   const [texto, setTexto]       = useState('');
@@ -232,8 +233,13 @@ export default function ChatIAScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        // En Android moderno con edge-to-edge habilitado, behavior='height'
+        // dejaba un espacio fantasma del bottom safe-area entre el teclado y
+        // el inputBar. Usamos 'padding' en ambas plataformas y compensamos
+        // con keyboardVerticalOffset = -insets.bottom en Android para
+        // colapsar ese gap. iOS no lo necesita.
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -insets.bottom}
       >
         {/* Conversación */}
         <ScrollView
