@@ -20,6 +20,12 @@ export const LEGAL_VERSION = '2026-05-26';
 export const SUPABASE_URL      = 'https://nfdmnpkojrzqfkpdxuxb.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZG1ucGtvanJ6cWZrcGR4dXhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDcxNzIsImV4cCI6MjA5MTUyMzE3Mn0.TMnkFFPtI3g-jTHywrKosmIcmzvYQx5v5oaaz_FF_78';
 
+// Stripe — publishable key ES PÚBLICA (no es secreto). Sí va en el bundle.
+// Empieza con "pk_test_" en test mode, "pk_live_" en producción.
+// Cuando cambies a live, actualiza este valor y haz un OTA.
+// PENDIENTE: Rafael debe reemplazar el placeholder con la key real de Test.
+export const STRIPE_PUBLISHABLE_KEY = 'pk_test_51TLF4RRw77bTNn7b4D0w1pNsOfggpLF6JPMeFLXqm7eLRDkPHOe5rIIaWcXs75jHiyZSg2rK0qZkldCKKsaDNYsY00peRNHl6U';
+
 export const COLORS = {
   bg:          '#0A0A0A',
   surface:     '#111111',

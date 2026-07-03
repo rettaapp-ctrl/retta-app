@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
+import { useStripe } from '@stripe/stripe-react-native';
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +48,7 @@ type MetodoPago = 'visa' | 'mc' | 'applepay';
 export default function ConfirmarPagoScreen() {
   const router = useRouter();
   const { request } = useApi();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const {
     partido_id, equipo, complejo, cancha, fecha,
     hora, precio, tipo, es_invitado, nombre_invitado,
@@ -83,10 +85,18 @@ export default function ConfirmarPagoScreen() {
   }, [stage]);
 
   async function handlePagar() {
-    setStage('processing');
-    try {
-      await new Promise(r => setTimeout(r, 1500));
-      if (esInvitado) {
+    // Flujo real de pago con Stripe Payment Sheet:
+    //   1. Backend crea PaymentIntent y reserva cupo (inscripción pendiente)
+    //   2. App inicializa Payment Sheet con el client_secret
+    //   3. App presenta el Payment Sheet (UI nativo de Stripe)
+    //   4. Usuario paga → Stripe procesa
+    //   5. Webhook backend recibe payment_intent.succeeded → confirma inscripción
+    //   6. App muestra pantalla de éxito
+    // Nota: los "invitados" (sin cuenta) todavía NO pasan por Stripe, sigue el
+    // flujo directo de /partidos/:id/invitado. Migrar a Stripe cuando sea prioritario.
+    if (esInvitado) {
+      setStage('processing');
+      try {
         await request(`/partidos/${partido_id}/invitado`, {
           method: 'POST',
           body: JSON.stringify({ equipo, nombre_invitado }),
@@ -94,15 +104,68 @@ export default function ConfirmarPagoScreen() {
         track('invitado_pagado', {
           partido_id, equipo, precio: Number(precio) || 0, metodo,
         });
-      } else {
-        await request(`/partidos/${partido_id}/unirse`, {
-          method: 'POST',
-          body: JSON.stringify({ equipo }),
-        });
-        track('partido_inscripcion_completada', {
-          partido_id, equipo, precio: Number(precio) || 0, tipo, metodo,
-        });
+        setStage('success');
+      } catch (e: any) {
+        setStage('confirm');
+        const msg = e?.message || 'No pudimos agregar al invitado. Intenta de nuevo.';
+        AppAlert.alert('No se pudo completar', msg);
       }
+      return;
+    }
+
+    setStage('processing');
+    try {
+      // 1. Crear PaymentIntent en el backend (reserva cupo con status pendiente)
+      const { paymentIntentClientSecret } = await request('/pagos/crear-payment-intent', {
+        method: 'POST',
+        body: JSON.stringify({ partido_id, equipo: equipo || 'auto' }),
+      });
+
+      // 2. Inicializar Payment Sheet con el client_secret
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: 'Retta',
+        paymentIntentClientSecret,
+        allowsDelayedPaymentMethods: false,
+        returnURL: 'retta://stripe-redirect',
+        appearance: {
+          colors: {
+            primary:                DT.primary,
+            background:             DT.bg,
+            componentBackground:    DT.surface,
+            componentBorder:        DT.glassBorder,
+            componentDivider:       DT.glassBorder,
+            primaryText:            DT.onBg,
+            secondaryText:          DT.onSurfaceVar,
+            componentText:          DT.onBg,
+            placeholderText:        DT.outline,
+            icon:                   DT.onSurfaceVar,
+            error:                  DT.error,
+          },
+          shapes: { borderRadius: 12, borderWidth: 1 },
+        },
+      });
+      if (initError) throw new Error(initError.message);
+
+      // 3. Presentar Payment Sheet (UI nativo)
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        // Usuario canceló o hubo error
+        setStage('confirm');
+        if (presentError.code === 'Canceled') {
+          // Silencioso — el usuario abandonó. No mostrar error.
+          track('partido_pago_cancelado', { partido_id });
+          return;
+        }
+        throw new Error(presentError.message || 'No se pudo completar el pago');
+      }
+
+      // 4. Pago confirmado por Stripe. El webhook del backend actualizará la
+      //    inscripción a "confirmado" en segundos. Mostramos éxito de una vez
+      //    (optimistic UI) — la app luego refresca al volver a Mis Rettas.
+      track('partido_inscripcion_completada', {
+        partido_id, equipo, precio: Number(precio) || 0, tipo, metodo: 'stripe',
+      });
       setStage('success');
     } catch (e: any) {
       setStage('confirm');

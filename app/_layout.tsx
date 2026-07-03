@@ -13,6 +13,8 @@ import { TUTORIAL_SEEN_KEY } from './tutorial';
 import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { POSTHOG_CONFIG, registerAnalyticsClient } from '@/lib/analytics';
 import { AppAlertHost } from '@/lib/appAlert';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { STRIPE_PUBLISHABLE_KEY } from '@/constants';
 // ── Fuentes del rediseño (rama `rediseno`) ──
 import { useFonts as useSpaceGrotesk, SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
@@ -200,11 +202,20 @@ function RootLayout() {
     >
       <AnalyticsBridge />
       <AuthProvider>
-        <StatusBar style="light" />
-        <RootLayoutNav />
-        {/* Host del AppAlert global: cualquier pantalla puede llamar
-            AppAlert.alert / .success / .error sin importar nada extra. */}
-        <AppAlertHost />
+        {/* StripeProvider wrappea toda la app para que confirmar-pago.tsx
+            (o cualquier otra pantalla futura) pueda usar el Payment Sheet
+            nativo de Stripe. La publishable key es pública (sí va en bundle);
+            para cambiar de test a live, actualizar STRIPE_PUBLISHABLE_KEY
+            en constants/index.ts y hacer un OTA (no requiere rebuild). */}
+        <StripeProvider
+          publishableKey={STRIPE_PUBLISHABLE_KEY}
+          merchantIdentifier="merchant.mx.retta.app"
+        >
+          <StatusBar style="light" />
+          <RootLayoutNav />
+          {/* Host del AppAlert global */}
+          <AppAlertHost />
+        </StripeProvider>
       </AuthProvider>
     </PostHogProvider>
   );
