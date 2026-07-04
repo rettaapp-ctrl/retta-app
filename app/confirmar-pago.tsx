@@ -127,19 +127,22 @@ export default function ConfirmarPagoScreen() {
         paymentIntentClientSecret,
         allowsDelayedPaymentMethods: false,
         returnURL: 'retta://stripe-redirect',
+        // Stripe SÓLO acepta hex #RRGGBB o #RRGGBBAA (no rgba(...)).
+        // Los DT tokens tienen algunos rgba (glassBorder, etc.), por eso
+        // pasamos valores hex directos aquí. Colores oficiales del manual.
         appearance: {
           colors: {
-            primary:                DT.primary,
-            background:             DT.bg,
-            componentBackground:    DT.surface,
-            componentBorder:        DT.glassBorder,
-            componentDivider:       DT.glassBorder,
-            primaryText:            DT.onBg,
-            secondaryText:          DT.onSurfaceVar,
-            componentText:          DT.onBg,
-            placeholderText:        DT.outline,
-            icon:                   DT.onSurfaceVar,
-            error:                  DT.error,
+            primary:             '#bec2ff', // lavanda primary
+            background:          '#11131b', // fondo dark
+            componentBackground: '#1d1f28', // surface card
+            componentBorder:     '#FFFFFF14', // glass border (rgba 8% en hex)
+            componentDivider:    '#FFFFFF14',
+            primaryText:         '#e1e1ee', // texto principal
+            secondaryText:       '#c6c5d7', // texto secundario
+            componentText:       '#e1e1ee',
+            placeholderText:     '#908fa0',
+            icon:                '#c6c5d7',
+            error:               '#ffb4ab',
           },
           shapes: { borderRadius: 12, borderWidth: 1 },
         },
