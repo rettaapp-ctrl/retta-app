@@ -2,7 +2,8 @@
 // Hook que detecta cuántas calificaciones tiene el usuario pendientes.
 // Se usa para mostrar el banner/prompt en Partidos.
 // ═══════════════════════════════════════════════
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { useApi } from './useApi';
 import { useAuth } from '@/context/AuthContext';
 
@@ -28,7 +29,15 @@ export function useCalificacionesPendientes() {
     }
   }, [token, request]);
 
-  useEffect(() => { refetch(); }, [refetch]);
+  // useFocusEffect en vez de useEffect: cada vez que la pantalla que consume
+  // este hook vuelve a foco (ej. al regresar desde /calificar) el conteo se
+  // re-hace. Antes solo se ejecutaba en el mount, y el banner "tienes X
+  // calificaciones pendientes" seguía visible aunque el usuario ya calificó.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   return { count, loading, refetch };
 }

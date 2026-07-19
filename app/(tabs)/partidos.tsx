@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { isPartidoVisible } from '@/lib/partidos';
+import { isPartidoUnible } from '@/lib/partidos';
 import { useNotificacionesCount } from '@/hooks/useNotificacionesCount';
 import { useCalificacionesPendientes } from '@/hooks/useCalificacionesPendientes';
 import { openMaps, buildMapQuery } from '@/lib/mapas';
@@ -124,8 +124,11 @@ export default function PartidosScreen() {
         request(`/partidos?fecha=${fecha}&limit=50&status=abierto`),
         request('/usuarios/me/partidos').catch(() => ({ partidos: [] })),
       ]);
+      // En Explorar filtramos con isPartidoUnible (sin gracia): un partido
+      // que ya empezó no puede unirse (backend rechaza), no tiene sentido
+      // mostrarlo aquí. La ventana de 1h de gracia queda solo para Mis Rettas.
       setPartidos(
-        (partidosData.partidos || []).filter((p: Partido) => isPartidoVisible(p.fecha, p.hora_inicio))
+        (partidosData.partidos || []).filter((p: Partido) => isPartidoUnible(p.fecha, p.hora_inicio))
       );
       const ids = new Set<string>(
         (inscData.partidos || [])
@@ -204,7 +207,7 @@ export default function PartidosScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.bigTitle}>
+            <Text style={styles.bigTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
               <Text style={styles.bigTitleAccent}>Rettas</Text>
               <Text style={styles.bigTitlePlain}> cerca de ti</Text>
             </Text>
@@ -462,13 +465,18 @@ export default function PartidosScreen() {
 const styles = StyleSheet.create({
   root:              { flex: 1, backgroundColor: DT.bg },
   header:            { paddingHorizontal: SPACING.gutter, paddingTop: SPACING.gutter, paddingBottom: 4 },
-  headerTop:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 12 },
+  // Header idéntico en las 3 tabs (Explorar/Mis Rettas/Perfil) para que
+  // la campana quede exactamente en el mismo pixel al cambiar de pestaña.
+  headerTop:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 20, gap: 12 },
   bellBtn:           { position: 'relative', width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
-  bellBadge:         { position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center' },
+  bellBadge:         { position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: DT.bg },
   bellBadgeTxt:      { fontSize: 9, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 12 },
+  // Sora es más ancha que Space Grotesk en el mismo tamaño. Bajamos de 32 a
+  // 26 y del peso Bold (700) al SemiBold (600) para que "Rettas cerca de ti"
+  // quepa en una sola línea sin verse pesado.
   bigTitle:          { flex: 1 },
-  bigTitleAccent:    { fontSize: 32, color: DT.primary, fontFamily: FONTS.display, letterSpacing: -1, lineHeight: 36 },
-  bigTitlePlain:     { fontSize: 32, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -1, lineHeight: 36 },
+  bigTitleAccent:    { fontSize: 26, color: DT.primary, fontFamily: FONTS.displayMed, letterSpacing: -0.8, lineHeight: 30 },
+  bigTitlePlain:     { fontSize: 26, color: DT.onBg, fontFamily: FONTS.displayMed, letterSpacing: -0.8, lineHeight: 30 },
   searchBox:         { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, height: 46, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, marginBottom: 16 },
   searchInput:       { flex: 1, fontSize: 14.5, color: DT.onBg, fontFamily: FONTS.body },
   daysRow:           { gap: 10, paddingBottom: 6, paddingRight: 8 },

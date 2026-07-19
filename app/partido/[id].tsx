@@ -58,6 +58,8 @@ interface Partido {
   status: string;
   notas?: string;
   jugadores?: Jugador[];
+  goles_a?: number | null;
+  goles_b?: number | null;
 }
 
 function BackIcon() {
@@ -119,6 +121,7 @@ export default function PartidoDetailScreen() {
   const [modoInvitado, setModoInvitado]     = useState(false);
   const [modalInvitado, setModalInvitado]   = useState(false);
   const [equipoInvitado, setEquipoInvitado] = useState<'A'|'B'>('A');
+  const [posicionInvitado, setPosicionInvitado] = useState<'POR'|'DEF'|'MED'|'DEL'>('MED');
   const [invNombre, setInvNombre]           = useState('');
   const [invError, setInvError]             = useState('');
   const [enviandoInv, setEnviandoInv]       = useState(false);
@@ -196,6 +199,7 @@ export default function PartidoDetailScreen() {
         tipo:            partido?.tipo,
         es_invitado:     'true',
         nombre_invitado: invNombre.trim(),
+        posicion_invitado: posicionInvitado,
       },
     });
   }
@@ -251,6 +255,14 @@ export default function PartidoDetailScreen() {
   }
 
   function handleSlotPress(equipo: 'A' | 'B', index: number, jugador: Jugador | null) {
+    // Si el partido ya pasó, sólo permitimos navegar al perfil de otro jugador.
+    // No se puede cancelar invitados ni agregar nadie a algo que ya terminó.
+    if (partidoYaPaso) {
+      if (jugador && !jugador.es_invitado && jugador.usuario_id && jugador.usuario_id !== user?.id) {
+        router.push(`/usuario/${jugador.usuario_id}`);
+      }
+      return;
+    }
     if (jugador?.es_invitado && jugador.invitado_de === user?.id) {
       handleCancelarInvitado(jugador);
       return;
@@ -262,6 +274,7 @@ export default function PartidoDetailScreen() {
     if (jugador) return;
     if (desde === 'reservas' || yaInscrito) {
       setEquipoInvitado(equipo);
+      setPosicionInvitado('MED');
       setInvNombre('');
       setInvError('');
       setModalInvitado(true);
@@ -281,14 +294,39 @@ export default function PartidoDetailScreen() {
     const url = `https://rettaapp.com/partido/${partido.id}`;
     const fechaTxt = formatFecha(partido.fecha);
     const horaTxt  = formatHora(partido.hora_inicio);
-    const mensaje = `Te invito a jugar en Retta\n\n${partido.complejo_nombre} · ${partido.cancha_nombre}\n${fechaTxt} a las ${horaTxt}\n\n${url}`;
+
+    // El texto cambia según si el partido pasó o no. Para partidos pasados no
+    // tiene sentido "invitar" — mostramos el resultado (si existe) o avisamos
+    // que falta reportar el marcador.
+    let mensaje: string;
+    let title: string;
+    if (partidoYaPaso) {
+      const tieneMarcador =
+        partido.goles_a != null && partido.goles_b != null;
+      if (tieneMarcador) {
+        mensaje =
+          `Resultado en Retta\n\n${partido.complejo_nombre} · ${partido.cancha_nombre}\n` +
+          `${fechaTxt}\n\nEquipo A ${partido.goles_a} - ${partido.goles_b} Equipo B\n\n${url}`;
+        title = 'Resultado del partido';
+      } else {
+        mensaje =
+          `Partido pasado, falta resultado\n\n${partido.complejo_nombre} · ${partido.cancha_nombre}\n` +
+          `${fechaTxt}\n\n${url}`;
+        title = 'Partido pasado';
+      }
+    } else {
+      mensaje =
+        `Te invito a jugar en Retta\n\n${partido.complejo_nombre} · ${partido.cancha_nombre}\n` +
+        `${fechaTxt} a las ${horaTxt}\n\n${url}`;
+      title = 'Partido en Retta';
+    }
     try {
       await Share.share({
         message: mensaje,
         url: Platform.OS === 'ios' ? url : undefined,
-        title: 'Partido en Retta',
+        title,
       });
-      track('partido_compartido', { partido_id: partido.id });
+      track('partido_compartido', { partido_id: partido.id, es_pasado: partidoYaPaso });
     } catch {}
   }
 
@@ -381,7 +419,14 @@ export default function PartidoDetailScreen() {
 
   function formatFecha(fecha: string) {
     const d = new Date(fecha + 'T00:00:00');
-    return d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+    const nowYear = new Date().getFullYear();
+    // Si el partido es de otro año (típicamente pasado), mostramos el año
+    // para no confundir al usuario — "vie 3 de jul." podría verse como
+    // futuro cuando en realidad fue en 2025.
+    const opts: Intl.DateTimeFormatOptions = d.getFullYear() === nowYear
+      ? { weekday: 'short', day: 'numeric', month: 'short' }
+      : { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+    return d.toLocaleDateString('es-MX', opts);
   }
 
   function formatHora(hora: string) {
@@ -450,21 +495,33 @@ export default function PartidoDetailScreen() {
               {jugador!.nombre?.[0]?.toUpperCase() || '?'}
             </Text>
           )}
-          {esMiInvitado && (
+          {/* Badge X para cancelar invitado — SOLO si el partido no ha pasado.
+              En modo resumen no tiene sentido: no puedes cancelar lo pasado. */}
+          {esMiInvitado && !partidoYaPaso && (
             <View style={styles.slotInvitadoBadge}>
               <Text style={styles.slotInvitadoBadgeTxt}>×</Text>
             </View>
           )}
         </View>
-        <Text style={[styles.slotName, isEmpty && !isThisSlot && styles.slotNameEmpty, esYo && styles.slotNameYo]}>
+        <Text
+          style={[styles.slotName, isEmpty && !isThisSlot && styles.slotNameEmpty, esYo && styles.slotNameYo]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
           {isThisSlot ? user?.nombre || 'Tú' : isEmpty ? 'Libre' : esYo ? (user?.nombre || jugador!.nombre) : jugador!.nombre}
         </Text>
-        {isThisSlot && <Text style={styles.slotPreviewTag}>vista previa</Text>}
-        {esMiInvitado && <Text style={styles.slotInvitadoTag}>tu invitado</Text>}
-        {esOtroInvitado && <Text style={styles.slotOtroInvitadoTag}>invitado</Text>}
-        {esYo && <Text style={styles.slotYoTag}>tú</Text>}
+        {isThisSlot && <Text style={styles.slotPreviewTag} numberOfLines={1}>vista previa</Text>}
+        {/* En modo pasado, ambos tipos de invitado se muestran igual — la
+            distinción "tuyo/otro" solo importaba para cancelar. */}
+        {esMiInvitado && (
+          <Text style={styles.slotInvitadoTag} numberOfLines={1}>
+            {partidoYaPaso ? 'invitado' : 'tu invitado'}
+          </Text>
+        )}
+        {esOtroInvitado && <Text style={styles.slotOtroInvitadoTag} numberOfLines={1}>invitado</Text>}
+        {esYo && <Text style={styles.slotYoTag} numberOfLines={1}>tú</Text>}
         {!isEmpty && !isThisSlot && !esMiInvitado && !esOtroInvitado && !esYo && jugador?.posicion && (
-          <Text style={styles.slotPos}>{jugador.posicion}</Text>
+          <Text style={styles.slotPos} numberOfLines={1}>{jugador.posicion}</Text>
         )}
       </TouchableOpacity>
     );
@@ -481,10 +538,20 @@ export default function PartidoDetailScreen() {
   // Determinar si el partido ya pasó (terminado o cancelado). Si ya pasó,
   // ocultamos todos los CTAs de acción (unirse, cancelar, invitar) porque
   // no tienen sentido — el usuario sólo está viendo el detalle histórico.
-  // Combinamos fecha+hora real vs. ahora + cualquier status terminal.
-  const fechaHoraPartido = new Date(`${partido.fecha}T${partido.hora_inicio || '00:00'}:00`);
+  // Normalizamos hora: backend puede mandar "21:00" o "21:00:00" — cualquiera
+  // de los dos debe funcionar. Si viene malformada, caemos a "00:00" para
+  // que el .getTime() no devuelva NaN (NaN < Date.now() sería siempre false,
+  // ocultando el bug de partido pasado).
+  const horaNorm = (() => {
+    const h = partido.hora_inicio || '00:00';
+    // Aceptamos "HH:MM" o "HH:MM:SS". Truncamos a "HH:MM".
+    const m = h.match(/^(\d{1,2}):(\d{2})/);
+    return m ? `${m[1].padStart(2, '0')}:${m[2]}` : '00:00';
+  })();
+  const fechaHoraPartido = new Date(`${partido.fecha}T${horaNorm}:00`);
+  const fechaHoraMs = fechaHoraPartido.getTime();
   const partidoYaPaso =
-    fechaHoraPartido.getTime() < Date.now() ||
+    (!isNaN(fechaHoraMs) && fechaHoraMs < Date.now()) ||
     partido.status === 'finalizado' ||
     partido.status === 'cancelado' ||
     partido.status === 'cerrado';
@@ -496,7 +563,7 @@ export default function PartidoDetailScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top','bottom']}>
         {/* Topbar */}
         <View style={styles.topbar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
@@ -513,26 +580,42 @@ export default function PartidoDetailScreen() {
 
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
+          {/* Banner de partido pasado — se muestra siempre arriba del hero
+              cuando el partido ya no admite acciones (finalizado / cancelado /
+              simplemente fecha pasada). */}
+          {partidoYaPaso && (
+            <View style={styles.pastBanner}>
+              <View style={styles.pastBannerDot} />
+              <Text style={styles.pastBannerTxt}>
+                {partido.status === 'cancelado' ? 'PARTIDO CANCELADO' : 'PARTIDO FINALIZADO'}
+              </Text>
+            </View>
+          )}
+
           {/* Hero */}
           <View style={styles.hero}>
             <Text style={styles.heroVenue}>{partido.complejo_nombre}</Text>
             <Text style={styles.heroCancha}>{partido.cancha_nombre} · {partido.tipo}</Text>
 
-            {/* Progreso de cupo */}
+            {/* Progreso de cupo (o resumen si ya pasó) */}
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>PROGRESO</Text>
+              <Text style={styles.progressLabel}>{partidoYaPaso ? 'PARTICIPARON' : 'PROGRESO'}</Text>
               <Text style={styles.progressCount}>
-                {partido.jugadores_confirmados || 0}/{partido.max_jugadores}
+                {partidoYaPaso
+                  ? `${partido.jugadores_confirmados || 0}`
+                  : `${partido.jugadores_confirmados || 0}/${partido.max_jugadores}`}
                 <Text style={styles.progressCountSub}>  jugadores</Text>
               </Text>
             </View>
-            <View style={styles.progressBar}>
-              <LinearGradient
-                colors={GRADIENTS.progress}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
-              />
-            </View>
+            {!partidoYaPaso && (
+              <View style={styles.progressBar}>
+                <LinearGradient
+                  colors={GRADIENTS.progress}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
+                />
+              </View>
+            )}
 
             <View style={styles.heroPills}>
               <View style={styles.heroPill}>
@@ -552,7 +635,9 @@ export default function PartidoDetailScreen() {
             </View>
           </View>
 
-          {/* Mapa */}
+          {/* Mapa — sigue clickeable siempre (útil para volver a visitar el
+              lugar aún después de un partido pasado), pero ocultamos el CTA
+              "TOCA PARA CÓMO LLEGAR" cuando ya pasó, para no saturar. */}
           <TouchableOpacity
             style={styles.mapBox}
             onPress={() => openMaps(buildMapQuery(partido.complejo_nombre, partido.complejo_ciudad, partido.complejo_direccion))}
@@ -573,9 +658,11 @@ export default function PartidoDetailScreen() {
               <PinIcon />
             </View>
             <Text style={styles.mapAddr}>{partido.complejo_ciudad}</Text>
-            <View style={styles.mapHint}>
-              <Text style={styles.mapHintTxt}>TOCA PARA CÓMO LLEGAR</Text>
-            </View>
+            {!partidoYaPaso && (
+              <View style={styles.mapHint}>
+                <Text style={styles.mapHintTxt}>TOCA PARA CÓMO LLEGAR</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Banners */}
@@ -595,115 +682,130 @@ export default function PartidoDetailScreen() {
             </View>
           )}
 
-          {/* Jugadores */}
-          <Text style={styles.sectionLabel}>ALINEACIÓN</Text>
+          {/* Jugadores — envuelto en card propia para alinear con hero y mapa.
+              Antes el sectionLabel + equipoBlock se salían del contorno visual
+              porque tenían solo marginHorizontal:gutter mientras que el hero
+              agregaba padding interno adicional. */}
+          <View style={styles.alineacionCard}>
+            <Text style={styles.alineacionLabel}>Alineación</Text>
+            <View style={styles.alineacionDivider} />
 
-          <View style={styles.equipoBlock}>
-            <View style={styles.equipoHeader}>
-              <View style={[styles.equipoDot, { backgroundColor: '#3A86FF' }]} />
-              <Text style={styles.equipoTitle}>EQUIPO A</Text>
-            </View>
-            <View style={styles.slotsGrid}>
-              {slotsA.map((jugador, i) => renderSlot(jugador, i, 'A'))}
-            </View>
-          </View>
-
-          <View style={styles.vsDivider}>
-            <View style={styles.vsLine} />
-            <Text style={styles.vsText}>VS</Text>
-            <View style={styles.vsLine} />
-          </View>
-
-          <View style={styles.equipoBlock}>
-            <View style={styles.equipoHeader}>
-              <View style={[styles.equipoDot, { backgroundColor: '#2A9D8F' }]} />
-              <Text style={styles.equipoTitle}>EQUIPO B</Text>
-            </View>
-            <View style={styles.slotsGrid}>
-              {slotsB.map((jugador, i) => renderSlot(jugador, i, 'B'))}
-            </View>
-          </View>
-
-          {/* Reglas */}
-          <Text style={[styles.sectionLabel, { marginTop: 16 }]}>REGLAS DEL PARTIDO</Text>
-          <View style={styles.rulesCard}>
-            {[
-              'Llegar al menos 10 minutos antes del inicio del partido.',
-              'Portar ropa deportiva adecuada. Prohibido jugar con tenis de calle.',
-              'Juego limpio obligatorio. Tarjeta roja implica expulsión inmediata sin reembolso.',
-              'Esta es una reta entre amigos: venimos a disfrutar, hacer deporte y pasarla bien. Mantén siempre las buenas vibras.',
-              'El partido podrá cancelarse hasta 2 horas antes del inicio si no se completa el mínimo de jugadores. En ese caso se reembolsa a los inscritos.',
-            ].map((r, i, arr) => (
-              <View key={i} style={[styles.ruleRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
-                <View style={styles.ruleDot} />
-                <Text style={styles.ruleText}>{r}</Text>
+            <View style={styles.equipoBlockInner}>
+              <View style={styles.equipoHeader}>
+                <View style={[styles.equipoDot, { backgroundColor: '#3A86FF' }]} />
+                <Text style={styles.equipoTitle}>EQUIPO A</Text>
               </View>
-            ))}
-          </View>
-
-          {/* Política cancelación */}
-          <Text style={[styles.sectionLabel, { marginTop: 10 }]}>POLÍTICA DE CANCELACIÓN</Text>
-          <View style={[styles.rulesCard, { marginBottom: 12 }]}>
-            {[
-              { color: DT.success, label: 'Más de 12 horas antes', detail: 'Cancelación sin costo · Reembolso completo' },
-              { color: DT.warning, label: 'Entre 3 y 12 horas antes', detail: 'Se retiene el 40% · Se reembolsa el 60%' },
-              { color: DT.error,   label: 'Menos de 3 horas antes', detail: 'Sin reembolso · Cargo definitivo' },
-            ].map((item, i) => (
-              <View key={i} style={[styles.ruleRow, { alignItems: 'center' }, i === 2 && { borderBottomWidth: 0 }]}>
-                <View style={[styles.ruleDot, { backgroundColor: item.color, marginTop: 0 }]} />
-                <View>
-                  <Text style={[styles.ruleText, { color: item.color, fontFamily: FONTS.bodyMed }]}>{item.label}</Text>
-                  <Text style={[styles.ruleText, { marginTop: 2 }]}>{item.detail}</Text>
-                </View>
+              <View style={styles.slotsGrid}>
+                {slotsA.map((jugador, i) => renderSlot(jugador, i, 'A'))}
               </View>
-            ))}
+            </View>
+
+            <View style={styles.vsDivider}>
+              <View style={styles.vsLine} />
+              <Text style={styles.vsText}>VS</Text>
+              <View style={styles.vsLine} />
+            </View>
+
+            <View style={styles.equipoBlockInner}>
+              <View style={styles.equipoHeader}>
+                <View style={[styles.equipoDot, { backgroundColor: '#2A9D8F' }]} />
+                <Text style={styles.equipoTitle}>EQUIPO B</Text>
+              </View>
+              <View style={styles.slotsGrid}>
+                {slotsB.map((jugador, i) => renderSlot(jugador, i, 'B'))}
+              </View>
+            </View>
           </View>
 
-          {/* Reportar incidente */}
+          {/* Reglas y política de cancelación — solo tienen sentido antes
+              de que el partido inicie. En modo resumen las ocultamos. */}
+          {!partidoYaPaso && (
+            <>
+              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>REGLAS DEL PARTIDO</Text>
+              <View style={styles.rulesCard}>
+                {[
+                  'Llegar al menos 10 minutos antes del inicio del partido.',
+                  'Portar ropa deportiva adecuada. Prohibido jugar con tenis de calle.',
+                  'Juego limpio obligatorio. Tarjeta roja implica expulsión inmediata sin reembolso.',
+                  'Esta es una reta entre amigos: venimos a disfrutar, hacer deporte y pasarla bien. Mantén siempre las buenas vibras.',
+                  'El partido podrá cancelarse hasta 2 horas antes del inicio si no se completa el mínimo de jugadores. En ese caso se reembolsa a los inscritos.',
+                ].map((r, i, arr) => (
+                  <View key={i} style={[styles.ruleRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
+                    <View style={styles.ruleDot} />
+                    <Text style={styles.ruleText}>{r}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={[styles.sectionLabel, { marginTop: 10 }]}>POLÍTICA DE CANCELACIÓN</Text>
+              <View style={[styles.rulesCard, { marginBottom: 12 }]}>
+                {[
+                  { color: DT.success, label: 'Más de 12 horas antes', detail: 'Cancelación sin costo · Reembolso completo' },
+                  { color: DT.warning, label: 'Entre 3 y 12 horas antes', detail: 'Se retiene el 40% · Se reembolsa el 60%' },
+                  { color: DT.error,   label: 'Menos de 3 horas antes', detail: 'Sin reembolso · Cargo definitivo' },
+                ].map((item, i) => (
+                  <View key={i} style={[styles.ruleRow, { alignItems: 'center' }, i === 2 && { borderBottomWidth: 0 }]}>
+                    <View style={[styles.ruleDot, { backgroundColor: item.color, marginTop: 0 }]} />
+                    <View>
+                      <Text style={[styles.ruleText, { color: item.color, fontFamily: FONTS.bodyMed }]}>{item.label}</Text>
+                      <Text style={[styles.ruleText, { marginTop: 2 }]}>{item.detail}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Reportar incidente — disponible tanto en partidos activos como
+              pasados (por si algo ocurrió que amerita reporte). */}
           {yaInscrito && (
-            <View style={{ marginBottom: (desde === 'reservas' || yaInscrito) ? 240 : 130, alignItems: 'center' }}>
+            <View style={{ marginBottom: 20, alignItems: 'center' }}>
               <TouchableOpacity onPress={() => setReporteOpen(true)} activeOpacity={0.7}>
                 <Text style={styles.reportarLink}>¿Pasó algo en este partido? Reportar incidente</Text>
               </TouchableOpacity>
             </View>
           )}
-          {!yaInscrito && <View style={{ marginBottom: 130 }} />}
-        </ScrollView>
 
-        {/* Botón inferior — solo si el partido NO ha pasado todavía */}
-        {partidoYaPaso ? null : (desde === 'reservas' || yaInscrito) ? (
-          <View style={[styles.joinBar, { paddingBottom: insets.bottom + 16 }]}>
-            <TouchableOpacity style={[styles.invBar, { marginBottom: 8 }]} onPress={openInvitarAmigos} activeOpacity={0.85}>
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Circle cx="9" cy="7" r="4" stroke="#fff" strokeWidth="1.8"/>
-                <Path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
-                <Circle cx="17" cy="10" r="3" stroke="#fff" strokeWidth="1.8"/>
-                <Path d="M22 17a4 4 0 0 0-4-3.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
-              </Svg>
-              <Text style={styles.invBarTxt}>INVITAR AMIGOS</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.invBar, { marginBottom: 8 }]}
-              onPress={() => { setEquipoInvitado('A'); setInvNombre(''); setInvError(''); setModalInvitado(true); }}
-              activeOpacity={0.85}
-            >
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="1.8"/>
-                <Path d="M4 21v-1a6 6 0 0 1 12 0v1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
-                <Path d="M19 8v6M22 11h-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
-              </Svg>
-              <Text style={styles.invBarTxt}>AGREGAR INVITADO</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelInscBtn} onPress={handleCancelarInscripcion} disabled={cancelando} activeOpacity={0.85}>
-              {cancelando
-                ? <ActivityIndicator color={DT.error} />
-                : <Text style={styles.cancelInscTxt}>CANCELAR MI LUGAR</Text>
-              }
-            </TouchableOpacity>
-          </View>
-        ) : (
-          (canUnirse || equipoSeleccionado) && (
-            <View style={[styles.joinBar, { paddingBottom: insets.bottom + 16 }]}>
+          {/* ── Acciones al final del scroll (ya NO barra fixed) ──
+              Layout: 2 columnas compactas (INVITAR + AGREGAR) + CANCELAR
+              debajo. Ocultas si el partido ya pasó. Para no-inscritos, solo
+              se muestra UNIRME. */}
+          {!partidoYaPaso && (desde === 'reservas' || yaInscrito) && (
+            <View style={styles.actionsInline}>
+              <View style={styles.actionsRow}>
+                <TouchableOpacity style={[styles.invBar, styles.invBarHalf]} onPress={openInvitarAmigos} activeOpacity={0.85}>
+                  <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <Circle cx="9" cy="7" r="4" stroke="#fff" strokeWidth="1.8"/>
+                    <Path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+                    <Circle cx="17" cy="10" r="3" stroke="#fff" strokeWidth="1.8"/>
+                    <Path d="M22 17a4 4 0 0 0-4-3.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+                  </Svg>
+                  <Text style={styles.invBarTxtSm}>INVITAR</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.invBar, styles.invBarHalf]}
+                  onPress={() => { setEquipoInvitado('A'); setPosicionInvitado('MED'); setInvNombre(''); setInvError(''); setModalInvitado(true); }}
+                  activeOpacity={0.85}
+                >
+                  <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <Circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="1.8"/>
+                    <Path d="M4 21v-1a6 6 0 0 1 12 0v1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+                    <Path d="M19 8v6M22 11h-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+                  </Svg>
+                  <Text style={styles.invBarTxtSm}>INVITADO</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={[styles.cancelInscBtn, { marginTop: 8 }]} onPress={handleCancelarInscripcion} disabled={cancelando} activeOpacity={0.85}>
+                {cancelando
+                  ? <ActivityIndicator color={DT.error} />
+                  : <Text style={styles.cancelInscTxt}>CANCELAR MI LUGAR</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!partidoYaPaso && !(desde === 'reservas' || yaInscrito) && (canUnirse || equipoSeleccionado) && (
+            <View style={styles.actionsInline}>
               <TouchableOpacity onPress={handleUnirse} disabled={joining} activeOpacity={0.85}>
                 <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.joinBtn}>
                   {joining ? (
@@ -718,8 +820,10 @@ export default function PartidoDetailScreen() {
                 </LinearGradient>
               </TouchableOpacity>
             </View>
-          )
-        )}
+          )}
+
+          <View style={{ height: 30 }} />
+        </ScrollView>
 
         {/* Modal invitar amigos */}
         <Modal visible={modalAmigos} transparent animationType="slide" onRequestClose={() => setModalAmigos(false)}>
@@ -852,6 +956,25 @@ export default function PartidoDetailScreen() {
                   <Text style={[styles.invEquipoTxt, equipoInvitado === 'B' && styles.invEquipoTxtSel]}>EQUIPO B</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Selector de POSICIÓN — segmented control 4 opciones (POR/DEF/MED/DEL). */}
+              <View style={[styles.invEquipoLabel, { marginTop: 12 }]}>
+                <Text style={styles.invInputLabel}>POSICIÓN</Text>
+              </View>
+              <View style={styles.invPosRow}>
+                {(['POR','DEF','MED','DEL'] as const).map(pos => (
+                  <TouchableOpacity
+                    key={pos}
+                    style={[styles.invPosBtn, posicionInvitado === pos && styles.invPosBtnSel]}
+                    onPress={() => setPosicionInvitado(pos)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.invPosTxt, posicionInvitado === pos && styles.invPosTxtSel]}>
+                      {pos}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <View style={styles.invBanner}>
                 <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <Circle cx="12" cy="12" r="9" stroke={DT.primary} strokeWidth="1.8"/>
@@ -921,9 +1044,19 @@ const styles = StyleSheet.create({
   iconBtn:            { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   mdTitle:            { fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.3, lineHeight: 22 },
   mdSubtitle:         { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 1, fontFamily: FONTS.body },
-  scroll:             { paddingBottom: 20 },
+  scroll:             { paddingBottom: 40 },
   // Hero
-  hero:               { backgroundColor: DT.surfaceLow, marginHorizontal: SPACING.gutter, borderRadius: RADIUS.xl, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: DT.glassBorder },
+  // Cards más anchas — bajamos margen lateral de 24 (SPACING.gutter) a 16
+  // para dar más aire al contenido interno sin llegar a los bordes.
+  hero:               { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: DT.glassBorder },
+
+  // Banner que se muestra arriba del hero cuando el partido ya no admite
+  // acciones (finalizado, cancelado, o simplemente su hora ya pasó). Deja
+  // muy clara la naturaleza de "sólo lectura" de la pantalla.
+  pastBanner:         { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: SPACING.gutter, marginBottom: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder },
+  pastBannerDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: DT.outline },
+  pastBannerTxt:      { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.mono, letterSpacing: 1.5 },
+
   heroVenue:          { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.8, lineHeight: 30, marginBottom: 3 },
   heroCancha:         { fontSize: 13, color: DT.onSurfaceVar, marginBottom: 18, fontFamily: FONTS.body },
   progressHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 },
@@ -937,7 +1070,7 @@ const styles = StyleSheet.create({
   pillLabel:          { fontSize: 9, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 0.5, marginBottom: 1 },
   pillVal:            { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed },
   // Mapa
-  mapBox:             { marginHorizontal: SPACING.gutter, height: 110, borderRadius: RADIUS.lg, overflow: 'hidden', backgroundColor: DT.surface, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 14, position: 'relative' },
+  mapBox:             { marginHorizontal: 16, height: 110, borderRadius: RADIUS.lg, overflow: 'hidden', backgroundColor: DT.surface, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 14, position: 'relative' },
   mapPin:             { alignItems: 'center' },
   mapLabel:           { backgroundColor: DT.surfaceHighest, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, marginBottom: 4 },
   mapLabelTxt:        { fontSize: 11, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.3 },
@@ -948,6 +1081,18 @@ const styles = StyleSheet.create({
   elegirBanner:       { marginHorizontal: SPACING.gutter, backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.3)', borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   elegirTxt:          { fontSize: 12, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 1, textAlign: 'center' },
   sectionLabel:       { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar, paddingHorizontal: SPACING.gutter, marginBottom: 12, marginTop: 4 },
+  // Card contenedora para la sección ALINEACIÓN (equipo A + VS + equipo B).
+  // Mismo look que el hero card: mismo borde, mismo bg, mismo radius, mismo
+  // marginHorizontal — para que TODOS los bloques de la pantalla queden
+  // visualmente alineados y con contornos consistentes.
+  alineacionCard:     { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: DT.glassBorder },
+  // ALINEACIÓN ahora es un TÍTULO de sección (Sora SemiBold, más grande y
+  // contrastante) en vez de un label mono muted. Así no se confunde
+  // visualmente con "EQUIPO A/B" que sí son labels mono chicos. Se separa
+  // con un divider sutil para reforzar la jerarquía.
+  alineacionLabel:    { fontSize: 16, fontFamily: FONTS.heading, color: DT.onBg, marginBottom: 4, letterSpacing: -0.2 },
+  alineacionDivider:  { height: 1, backgroundColor: DT.glassBorder, marginBottom: 20, marginTop: 8 },
+  equipoBlockInner:   { marginBottom: 8 },
   // Equipos
   equipoBlock:        { marginHorizontal: SPACING.gutter, marginBottom: 8 },
   equipoHeader:       { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 14 },
@@ -973,12 +1118,20 @@ const styles = StyleSheet.create({
   ruleText:           { flex: 1, fontSize: 12.5, color: DT.onSurfaceVar, lineHeight: 18, fontFamily: FONTS.body },
   // Join bar
   joinBar:            { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 16, backgroundColor: DT.surfaceLowest, borderTopWidth: 1, borderTopColor: DT.glassBorder },
+  // Nuevas acciones inline al final del scroll (reemplazan joinBar fixed).
+  // Sin barra fixed, la pantalla queda 100% libre para explorar el partido.
+  actionsInline:      { marginHorizontal: SPACING.gutter, marginTop: 8 },
+  actionsRow:         { flexDirection: 'row', gap: 8 },
+  invBarHalf:         { flex: 1 },
+  invBarTxtSm:        { fontSize: 11, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },
   joinBtn:            { height: 56, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
   joinBtnTxt:         { fontSize: 14, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
   invBar:             { height: 48, backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.3)', borderRadius: RADIUS.full, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   invBarTxt:          { fontSize: 12, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
-  cancelInscBtn:      { height: 42, marginTop: 6, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', backgroundColor: 'rgba(255,180,171,0.08)' },
-  cancelInscTxt:      { fontSize: 11, color: DT.error, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
+  // Mismo height (48) y font-size (12) que invBar para alineación visual
+  // consistente entre INVITAR AMIGOS / AGREGAR INVITADO / CANCELAR MI LUGAR.
+  cancelInscBtn:      { height: 48, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', backgroundColor: 'rgba(255,180,171,0.08)' },
+  cancelInscTxt:      { fontSize: 12, color: DT.error, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
   // Preview slot
   slotPreviewRing:    { position: 'absolute', inset: 0, borderRadius: 25, borderWidth: 2.5, borderColor: DT.primary },
   slotPreviewTag:     { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.5, marginTop: 1 },
@@ -986,8 +1139,8 @@ const styles = StyleSheet.create({
   slotAvatarOtroInvitado:{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', borderStyle: 'dashed' },
   slotInvitadoBadge:  { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: DT.bg },
   slotInvitadoBadgeTxt:{ fontSize: 12, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 14 },
-  slotInvitadoTag:    { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.5, marginTop: 1 },
-  slotOtroInvitadoTag:{ fontSize: 8, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 0.5, marginTop: 1, fontStyle: 'italic' },
+  slotInvitadoTag:    { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0, marginTop: 1 },
+  slotOtroInvitadoTag:{ fontSize: 8, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 0, marginTop: 1, fontStyle: 'italic' },
   slotAvatarYo:       { borderWidth: 2.5, borderColor: DT.primary, overflow: 'hidden' },
   slotNameYo:         { color: DT.primary, fontFamily: FONTS.bodyBold },
   slotYoTag:          { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 1, marginTop: 1 },
@@ -1006,6 +1159,12 @@ const styles = StyleSheet.create({
   invEquipoRow:       { flexDirection: 'row', gap: 10, marginHorizontal: 20, marginBottom: 18 },
   invEquipoBtn:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: DT.glassBorder, backgroundColor: 'rgba(255,255,255,0.04)' },
   invEquipoBtnSel:    { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.12)' },
+  // Segmented control de POSICIÓN — 4 opciones más compactas que los de equipo.
+  invPosRow:          { flexDirection: 'row', gap: 6, marginHorizontal: 20, marginBottom: 18 },
+  invPosBtn:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: DT.glassBorder, backgroundColor: 'rgba(255,255,255,0.04)' },
+  invPosBtnSel:       { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.12)' },
+  invPosTxt:          { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
+  invPosTxtSel:       { color: DT.primary },
   invEquipoDot:       { width: 10, height: 10, borderRadius: 5 },
   invEquipoTxt:       { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
   invEquipoTxtSel:    { color: DT.primary },

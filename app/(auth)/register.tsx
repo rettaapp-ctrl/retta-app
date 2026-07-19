@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator, KeyboardAvoidingView,
   Platform, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -98,6 +99,7 @@ export default function RegisterScreen() {
   }
 
   return (
+    <SafeAreaView style={styles.root} edges={['top','bottom']}>
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.back} onPress={() => router.back()}>
@@ -178,28 +180,33 @@ export default function RegisterScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           {/* Checkbox obligatorio de aceptación legal — LFPDPPP / LFPC.
-              El usuario debe marcarlo activamente; el botón valida y bloquea
-              si no está marcado. La versión se manda al backend al registrar. */}
-          <TouchableOpacity
-            style={styles.legalRow}
-            onPress={() => setAceptaLegal(v => !v)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, aceptaLegal && styles.checkboxOn]}>
-              {aceptaLegal && (
-                <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <Path d="M5 12L10 17L19 8" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </Svg>
-              )}
-            </View>
-            <Text style={styles.legalTxt}>
-              He leído y acepto los{' '}
+              Antes todo estaba envuelto en un TouchableOpacity padre; eso
+              interceptaba el touch de los links internos (T&C, Privacidad)
+              y solo togglaba el checkbox. Ahora el checkbox y el texto son
+              elementos independientes: la caja se toca sola, y los links
+              del texto responden a su propio onPress. */}
+          <View style={styles.legalRow}>
+            <TouchableOpacity
+              onPress={() => setAceptaLegal(v => !v)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <View style={[styles.checkbox, aceptaLegal && styles.checkboxOn]}>
+                {aceptaLegal && (
+                  <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <Path d="M5 12L10 17L19 8" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </Svg>
+                )}
+              </View>
+            </TouchableOpacity>
+            <Text style={[styles.legalTxt, { flex: 1 }]}>
+              <Text onPress={() => setAceptaLegal(v => !v)}>He leído y acepto los </Text>
               <Text style={styles.legalLink} onPress={() => router.push('/terminos')}>Términos y Condiciones</Text>
-              {' '}y el{' '}
+              <Text onPress={() => setAceptaLegal(v => !v)}> y el </Text>
               <Text style={styles.legalLink} onPress={() => router.push('/privacidad')}>Aviso de Privacidad</Text>
-              {' '}de Retta.
+              <Text onPress={() => setAceptaLegal(v => !v)}> de Retta.</Text>
             </Text>
-          </TouchableOpacity>
+          </View>
 
           <TouchableOpacity onPress={handleRegister} disabled={loading || !aceptaLegal} activeOpacity={0.85}>
             <LinearGradient
@@ -220,12 +227,16 @@ export default function RegisterScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root:             { flex: 1, backgroundColor: DT.bg },
-  scroll:           { flexGrow: 1, padding: 24, paddingTop: 60 },
+  // paddingBottom mayor evita que el botón CREAR CUENTA choque con el
+  // home indicator del sistema. backgroundColor explícito evita que se vea
+  // la barra blanca del bounce del ScrollView (issue iOS/Android).
+  scroll:           { flexGrow: 1, padding: 24, paddingTop: 40, paddingBottom: 48, backgroundColor: DT.bg },
   back:             { marginBottom: 24 },
   backTxt:          { color: DT.primary, fontSize: 14, fontFamily: FONTS.bodyMed },
   title:            { fontSize: 30, color: DT.onBg, marginBottom: 8, fontFamily: FONTS.display, letterSpacing: -0.8 },

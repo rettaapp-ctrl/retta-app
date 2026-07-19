@@ -20,7 +20,7 @@ export default function TerminosScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top','bottom']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <BackIcon />
@@ -39,7 +39,7 @@ export default function TerminosScreen() {
               <Path d="M9 13H15M9 17H13" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
             </Svg>
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>RETTA</Text>
             <Text style={styles.headerSub}>Última actualización: 19 de mayo de 2026</Text>
           </View>

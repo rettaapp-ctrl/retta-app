@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "600820267876",
+    "project_id": "retta-1e210",
+    "storage_bucket": "retta-1e210.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:600820267876:android:0e807451e6aae84aa45871",
+        "android_client_info": {
+          "package_name": "mx.retta.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVRQdQ08fI0IM8DZero5VujIGibEdeU_E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -86,9 +86,9 @@ export default function TabsLayout() {
         tabBarActiveTintColor:   DT.primary,
         tabBarInactiveTintColor: DT.outline,
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontFamily: FONTS.mono,
-          letterSpacing: 0.8,
+          fontSize: 11,
+          fontFamily: FONTS.bodyMed,
+          letterSpacing: 0.1,
           marginTop: 2,
         },
       }}

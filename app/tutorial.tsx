@@ -10,7 +10,7 @@
 import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Dimensions,
-  ScrollView, NativeSyntheticEvent, NativeScrollEvent,
+  ScrollView, NativeSyntheticEvent, NativeScrollEvent, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,12 +36,14 @@ function SlideIcon({ kind, color }: { kind: IconKind; color: string }) {
   const common = { width: 60, height: 60, viewBox: '0 0 24 24', fill: 'none' as const };
   switch (kind) {
     case 'ball':
+      // Logo oficial de Retta (R con líneas de velocidad). El PNG es blanco con
+      // alpha, así que `tintColor` lo pinta del acento de la slide.
       return (
-        <Svg {...common}>
-          <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.6" />
-          <Path d="M12 7.2l2.9 2.1-1.1 3.4h-3.6L9.1 9.3 12 7.2z" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
-          <Path d="M12 7.2V4M14.9 9.3l3-1M13.8 12.7l1.8 2.6M10.2 12.7l-1.8 2.6M9.1 9.3l-3-1" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
-        </Svg>
+        <Image
+          source={require('@/assets/images/retta-logo-mark.png')}
+          style={{ width: 96, height: 72, tintColor: color }}
+          resizeMode="contain"
+        />
       );
     case 'flame':
       return (

@@ -7,10 +7,12 @@ import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApi } from '@/hooks/useApi';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AppAlert } from '@/lib/appAlert';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   ScrollView,
   StyleSheet,
   Text,
@@ -77,6 +79,11 @@ export default function CalificarScreen() {
   const [enviando, setEnviando] = useState(false);
   const [reporteOpen, setReporteOpen] = useState(false);
   const [reporteTarget, setReporteTarget] = useState<{ id: string; nombre: string } | null>(null);
+  // Estado visual del rating: cuál estrella tocó el user (1..5). null antes de tocar.
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  // Animaciones de las 5 estrellas — entrada (opacity+scale) + tap (scale bounce).
+  const starEnter = useRef([1, 2, 3, 4, 5].map(() => new Animated.Value(0))).current;
+  const starBounce = useRef([1, 2, 3, 4, 5].map(() => new Animated.Value(1))).current;
 
   function abrirReporte(userId: string, nombre: string) {
     setReporteTarget({ id: userId, nombre });
@@ -96,6 +103,52 @@ export default function CalificarScreen() {
       setPartidos([]);
     }
     setLoading(false);
+  }
+
+  // Cuando cambia el jugador que se está calificando, resetear estado y
+  // reproducir la animación de entrada de las estrellas (stagger 60ms).
+  useEffect(() => {
+    setSelectedRating(null);
+    starEnter.forEach(a => a.setValue(0));
+    starBounce.forEach(a => a.setValue(1));
+    Animated.stagger(
+      60,
+      starEnter.map(a =>
+        Animated.spring(a, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 8,
+        })
+      )
+    ).start();
+  }, [calIdx, partidoIdx, partidos.length]);
+
+  function handleStarTap(calId: string, n: number) {
+    if (enviando) return;
+    setSelectedRating(n);
+    // Cascade bounce: cada estrella hasta la n hace un pop de scale.
+    Animated.stagger(
+      45,
+      starBounce.slice(0, n).map(s =>
+        Animated.sequence([
+          Animated.timing(s, {
+            toValue: 1.35,
+            duration: 120,
+            easing: Easing.out(Easing.back(2)),
+            useNativeDriver: true,
+          }),
+          Animated.spring(s, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 180,
+            friction: 6,
+          }),
+        ])
+      )
+    ).start();
+    // Enviar después de que la animación se sienta (~350ms).
+    setTimeout(() => enviarEstrellas(calId, n), 380);
   }
 
   async function enviarEstrellas(calId: string, estrellas: number) {
@@ -124,7 +177,8 @@ export default function CalificarScreen() {
       setPartidoIdx(partidoIdx + 1);
       setCalIdx(0);
     } else {
-      // Terminó todo
+      // Terminó todo — volver. El hook useCalificacionesPendientes se
+      // re-cuenta solo con useFocusEffect al volver a la pantalla anterior.
       router.back();
     }
   }
@@ -228,17 +282,38 @@ export default function CalificarScreen() {
         <Text style={styles.preguntaLbl}>¿Cómo jugó?</Text>
 
         <View style={styles.starsRow}>
-          {[1, 2, 3, 4, 5].map(n => (
-            <TouchableOpacity
-              key={n}
-              style={styles.starBtn}
-              onPress={() => enviarEstrellas(cal.id, n)}
-              disabled={enviando}
-              activeOpacity={0.7}
-            >
-              <StarIcon filled={false} />
-            </TouchableOpacity>
-          ))}
+          {[1, 2, 3, 4, 5].map((n, idx) => {
+            const isFilled = selectedRating !== null && n <= selectedRating;
+            return (
+              <TouchableOpacity
+                key={n}
+                style={styles.starBtn}
+                onPress={() => handleStarTap(cal.id, n)}
+                disabled={enviando}
+                activeOpacity={0.7}
+              >
+                <Animated.View
+                  style={{
+                    opacity: starEnter[idx],
+                    transform: [
+                      // Entrada (0→1) combinada con bounce del tap (multiplicando).
+                      {
+                        scale: Animated.multiply(
+                          starEnter[idx].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.3, 1],
+                          }),
+                          starBounce[idx]
+                        ),
+                      },
+                    ],
+                  }}
+                >
+                  <StarIcon filled={isFilled} />
+                </Animated.View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Text style={styles.helperTxt}>

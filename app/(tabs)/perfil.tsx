@@ -341,14 +341,16 @@ export default function PerfilScreen() {
 const styles = StyleSheet.create({
   root:           { flex: 1, backgroundColor: DT.bg },
   scroll:         { padding: SPACING.gutter, paddingBottom: 40 },
-  topBar:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, paddingBottom: 4 },
+  // Idéntico paddingTop/Bottom que partidos.tsx y reservas.tsx para que la
+  // campana quede alineada al pixel exacto al cambiar de tab.
+  topBar:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, paddingBottom: 20 },
   iconBtn:        { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, position: 'relative' },
-  bellBadge:      { position: 'absolute', top: 0, right: 0, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center' },
+  bellBadge:      { position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: DT.bg },
   bellBadgeTxt:   { fontSize: 9, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 12 },
   hero:           { alignItems: 'center', paddingVertical: 18 },
   avatarRing:     { width: 96, height: 96, borderRadius: 48, padding: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 14, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
   avatarInner:    { width: '100%', height: '100%', borderRadius: 45, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  profileName:    { fontSize: 26, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 30, textAlign: 'center' },
+  profileName:    { fontSize: 24, color: DT.onBg, fontFamily: FONTS.displayMed, letterSpacing: -0.4, lineHeight: 28, textAlign: 'center' },
   profileSub:     { fontSize: 13, color: DT.onSurfaceVar, marginTop: 5, fontFamily: FONTS.body },
   rachaCard:      { flexDirection: 'row', alignItems: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 12 },
   rachaIcon:      { width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(190,194,255,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
@@ -357,14 +359,17 @@ const styles = StyleSheet.create({
   rachaNum:       { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.3, marginTop: 3 },
   rachaRecord:    { fontSize: 11.5, color: DT.outline, marginTop: 3, fontFamily: FONTS.body },
   statsRow:       { flexDirection: 'row', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
-  statCell:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 18, paddingHorizontal: 8 },
+  // Ojo: alignItems 'flex-start' + paddingTop fijo asegura que los 3 números
+  // arranquen a la MISMA altura, aunque la celda de "Amigos" tenga un botón
+  // extra debajo (VER ›) y por eso sea más alta.
+  statCell:       { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 18, paddingBottom: 18, paddingHorizontal: 8 },
   statCellBorder: { borderLeftWidth: 1, borderColor: DT.glassBorder },
   statCellTappable:{ backgroundColor: 'rgba(190,194,255,0.06)' },
   statCta:        { marginTop: 8, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, backgroundColor: 'rgba(190,194,255,0.15)' },
   statCtaTxt:     { fontSize: 10, fontFamily: FONTS.bodyBold, color: DT.primary, letterSpacing: 1 },
   statBadge:      { position: 'absolute', top: 8, right: 12, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   statBadgeTxt:   { fontSize: 11, color: '#5a0006', fontFamily: FONTS.bodyBold },
-  statNum:        { fontSize: 26, color: DT.onBg, fontFamily: FONTS.display, lineHeight: 28 },
+  statNum:        { fontSize: 26, color: DT.onBg, fontFamily: FONTS.displayMed, lineHeight: 28 },
   statLabel:      { fontSize: 9, color: DT.outline, marginTop: 5, textAlign: 'center', lineHeight: 13, fontFamily: FONTS.mono, letterSpacing: 0.5 },
   card:           { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, marginBottom: 12, overflow: 'hidden' },
   cardHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: DT.glassBorder },

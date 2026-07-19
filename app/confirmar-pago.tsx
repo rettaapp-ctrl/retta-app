@@ -43,7 +43,6 @@ function CardIcon() {
 }
 
 type Stage = 'confirm' | 'processing' | 'success';
-type MetodoPago = 'visa' | 'mc' | 'applepay';
 
 export default function ConfirmarPagoScreen() {
   const router = useRouter();
@@ -51,18 +50,17 @@ export default function ConfirmarPagoScreen() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const {
     partido_id, equipo, complejo, cancha, fecha,
-    hora, precio, tipo, es_invitado, nombre_invitado,
+    hora, precio, tipo, es_invitado, nombre_invitado, posicion_invitado,
   } = useLocalSearchParams<{
     partido_id: string; equipo: string; complejo: string;
     cancha: string; fecha: string; hora: string;
     precio: string; tipo: string;
-    es_invitado?: string; nombre_invitado?: string;
+    es_invitado?: string; nombre_invitado?: string; posicion_invitado?: string;
   }>();
 
   const esInvitado = es_invitado === 'true';
 
-  const [stage, setStage]   = useState<Stage>('confirm');
-  const [metodo, setMetodo] = useState<MetodoPago>('visa');
+  const [stage, setStage] = useState<Stage>('confirm');
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim   = useRef(new Animated.Value(1)).current;
@@ -92,33 +90,21 @@ export default function ConfirmarPagoScreen() {
     //   4. Usuario paga → Stripe procesa
     //   5. Webhook backend recibe payment_intent.succeeded → confirma inscripción
     //   6. App muestra pantalla de éxito
-    // Nota: los "invitados" (sin cuenta) todavía NO pasan por Stripe, sigue el
-    // flujo directo de /partidos/:id/invitado. Migrar a Stripe cuando sea prioritario.
-    if (esInvitado) {
-      setStage('processing');
-      try {
-        await request(`/partidos/${partido_id}/invitado`, {
-          method: 'POST',
-          body: JSON.stringify({ equipo, nombre_invitado }),
-        });
-        track('invitado_pagado', {
-          partido_id, equipo, precio: Number(precio) || 0, metodo,
-        });
-        setStage('success');
-      } catch (e: any) {
-        setStage('confirm');
-        const msg = e?.message || 'No pudimos agregar al invitado. Intenta de nuevo.';
-        AppAlert.alert('No se pudo completar', msg);
-      }
-      return;
-    }
-
+    // Los invitados también pasan por Stripe con el mismo endpoint —
+    // el backend crea la inscripción con es_invitado=true y el flujo
+    // es idéntico al del jugador (Payment Sheet → webhook confirma).
     setStage('processing');
     try {
       // 1. Crear PaymentIntent en el backend (reserva cupo con status pendiente)
       const { paymentIntentClientSecret } = await request('/pagos/crear-payment-intent', {
         method: 'POST',
-        body: JSON.stringify({ partido_id, equipo: equipo || 'auto' }),
+        body: JSON.stringify({
+          partido_id,
+          equipo: equipo || 'auto',
+          es_invitado: esInvitado,
+          nombre_invitado: esInvitado ? nombre_invitado : undefined,
+          posicion_invitado: esInvitado ? posicion_invitado : undefined,
+        }),
       });
 
       // 2. Inicializar Payment Sheet con el client_secret
@@ -260,7 +246,7 @@ export default function ConfirmarPagoScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top','bottom']}>
         {/* Topbar */}
         <View style={styles.topbar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -293,36 +279,18 @@ export default function ConfirmarPagoScreen() {
             </View>
           </View>
 
-          {/* Método de pago */}
+          {/* Método de pago — informativo, Stripe se abre al tocar PAGAR */}
           <Text style={styles.sectionLabel}>MÉTODO DE PAGO</Text>
-          <View style={styles.metodosCard}>
-            {([
-              { id: 'visa',     nombre: 'Visa',       num: '•••• 7890', logo: 'VISA' },
-              { id: 'mc',       nombre: 'Mastercard', num: '•••• 3610', logo: 'MC' },
-              { id: 'applepay', nombre: 'Apple Pay',  num: 'iPhone',    logo: 'AP' },
-            ] as { id: MetodoPago; nombre: string; num: string; logo: string }[]).map((m, i, arr) => (
-              <TouchableOpacity
-                key={m.id}
-                style={[styles.metodoRow, i < arr.length - 1 && styles.metodoRowBorder]}
-                onPress={() => setMetodo(m.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.metodoLogo}>
-                  <Text style={styles.metodoLogoTxt}>{m.logo === 'MC' ? '●●' : m.logo}</Text>
-                </View>
-                <View style={styles.metodoInfo}>
-                  <Text style={styles.metodoNombre}>{m.nombre}</Text>
-                  <Text style={styles.metodoNum}>{m.num}</Text>
-                </View>
-                <View style={[styles.metodoCheck, metodo === m.id && styles.metodoCheckActive]}>
-                  {metodo === m.id && (
-                    <Svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                      <Path d="M20 6L9 17L4 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </Svg>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.metodoInfo2}>
+            <View style={styles.metodoInfoIcon}>
+              <CardIcon />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.metodoInfoTitle}>Pago seguro con Stripe</Text>
+              <Text style={styles.metodoInfoSub}>
+                Ingresa tu tarjeta o usa Google Pay al continuar.
+              </Text>
+            </View>
           </View>
 
           <Text style={styles.politicaTxt}>
@@ -362,16 +330,10 @@ const styles = StyleSheet.create({
   pillVal:            { fontSize: 13, color: DT.onBg, fontFamily: FONTS.bodyMed },
 
   sectionLabel:       { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 12, fontFamily: FONTS.mono },
-  metodosCard:        { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 18 },
-  metodoRow:          { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, gap: 14 },
-  metodoRowBorder:    { borderBottomWidth: 1, borderBottomColor: DT.glassBorder },
-  metodoLogo:         { width: 44, height: 30, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  metodoLogoTxt:      { fontSize: 12, color: DT.onBg, fontFamily: FONTS.bodyBold, letterSpacing: -0.3 },
-  metodoInfo:         { flex: 1 },
-  metodoNombre:       { fontSize: 15, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2 },
-  metodoNum:          { fontSize: 11, color: DT.onSurfaceVar, marginTop: 2, letterSpacing: 0.5, fontFamily: FONTS.mono },
-  metodoCheck:        { width: 24, height: 24, borderRadius: 7, borderWidth: 1.8, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  metodoCheckActive:  { backgroundColor: DT.primaryContainer, borderColor: DT.primaryContainer },
+  metodoInfo2:        { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 18 },
+  metodoInfoIcon:     { width: 44, height: 44, borderRadius: 12, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  metodoInfoTitle:    { fontSize: 15, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2, marginBottom: 3 },
+  metodoInfoSub:      { fontSize: 12.5, color: DT.onSurfaceVar, lineHeight: 17, fontFamily: FONTS.body },
 
   politicaTxt:        { fontSize: 11, color: DT.outline, lineHeight: 16, textAlign: 'center', paddingHorizontal: 8, fontFamily: FONTS.body },
 

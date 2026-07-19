@@ -42,7 +42,7 @@ export default function MensajesScreen() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: DT.bg },
   header:      { padding: 20, paddingBottom: 12 },
-  title:       { fontSize: 28, color: DT.onBg, letterSpacing: 0.4, fontFamily: FONTS.display },
+  title:       { fontSize: 26, color: DT.onBg, letterSpacing: 0.2, fontFamily: FONTS.displayMed },
   empty:       { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIconWrap:{ width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(190,194,255,0.08)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   emptyTitle:  { fontSize: 18, color: DT.onBg, marginBottom: 6, fontFamily: FONTS.heading },

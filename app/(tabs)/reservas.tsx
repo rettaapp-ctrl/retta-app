@@ -84,6 +84,7 @@ export default function ReservasScreen() {
   const router      = useRouter();
 
   const [partidos, setPartidos]         = useState<Inscripcion[]>([]);
+  const [anteriores, setAnteriores]     = useState<Inscripcion[]>([]);
   const [loading, setLoading]           = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
   const [loadError, setLoadError]       = useState<string | null>(null);
@@ -103,16 +104,30 @@ export default function ReservasScreen() {
     setIsInfraDown(false);
     try {
       const data = await request('/usuarios/me/partidos');
-      const lista = (data.partidos || [])
+      const validos = (data.partidos || [])
         .filter((p: Inscripcion) => p.status !== 'cancelado')
-        .filter((p: Inscripcion) => p.v_partidos != null)
+        .filter((p: Inscripcion) => p.v_partidos != null);
+      // Próximos: los que aún son visibles (hasta 1h después del inicio).
+      const lista = validos
         .filter((p: Inscripcion) => isPartidoVisible(p.v_partidos?.fecha, p.v_partidos?.hora_inicio))
         .sort((a: Inscripcion, b: Inscripcion) => {
           const fa = `${a.v_partidos?.fecha || '9999'} ${a.v_partidos?.hora_inicio || '99:99'}`;
           const fb = `${b.v_partidos?.fecha || '9999'} ${b.v_partidos?.hora_inicio || '99:99'}`;
           return fa.localeCompare(fb);
         });
+      // Anteriores: los que ya pasaron. Se muestran debajo como historial —
+      // patrón tipo Uber/Rappi para que la pantalla no se vea vacía cuando
+      // solo hay 1 próximo partido.
+      const historial = validos
+        .filter((p: Inscripcion) => !isPartidoVisible(p.v_partidos?.fecha, p.v_partidos?.hora_inicio))
+        .sort((a: Inscripcion, b: Inscripcion) => {
+          const fa = `${a.v_partidos?.fecha || ''} ${a.v_partidos?.hora_inicio || ''}`;
+          const fb = `${b.v_partidos?.fecha || ''} ${b.v_partidos?.hora_inicio || ''}`;
+          return fb.localeCompare(fa); // más recientes primero
+        })
+        .slice(0, 5);
       setPartidos(lista);
+      setAnteriores(historial);
     } catch (err: any) {
       console.error('[reservas/load]', err?.message);
       if (!err?.isInfraOutage && !err?.isNetworkError) {
@@ -230,7 +245,15 @@ export default function ReservasScreen() {
                       ) : (
                         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DT.surfaceHigh }]} />
                       )}
-                      <LinearGradient colors={['transparent', 'rgba(12,14,22,0.95)']} style={StyleSheet.absoluteFill} />
+                      {/* Degradado de 3 stops: velo sutil arriba (para que el
+                          tag PRÓXIMO PARTIDO y título tengan contraste) y
+                          fade completo abajo. Con esto la info encima se lee
+                          bien SIN eliminar la presencia de la imagen. */}
+                      <LinearGradient
+                        colors={['rgba(17,19,27,0.35)', 'rgba(17,19,27,0.85)', DT.bg]}
+                        locations={[0, 0.55, 1]}
+                        style={StyleSheet.absoluteFill}
+                      />
                     </View>
                     <View style={styles.nextCardContent}>
                       <View style={styles.nextCardTag}>
@@ -312,6 +335,52 @@ export default function ReservasScreen() {
                   </TouchableOpacity>
                 );
               })}
+
+              {/* PARTIDOS ANTERIORES — patrón Uber/Rappi. Cuando hay pocos
+                  próximos (a veces solo 1), el historial abajo evita que la
+                  pantalla se sienta vacía. Máx. 5 items. */}
+              {anteriores.length > 0 && (
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>PARTIDOS ANTERIORES</Text>
+              )}
+              {anteriores.map(item => {
+                const p = item.v_partidos;
+                if (!p) return null;
+                const f = formatFecha(p.fecha);
+                return (
+                  <TouchableOpacity
+                    key={`past-${item.id}`}
+                    style={styles.pastCard}
+                    onPress={() => router.push(`/partido/${p.id}?desde=reservas`)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.upRow}>
+                      <View style={[styles.dateBlock, styles.dateBlockPast]}>
+                        <Text style={[styles.dateDay, styles.dateDayPast]}>{f.dia}</Text>
+                        <Text style={[styles.dateMes, styles.dateMesPast]}>{f.mes}</Text>
+                      </View>
+                      <View style={styles.upInfo}>
+                        <Text style={[styles.upVenue, styles.upVenuePast]} numberOfLines={1}>{p.complejo_nombre}</Text>
+                        <View style={styles.upMeta}>
+                          <Text style={[styles.upMetaTxt, styles.upMetaTxtPast]}>{p.cancha_nombre}</Text>
+                          <View style={[styles.upMetaDot, styles.upMetaDotPast]} />
+                          <Text style={[styles.upMetaTxt, styles.upMetaTxtPast]}>{p.tipo}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.pastChip}>
+                        <Text style={styles.pastChipTxt}>JUGADO</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Fallback cuando aún no hay historial — línea sutil para que
+                  el usuario entienda que este espacio se poblará solo. */}
+              {anteriores.length === 0 && partidos.length <= 1 && (
+                <Text style={styles.pastHint}>
+                  Aquí verás tus partidos jugados
+                </Text>
+              )}
             </>
           )}
         </ScrollView>
@@ -323,11 +392,13 @@ export default function ReservasScreen() {
 const styles = StyleSheet.create({
   root:             { flex: 1, backgroundColor: DT.bg },
   scroll:           { padding: SPACING.gutter, paddingBottom: 40 },
-  headerTop:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 20, paddingTop: 4 },
-  title:            { fontSize: 30, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -1 },
+  // Idéntico a partidos.tsx y perfil.tsx para que la campana quede en el
+  // mismo pixel al cambiar de tab.
+  headerTop:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 20, gap: 12 },
+  title:            { fontSize: 28, color: DT.onBg, fontFamily: FONTS.displayMed, letterSpacing: -0.8 },
   titleAccent:      { color: DT.primary, fontFamily: FONTS.display },
   bellBtn:          { position: 'relative', width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
-  bellBadge:        { position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center' },
+  bellBadge:        { position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: DT.bg },
   bellBadgeTxt:     { fontSize: 9, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 12 },
 
   errBanner:        { backgroundColor: 'rgba(255,180,171,0.12)', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', borderRadius: RADIUS.md, padding: 14, marginBottom: 14 },
@@ -342,7 +413,7 @@ const styles = StyleSheet.create({
   // Empty state
   empty:            { alignItems: 'center', paddingTop: 80, paddingHorizontal: 10 },
   emptyLogo:        { width: 96, height: 96, marginBottom: 28, opacity: 0.9 },
-  emptyTitle:       { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.8, textAlign: 'center', marginBottom: 8 },
+  emptyTitle:       { fontSize: 26, color: DT.onBg, fontFamily: FONTS.displayMed, letterSpacing: -0.6, textAlign: 'center', marginBottom: 8 },
   emptySub:         { fontSize: 15, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
   exploreBtn:       { height: 56, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
   exploreBtnTxt:    { fontSize: 16, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.3 },
@@ -354,7 +425,7 @@ const styles = StyleSheet.create({
   nextCardTag:      { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(190,194,255,0.15)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 12 },
   nextCardTagDot:   { width: 5, height: 5, borderRadius: 3, backgroundColor: DT.primary },
   nextCardTagTxt:   { fontSize: 10, fontFamily: FONTS.mono, color: DT.primary, letterSpacing: 1 },
-  nextCardVenue:    { fontSize: 26, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, marginBottom: 4 },
+  nextCardVenue:    { fontSize: 24, color: DT.onBg, fontFamily: FONTS.displayMed, letterSpacing: -0.4, marginBottom: 4 },
   nextCardType:     { fontSize: 13, color: DT.onSurfaceVar, marginBottom: 16, fontFamily: FONTS.body },
   nextCardDetails:  { flexDirection: 'row', gap: 10 },
   nextCardPill:     { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, padding: 12, flex: 1 },
@@ -367,6 +438,18 @@ const styles = StyleSheet.create({
 
   // Siguientes partidos card
   upCard:           { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 12 },
+  // Card de partido pasado — mismo layout que upCard pero visualmente
+  // apagado: menos opacidad de fondo, texto muted, chip "JUGADO" al lado.
+  pastCard:         { backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderRadius: RADIUS.lg, padding: 14, marginBottom: 10 },
+  dateBlockPast:    { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' },
+  dateDayPast:      { color: DT.onSurfaceVar },
+  dateMesPast:      { color: DT.outline },
+  upVenuePast:      { color: DT.onSurfaceVar },
+  upMetaTxtPast:    { color: DT.outline },
+  upMetaDotPast:    { backgroundColor: 'rgba(255,255,255,0.15)' },
+  pastChip:         { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  pastChipTxt:      { fontSize: 9, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 1 },
+  pastHint:         { fontSize: 12, color: DT.outline, textAlign: 'center', marginTop: 32, fontFamily: FONTS.body, fontStyle: 'italic' },
   upRow:            { flexDirection: 'row', alignItems: 'center', gap: 14 },
   upMapsRow:        { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: DT.glassBorder },
   upMapsTxt:        { fontSize: 12, fontFamily: FONTS.bodyMed, color: DT.primary, letterSpacing: 0.2 },

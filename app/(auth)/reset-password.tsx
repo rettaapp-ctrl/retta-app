@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -47,7 +48,8 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <SafeAreaView style={styles.root} edges={['top','bottom']}>
+    <KeyboardAvoidingView style={styles.rootInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.back} onPress={() => router.back()}>
@@ -102,12 +104,14 @@ export default function ResetPasswordScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root:          { flex: 1, backgroundColor: DT.bg },
-  scroll:        { flexGrow: 1, padding: 24, paddingTop: 60 },
+  rootInner:     { flex: 1 },
+  scroll:        { flexGrow: 1, padding: 24, paddingTop: 40, paddingBottom: 40, backgroundColor: 'transparent' },
   back:          { marginBottom: 24 },
   backTxt:       { color: DT.primary, fontSize: 14, fontFamily: FONTS.bodyMed },
   title:         { fontSize: 30, color: DT.onBg, marginBottom: 8, fontFamily: FONTS.display, letterSpacing: -0.8 },

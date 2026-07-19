@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DT } from '@/constants/designTokens';
 import { LEGAL_VERSION } from '@/constants';
 import * as Sentry from '@sentry/react-native';
@@ -15,9 +16,15 @@ import { POSTHOG_CONFIG, registerAnalyticsClient } from '@/lib/analytics';
 import { AppAlertHost } from '@/lib/appAlert';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { STRIPE_PUBLISHABLE_KEY } from '@/constants';
-// ── Fuentes del rediseño (rama `rediseno`) ──
-import { useFonts as useSpaceGrotesk, SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
-import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
+// ── Fuentes oficiales del manual de marca 2026 ──
+// - Sora (títulos) + Inter (cuerpo/labels/datos) según brand manual.
+// - Space Grotesk se mantiene solo para el wordmark del logo si aplica.
+// - JetBrains Mono se mantiene temporalmente por compatibilidad; ya no
+//   se referencia desde FONTS pero podría haber pantallas legacy.
+import { useFonts as useAppFonts } from '@expo-google-fonts/space-grotesk';
+import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { Sora_500Medium, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
 import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 
 // ─────────────────────────────────────────────────────────────
@@ -33,6 +40,26 @@ Sentry.init({
   profilesSampleRate: 0,
   // Privacidad: no recolectar PII por defecto
   sendDefaultPii: false,
+});
+
+// ─────────────────────────────────────────────────────────────
+// Notificaciones con la app ABIERTA (foreground).
+// Sin este handler, expo-notifications NO muestra nada cuando la push
+// llega estando la app en primer plano — que es justo el caso de
+// "¡Estás dentro del partido!" (llega segundos después de pagar, con
+// la app abierta en la pantalla de éxito) y de "¡Partido confirmado!"
+// si estás navegando la app. Con banner + list se ve como heads-up
+// arriba y queda en el centro de notificaciones.
+// Sin sonido en foreground para no ser invasivos (en background el
+// sistema sí suena con el canal 'default' de Android).
+// ─────────────────────────────────────────────────────────────
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList:   true,
+    shouldPlaySound:  false,
+    shouldSetBadge:   false,
+  }),
 });
 
 function RootLayoutNav() {
@@ -116,11 +143,16 @@ function RootLayoutNav() {
       router.replace('/aceptar-legal');
       return;
     }
-    // Después de onboarding-perfil pero antes de tabs: mostrar tutorial 1 vez
+    // Después de onboarding-perfil pero antes de tabs: mostrar tutorial 1 vez.
+    // OJO: agregamos `!inTabs` como guard. Sin él, cuando finish() del tutorial
+    // navega a /(tabs)/partidos, este useEffect corría con `tutorialSeen`
+    // stale (false) porque el otro useEffect que re-lee SecureStore es async,
+    // redirigiendo al usuario de regreso al tutorial (segunda ronda).
+    const inTabs = segments[0] === '(tabs)';
     if (
       user && user.onboarding_completo !== false &&
       user.legal_aceptado_version === LEGAL_VERSION &&
-      !tutorialSeen && !inTutorial
+      !tutorialSeen && !inTutorial && !inTabs
     ) {
       router.replace('/tutorial');
       return;
@@ -170,12 +202,20 @@ function AnalyticsBridge() {
 function RootLayout() {
   // Cargar las fuentes del rediseño. Mientras no estén listas, mostramos
   // un loader para evitar el "flash" de fuente del sistema.
-  const [fontsLoaded] = useSpaceGrotesk({
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_700Bold,
+  const [fontsLoaded] = useAppFonts({
+    // Manual de marca 2026 — Sora + Inter son las oficiales
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
     Inter_400Regular,
     Inter_500Medium,
+    Inter_600SemiBold,
     Inter_700Bold,
+    // Space Grotesk queda por si acaso (algún wordmark de logo)
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
+    // JetBrains Mono se mantiene por compatibilidad con pantallas legacy
+    // que aún no hayan migrado — se puede eliminar en un futuro cleanup.
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
   });
@@ -189,6 +229,10 @@ function RootLayout() {
   }
 
   return (
+    // GestureHandlerRootView envuelve TODA la app para que los componentes
+    // de react-native-gesture-handler (Swipeable, etc.) funcionen. Sin este
+    // wrapper, los gestos de swipe-to-delete en notificaciones no responden.
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <PostHogProvider
       apiKey={POSTHOG_CONFIG.apiKey}
       options={{
@@ -218,6 +262,7 @@ function RootLayout() {
         </StripeProvider>
       </AuthProvider>
     </PostHogProvider>
+    </GestureHandlerRootView>
   );
 }
 

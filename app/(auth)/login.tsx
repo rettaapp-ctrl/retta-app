@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator, KeyboardAvoidingView,
   Platform, ScrollView, Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -38,6 +39,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top','bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.logoWrap}>
@@ -119,13 +121,17 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: DT.bg },
-  scroll:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  // backgroundColor DT.bg explícito en scroll evita bounce en blanco.
+  // paddingBottom 40 asegura que la última pantalla (link Regístrate) no
+  // choque con el home indicator del sistema.
+  scroll:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingBottom: 40, backgroundColor: 'transparent' },
   logoWrap:   { alignItems: 'center', marginBottom: 40 },
   logo:       { width: 120, height: 120 },
   logoSub:    { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 3, marginTop: 14, fontFamily: FONTS.mono },
