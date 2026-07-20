@@ -15,7 +15,7 @@ import {
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useAuth, OnboardingPerfilData } from '@/context/AuthContext';
@@ -75,71 +75,8 @@ const GENEROS: { value: Genero; label: string }[] = [
   { value: 'O', label: 'Prefiero no decir' },
 ];
 
-function PosIcon({ tipo, active }: { tipo: Posicion; active: boolean }) {
-  const stroke = active ? DT.primary : 'rgba(255,255,255,0.4)';
-  const fill   = active ? DT.primary : 'transparent';
-  if (tipo === 'POR') {
-    return (
-      <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-        <Path d="M6 10 H34 V30 H6 Z" stroke={stroke} strokeWidth="2.2" fill="none" />
-        <Path d="M6 14 H34 M6 26 H34 M14 10 V30 M26 10 V30" stroke={stroke} strokeWidth="1.2" />
-        <Circle cx="20" cy="20" r="3" fill={fill} stroke={stroke} strokeWidth="1.5"/>
-      </Svg>
-    );
-  }
-  if (tipo === 'DEF') {
-    return (
-      <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-        <Rect x="7" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(190,194,255,0.18)' : 'transparent'}/>
-        <Rect x="17" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(190,194,255,0.18)' : 'transparent'}/>
-        <Rect x="27" y="8" width="6" height="24" rx="1" stroke={stroke} strokeWidth="2.2" fill={active ? 'rgba(190,194,255,0.18)' : 'transparent'}/>
-      </Svg>
-    );
-  }
-  if (tipo === 'MED') {
-    return (
-      <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-        <Circle cx="20" cy="20" r="14" stroke={stroke} strokeWidth="2.2" fill="none"/>
-        <Path d="M6 20 H34" stroke={stroke} strokeWidth="2"/>
-        <Circle cx="20" cy="20" r="3" fill={fill}/>
-      </Svg>
-    );
-  }
-  // DEL
-  return (
-    <Svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-      <Path d="M20 6 L20 30 M20 30 L12 22 M20 30 L28 22" stroke={stroke} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
-      <Circle cx="20" cy="34" r="2" fill={fill} stroke={stroke} strokeWidth="1.5"/>
-    </Svg>
-  );
-}
-
-function GenIcon({ tipo, active }: { tipo: Genero; active: boolean }) {
-  const stroke = active ? DT.primary : 'rgba(255,255,255,0.4)';
-  if (tipo === 'M') {
-    return (
-      <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-        <Circle cx="14" cy="22" r="7" stroke={stroke} strokeWidth="2.2" fill="none"/>
-        <Path d="M19 17 L29 7 M22 7 H29 V14" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-      </Svg>
-    );
-  }
-  if (tipo === 'F') {
-    return (
-      <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-        <Circle cx="18" cy="14" r="7" stroke={stroke} strokeWidth="2.2" fill="none"/>
-        <Path d="M18 21 V31 M14 27 H22" stroke={stroke} strokeWidth="2.2" strokeLinecap="round"/>
-      </Svg>
-    );
-  }
-  return (
-    <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <Circle cx="18" cy="18" r="3" fill={stroke}/>
-      <Circle cx="8"  cy="18" r="3" fill={stroke}/>
-      <Circle cx="28" cy="18" r="3" fill={stroke}/>
-    </Svg>
-  );
-}
+// Nota: las cards de posición/nivel/género son SOLO texto por decisión
+// de Rafael (2026-07-20) — los íconos SVG anteriores se veían mal.
 
 export default function OnboardingPerfilScreen() {
   const { user, completarOnboarding, logout } = useAuth();
@@ -408,8 +345,7 @@ export default function OnboardingPerfilScreen() {
                         onPress={() => setPosicion(p.value)}
                         activeOpacity={0.85}
                       >
-                        <PosIcon tipo={p.value} active={active}/>
-                        <View style={{ flex: 1, marginLeft: 16 }}>
+                        <View style={{ flex: 1 }}>
                           <Text style={[styles.cardLabel, active && styles.cardLabelActive]}>{p.label}</Text>
                           <Text style={styles.cardSub}>{p.sub}</Text>
                         </View>
@@ -438,12 +374,7 @@ export default function OnboardingPerfilScreen() {
                         onPress={() => setNivel(n.value)}
                         activeOpacity={0.85}
                       >
-                        <View style={[styles.nivelBadge, active && styles.nivelBadgeActive]}>
-                          <Text style={[styles.nivelBadgeTxt, active && { color: '#000' }]}>
-                            {n.value === 'Principiante' ? '1' : n.value === 'Intermedio' ? '2' : '3'}
-                          </Text>
-                        </View>
-                        <View style={{ flex: 1, marginLeft: 16 }}>
+                        <View style={{ flex: 1 }}>
                           <Text style={[styles.cardLabel, active && styles.cardLabelActive]}>{n.label}</Text>
                           <Text style={styles.cardSub}>{n.sub}</Text>
                         </View>
@@ -472,8 +403,7 @@ export default function OnboardingPerfilScreen() {
                         onPress={() => setGenero(g.value)}
                         activeOpacity={0.85}
                       >
-                        <GenIcon tipo={g.value} active={active}/>
-                        <Text style={[styles.cardLabel, active && styles.cardLabelActive, { marginLeft: 16, flex: 1 }]}>
+                        <Text style={[styles.cardLabel, active && styles.cardLabelActive, { flex: 1 }]}>
                           {g.label}
                         </Text>
                         <View style={[styles.checkRing, active && styles.checkRingActive]}>
@@ -610,7 +540,7 @@ const styles = StyleSheet.create({
   subtitle:       { fontSize: 14, color: DT.onSurfaceVar, marginBottom: 24, lineHeight: 20, fontFamily: FONTS.body },
 
   cards:          { gap: 12 },
-  card:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, minHeight: 76 },
+  card:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, paddingVertical: 18, paddingHorizontal: 18, minHeight: 64 },
   cardActive:     { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.10)' },
   cardLabel:      { fontSize: 16, color: DT.onBg, letterSpacing: 0.2, fontFamily: FONTS.bodyBold },
   cardLabelActive:{ color: DT.primary },
@@ -619,10 +549,6 @@ const styles = StyleSheet.create({
   checkRing:      { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   checkRingActive:{ borderColor: DT.primary, backgroundColor: DT.primary },
   checkMark:      { fontSize: 13, color: DT.bg, fontFamily: FONTS.bodyBold, lineHeight: 14 },
-
-  nivelBadge:     { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
-  nivelBadgeActive:{ borderColor: DT.primary, backgroundColor: DT.primary },
-  nivelBadgeTxt:  { fontSize: 16, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold },
 
   datosField:     { marginBottom: 18 },
   datosLabel:     { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 8, fontFamily: FONTS.mono },

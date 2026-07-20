@@ -105,12 +105,17 @@ function RootLayoutNav() {
     const inOnboarding   = segments[1] === 'onboarding-perfil';
     const inTutorial     = segments[0] === 'tutorial';
     const inAceptarLegal = segments[0] === 'aceptar-legal';
+    // Los documentos legales deben poder ABRIRSE desde login (checkbox),
+    // onboarding y aceptar-legal. Sin esta excepción, el guard rebotaba
+    // la navegación (links "muertos" en login) o REMONTABA el onboarding
+    // (perdías todo el progreso al tocar "Aviso de Privacidad").
+    const inLegalDocs = segments[0] === 'terminos' || segments[0] === 'privacidad';
 
-    if (!user && !inAuthGroup) {
+    if (!user && !inAuthGroup && !inLegalDocs) {
       router.replace('/(auth)/login');
       return;
     }
-    if (user && user.onboarding_completo === false && !inOnboarding) {
+    if (user && user.onboarding_completo === false && !inOnboarding && !inLegalDocs) {
       router.replace('/(auth)/onboarding-perfil');
       return;
     }
@@ -122,7 +127,8 @@ function RootLayoutNav() {
       user &&
       user.onboarding_completo !== false &&
       user.legal_aceptado_version !== LEGAL_VERSION &&
-      !inAceptarLegal
+      !inAceptarLegal &&
+      !inLegalDocs
     ) {
       router.replace('/aceptar-legal');
       return;
@@ -136,7 +142,7 @@ function RootLayoutNav() {
     if (
       user && user.onboarding_completo !== false &&
       user.legal_aceptado_version === LEGAL_VERSION &&
-      !tutorialSeen && !inTutorial && !inTabs
+      !tutorialSeen && !inTutorial && !inTabs && !inLegalDocs
     ) {
       router.replace('/tutorial');
       return;

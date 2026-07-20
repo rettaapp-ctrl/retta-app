@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { API_URL, LEGAL_VERSION } from '@/constants';
+import { TUTORIAL_SEEN_KEY } from '@/app/tutorial';
 import { identify, resetAnalytics, track } from '@/lib/analytics';
 import {
   isInfraOutage,
@@ -318,6 +319,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // al user_id correcto antes del reset.
     track('auth_logout');
     resetAnalytics();
+    // Decisión de producto (2026-07-20): al cerrar sesión se limpia el
+    // flag del tutorial para que el próximo inicio de sesión lo vuelva a
+    // mostrar (tiene botón "Saltar"). Solo en logout explícito — cuando
+    // la sesión expira (handleUnauthorized) NO se resetea.
+    try { await SecureStore.deleteItemAsync(TUTORIAL_SEEN_KEY); } catch {}
     // Best-effort: avisar al backend para revocar el refresh token.
     const rt = refreshTokenRef.current;
     if (rt) {
