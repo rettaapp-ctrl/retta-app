@@ -21,10 +21,40 @@ import { decode } from 'base64-arraybuffer';
 import { useAuth, OnboardingPerfilData } from '@/context/AuthContext';
 import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import { supabase } from '@/lib/supabase';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type Posicion = 'POR' | 'DEF' | 'MED' | 'DEL';
 type Nivel    = 'Principiante' | 'Intermedio' | 'Avanzado';
 type Genero   = 'M' | 'F' | 'O';
+
+// ─── Edad mínima (misma regla que el backend valida server-side) ───
+const EDAD_MINIMA = 16;
+
+// Default a 16 años atrás (la edad mínima exacta)
+function getDefaultBirthdate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - EDAD_MINIMA);
+  return d;
+}
+
+function calcularEdad(fecha: Date) {
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - fecha.getFullYear();
+  const m = hoy.getMonth() - fecha.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) edad--;
+  return edad;
+}
+
+function formatFecha(d: Date) {
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function toISODate(d: Date) {
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
 
 const POSICIONES: { value: Posicion; label: string; sub: string }[] = [
   { value: 'POR', label: 'Portero',      sub: 'Bajo los 3 palos' },
@@ -115,7 +145,13 @@ export default function OnboardingPerfilScreen() {
   const { user, completarOnboarding, logout } = useAuth();
   const router = useRouter();
 
-  const [step, setStep]         = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep]         = useState<1 | 2 | 3 | 4 | 5>(1);
+  // Paso 1 — datos personales (con OTP la cuenta nace solo con email)
+  const [nombre, setNombre]     = useState(user?.nombre || '');
+  const [apellido, setApellido] = useState(user?.apellido || '');
+  const [fechaNac, setFechaNac]       = useState<Date>(getDefaultBirthdate());
+  const [fechaTocada, setFechaTocada] = useState(false);
+  const [showPicker, setShowPicker]   = useState(false);
   const [posicion, setPosicion] = useState<Posicion | null>(null);
   const [nivel, setNivel]       = useState<Nivel | null>(null);
   const [genero, setGenero]     = useState<Genero | null>(null);
@@ -127,7 +163,15 @@ export default function OnboardingPerfilScreen() {
 
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  function animarA(nuevoStep: 1 | 2 | 3 | 4) {
+  function onChangeFecha(event: DateTimePickerEvent, selected?: Date) {
+    setShowPicker(Platform.OS === 'ios');
+    if (selected) {
+      setFechaNac(selected);
+      setFechaTocada(true);
+    }
+  }
+
+  function animarA(nuevoStep: 1 | 2 | 3 | 4 | 5) {
     const delta = nuevoStep > step ? -1 : 1;
     Animated.timing(slideAnim, {
       toValue: delta * 300,
@@ -144,24 +188,35 @@ export default function OnboardingPerfilScreen() {
     });
   }
 
+  function datosCompletos() {
+    return nombre.trim().length >= 2 && fechaTocada;
+  }
+
   function handleSiguiente() {
     setError('');
     if (step === 1) {
-      if (!posicion) { setError('Selecciona una posición'); return; }
+      if (nombre.trim().length < 2) { setError('Escribe tu nombre'); return; }
+      if (!fechaTocada) { setError('Selecciona tu fecha de nacimiento'); return; }
+      if (calcularEdad(fechaNac) < EDAD_MINIMA) {
+        setError(`Debes tener al menos ${EDAD_MINIMA} años para usar Retta`); return;
+      }
       animarA(2);
     } else if (step === 2) {
-      if (!nivel) { setError('Selecciona tu nivel'); return; }
+      if (!posicion) { setError('Selecciona una posición'); return; }
       animarA(3);
     } else if (step === 3) {
-      if (!genero) { setError('Selecciona una opción'); return; }
+      if (!nivel) { setError('Selecciona tu nivel'); return; }
       animarA(4);
+    } else if (step === 4) {
+      if (!genero) { setError('Selecciona una opción'); return; }
+      animarA(5);
     }
   }
 
   function handleAtras() {
     setError('');
     if (step === 1) return;
-    animarA((step - 1) as 1 | 2 | 3);
+    animarA((step - 1) as 1 | 2 | 3 | 4);
   }
 
   async function pickImage() {
@@ -204,7 +259,7 @@ export default function OnboardingPerfilScreen() {
   }
 
   async function handleListo() {
-    if (!posicion || !nivel || !genero) {
+    if (!datosCompletos() || !posicion || !nivel || !genero) {
       setError('Completa todos los pasos'); return;
     }
     if (!avatarUrl) {
@@ -212,7 +267,13 @@ export default function OnboardingPerfilScreen() {
     }
     setError(''); setLoading(true);
     try {
-      const data: OnboardingPerfilData = { posicion, nivel, genero, avatar_url: avatarUrl };
+      const data: OnboardingPerfilData = {
+        nombre:           nombre.trim(),
+        apellido:         apellido.trim() || undefined,
+        fecha_nacimiento: toISODate(fechaNac),
+        posicion, nivel, genero,
+        avatar_url: avatarUrl,
+      };
       const tel = telefono.replace(/\D/g, '');
       if (tel) data.telefono = tel;
       await completarOnboarding(data);
@@ -242,7 +303,7 @@ export default function OnboardingPerfilScreen() {
             </TouchableOpacity>
           )}
           <View style={styles.steps}>
-            {[1,2,3,4].map(n => (
+            {[1,2,3,4,5].map(n => (
               <View
                 key={n}
                 style={[
@@ -261,10 +322,80 @@ export default function OnboardingPerfilScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* HOLA usuario */}
+            {/* Paso 1 — datos personales (nombre + fecha de nacimiento ≥16) */}
             {step === 1 && (
               <>
-                <Text style={styles.eyebrow}>HOLA, {(user?.nombre || '').toUpperCase()}</Text>
+                <Text style={styles.eyebrow}>EMPECEMOS</Text>
+                <Text style={styles.title}>Cuéntanos de ti</Text>
+                <Text style={styles.subtitle}>Así te reconocen tus compañeros en la cancha.</Text>
+
+                <View style={styles.datosField}>
+                  <Text style={styles.datosLabel}>NOMBRE</Text>
+                  <TextInput
+                    style={styles.datosInput}
+                    value={nombre}
+                    onChangeText={setNombre}
+                    placeholder="Tu nombre"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    autoCapitalize="words"
+                    maxLength={60}
+                  />
+                </View>
+
+                <View style={styles.datosField}>
+                  <Text style={styles.datosLabel}>APELLIDO (OPCIONAL)</Text>
+                  <TextInput
+                    style={styles.datosInput}
+                    value={apellido}
+                    onChangeText={setApellido}
+                    placeholder="Tu apellido"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    autoCapitalize="words"
+                    maxLength={60}
+                  />
+                </View>
+
+                <View style={styles.datosField}>
+                  <Text style={styles.datosLabel}>FECHA DE NACIMIENTO</Text>
+                  <Text style={styles.datosSub}>Debes tener al menos {EDAD_MINIMA} años para usar Retta.</Text>
+                  <TouchableOpacity
+                    style={styles.datosInput}
+                    onPress={() => setShowPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.datosInputTxt, !fechaTocada && styles.datosPlaceholder]}>
+                      {fechaTocada ? formatFecha(fechaNac) : 'Selecciona tu fecha'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showPicker && (
+                    <View>
+                      <DateTimePicker
+                        value={fechaNac}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        maximumDate={new Date()}
+                        minimumDate={new Date(1940, 0, 1)}
+                        onChange={onChangeFecha}
+                        themeVariant="dark"
+                      />
+                      {Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          style={styles.pickerDoneBtn}
+                          onPress={() => { setShowPicker(false); setFechaTocada(true); }}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.pickerDoneTxt}>LISTO</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <Text style={styles.eyebrow}>HOLA, {(nombre || user?.nombre || '').trim().toUpperCase()}</Text>
                 <Text style={styles.title}>¿En qué posición juegas?</Text>
                 <Text style={styles.subtitle}>Esto nos ayuda a armar equipos balanceados.</Text>
                 <View style={styles.cards}>
@@ -292,9 +423,9 @@ export default function OnboardingPerfilScreen() {
               </>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <>
-                <Text style={styles.eyebrow}>PASO 2 DE 4</Text>
+                <Text style={styles.eyebrow}>PASO 3 DE 5</Text>
                 <Text style={styles.title}>¿Cuál es tu nivel de juego?</Text>
                 <Text style={styles.subtitle}>Sé honesto — esto cuida la experiencia de todos.</Text>
                 <View style={styles.cards}>
@@ -326,9 +457,9 @@ export default function OnboardingPerfilScreen() {
               </>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <>
-                <Text style={styles.eyebrow}>PASO 3 DE 4</Text>
+                <Text style={styles.eyebrow}>PASO 4 DE 5</Text>
                 <Text style={styles.title}>Tu género</Text>
                 <Text style={styles.subtitle}>Para futuros partidos por categoría.</Text>
                 <View style={styles.cards}>
@@ -369,7 +500,7 @@ export default function OnboardingPerfilScreen() {
               </>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
               <>
                 <Text style={styles.eyebrow}>ÚLTIMO PASO</Text>
                 <Text style={styles.title}>Tu foto de perfil</Text>
@@ -424,14 +555,14 @@ export default function OnboardingPerfilScreen() {
 
         {/* Footer button */}
         <View style={styles.footer}>
-          {step < 4 ? (
+          {step < 5 ? (
             <TouchableOpacity
               style={[
                 styles.btn,
-                ((step === 1 && !posicion) || (step === 2 && !nivel) || (step === 3 && !genero)) && styles.btnDisabled,
+                ((step === 1 && !datosCompletos()) || (step === 2 && !posicion) || (step === 3 && !nivel) || (step === 4 && !genero)) && styles.btnDisabled,
               ]}
               onPress={handleSiguiente}
-              disabled={(step === 1 && !posicion) || (step === 2 && !nivel) || (step === 3 && !genero)}
+              disabled={(step === 1 && !datosCompletos()) || (step === 2 && !posicion) || (step === 3 && !nivel) || (step === 4 && !genero)}
               activeOpacity={0.85}
             >
               <Text style={styles.btnTxt}>SIGUIENTE</Text>
@@ -492,6 +623,15 @@ const styles = StyleSheet.create({
   nivelBadge:     { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
   nivelBadgeActive:{ borderColor: DT.primary, backgroundColor: DT.primary },
   nivelBadgeTxt:  { fontSize: 16, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold },
+
+  datosField:     { marginBottom: 18 },
+  datosLabel:     { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 8, fontFamily: FONTS.mono },
+  datosSub:       { fontSize: 12, color: DT.outline, marginBottom: 10, lineHeight: 17, fontFamily: FONTS.body },
+  datosInput:     { height: 52, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, paddingHorizontal: 16, fontSize: 15, color: DT.onBg, fontFamily: FONTS.body, justifyContent: 'center' },
+  datosInputTxt:  { fontSize: 15, color: DT.onBg, fontFamily: FONTS.body },
+  datosPlaceholder:{ color: 'rgba(255,255,255,0.3)' },
+  pickerDoneBtn:  { height: 44, backgroundColor: DT.primaryContainer, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  pickerDoneTxt:  { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
 
   telefonoBlock:  { marginTop: 24, paddingTop: 24, borderTopWidth: 1, borderTopColor: DT.glassBorder },
   telLabel:       { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.5, marginBottom: 4, fontFamily: FONTS.mono },

@@ -74,17 +74,17 @@ interface User {
 }
 
 export interface OnboardingPerfilData {
+  // Datos personales — con el flujo OTP la cuenta nace solo con email,
+  // así que nombre y fecha_nacimiento se capturan aquí (backend valida ≥16).
+  nombre?: string;
+  apellido?: string;
+  fecha_nacimiento?: string;  // 'YYYY-MM-DD'
   posicion: 'POR' | 'DEF' | 'MED' | 'DEL';
   nivel: 'Principiante' | 'Intermedio' | 'Avanzado';
   genero: 'M' | 'F' | 'O';
   telefono?: string;
   avatar_url?: string;
 }
-
-// register/login pueden requerir verificación; el caller navega a /(auth)/verificar
-export type AuthResult =
-  | { ok: true }
-  | { requiere_verificacion: true; email: string };
 
 interface AuthContextType {
   user: User | null;
@@ -96,12 +96,12 @@ interface AuthContextType {
    *  clearSessionExpired() para que no se vuelva a mostrar. */
   sessionExpired: boolean;
   clearSessionExpired: () => void;
-  login: (email: string, password: string) => Promise<AuthResult>;
-  register: (data: RegisterData) => Promise<AuthResult>;
-  verifyEmail: (email: string, codigo: string) => Promise<void>;
-  resendCode: (email: string) => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (email: string, codigo: string, password_nueva: string) => Promise<void>;
+  /** Manda el código de entrada al email. Respuesta genérica siempre
+   *  (nuevo o existente van por el mismo camino). */
+  requestOtp: (email: string) => Promise<void>;
+  /** Valida el código; crea la cuenta si no existía (manda LEGAL_VERSION
+   *  como prueba del checkbox) y persiste la sesión. */
+  verifyOtp: (email: string, codigo: string) => Promise<{ nuevo: boolean }>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   completarOnboarding: (data: OnboardingPerfilData) => Promise<void>;
@@ -109,15 +109,6 @@ interface AuthContextType {
   refreshAccessToken: () => Promise<string | null>;
   refreshUser: () => Promise<void>;
   aceptarLegal: () => Promise<void>;
-}
-
-interface RegisterData {
-  nombre: string;
-  apellido?: string;
-  email: string;
-  password: string;
-  ciudad?: string;
-  fecha_nacimiento: string;  // 'YYYY-MM-DD' — requerido (edad mínima 16)
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -277,108 +268,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return refreshPromiseRef.current;
   }, []);
 
-  // ── Login ──
-  // Errores claros: sin conexión, servicio caído, credenciales incorrectas.
-  async function login(email: string, password: string): Promise<AuthResult> {
-    const { res, data } = await safeFetchJSON(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    // Backend manda 403 con requiere_verificacion si el email aún no se verifica.
-    // En ese caso ya mandó un nuevo código por email.
-    if (res.status === 403 && data?.requiere_verificacion) {
-      track('auth_login_requiere_verificacion');
-      return { requiere_verificacion: true, email: data.email };
-    }
-    if (!res.ok) {
-      const fallback = res.status === 401
-        ? 'Email o contraseña incorrectos'
-        : res.status >= 500
-          ? SERVICE_DOWN_MESSAGE
-          : 'No se pudo iniciar sesión. Intenta de nuevo.';
-      throw new Error(data?.error || fallback);
-    }
-
-    await persistSession(data.token, data.refresh_token || null, data.usuario);
-    track('auth_login_completado');
-    return { ok: true };
-  }
-
-  // ── Registro: SIEMPRE requiere verificación de email ──
-  // Manda legal_version porque el registro implica aceptar T&C + Aviso.
-  // El backend lo guarda con timestamp como prueba de consentimiento.
-  // Errores claros: sin conexión, servicio caído, email duplicado, validación.
-  async function register(registerData: RegisterData): Promise<AuthResult> {
-    const { res, data } = await safeFetchJSON(`${API_URL}/auth/registro`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...registerData, legal_version: LEGAL_VERSION }),
-    });
-    if (!res.ok) {
-      // Backend ya manda mensajes claros: "Este email ya está registrado",
-      // "La contraseña debe tener al menos 6 caracteres", etc.
-      // Si por algún motivo no llegó mensaje, damos uno útil con el status.
-      const fallback = res.status === 409
-        ? 'Este email ya está registrado'
-        : res.status >= 500
-          ? SERVICE_DOWN_MESSAGE
-          : 'No pudimos crear tu cuenta. Verifica los datos e intenta de nuevo.';
-      throw new Error(data?.error || fallback);
-    }
-
-    track('auth_registro_completado', {
-      ciudad: registerData.ciudad || null,
-    });
-    return { requiere_verificacion: true, email: data.email };
-  }
-
-  // ── Verificar email con código → emite tokens ──
-  async function verifyEmail(email: string, codigo: string) {
-    const res = await fetch(`${API_URL}/auth/verificar-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, codigo }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Código incorrecto');
-
-    await persistSession(data.token, data.refresh_token || null, data.usuario);
-    track('auth_email_verificado');
-  }
-
-  // ── Reenviar código de verificación ──
-  async function resendCode(email: string) {
-    const res = await fetch(`${API_URL}/auth/reenviar-codigo`, {
+  // ── OTP paso 1: mandar código de entrada al email ──
+  // Registro y login son el MISMO flujo — el backend responde genérico
+  // siempre (anti-enumeration) y manda el código por Resend.
+  async function requestOtp(email: string) {
+    const { res, data } = await safeFetchJSON(`${API_URL}/auth/otp/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'No se pudo reenviar el código');
+    if (!res.ok) {
+      const fallback = res.status === 429
+        ? 'Demasiadas solicitudes. Espera unos minutos.'
+        : res.status >= 500
+          ? SERVICE_DOWN_MESSAGE
+          : 'No se pudo enviar el código. Intenta de nuevo.';
+      throw new Error(data?.error || fallback);
+    }
+    track('auth_otp_solicitado');
   }
 
-  // ── Forgot password (manda código) ──
-  async function forgotPassword(email: string) {
-    const res = await fetch(`${API_URL}/auth/forgot-password`, {
+  // ── OTP paso 2: validar código → crea cuenta si no existía + tokens ──
+  // Manda LEGAL_VERSION: el checkbox de T&C/Aviso de la pantalla de
+  // entrada es obligatorio, y el backend lo estampa con timestamp.
+  async function verifyOtp(email: string, codigo: string): Promise<{ nuevo: boolean }> {
+    const { res, data } = await safeFetchJSON(`${API_URL}/auth/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, codigo, legal_version: LEGAL_VERSION }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'No se pudo enviar el código');
-  }
+    if (!res.ok) throw new Error(data?.error || 'Código incorrecto');
 
-  // ── Reset password (valida código y guarda nueva contraseña) ──
-  async function resetPassword(email: string, codigo: string, password_nueva: string) {
-    const res = await fetch(`${API_URL}/auth/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, codigo, password_nueva }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'No se pudo restablecer la contraseña');
+    await persistSession(data.token, data.refresh_token || null, data.usuario);
+    track(data.nuevo ? 'auth_registro_completado' : 'auth_login_completado', { metodo: 'otp_email' });
+    return { nuevo: !!data.nuevo };
   }
 
   async function clearLocalSession() {
@@ -540,9 +463,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, token, loading,
       sessionExpired, clearSessionExpired,
-      login, register,
-      verifyEmail, resendCode,
-      forgotPassword, resetPassword,
+      requestOtp, verifyOtp,
       logout, updateUser, completarOnboarding,
       handleUnauthorized, refreshAccessToken, refreshUser,
       aceptarLegal,

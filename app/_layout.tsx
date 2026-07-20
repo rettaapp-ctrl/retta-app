@@ -42,25 +42,9 @@ Sentry.init({
   sendDefaultPii: false,
 });
 
-// ─────────────────────────────────────────────────────────────
-// Notificaciones con la app ABIERTA (foreground).
-// Sin este handler, expo-notifications NO muestra nada cuando la push
-// llega estando la app en primer plano — que es justo el caso de
-// "¡Estás dentro del partido!" (llega segundos después de pagar, con
-// la app abierta en la pantalla de éxito) y de "¡Partido confirmado!"
-// si estás navegando la app. Con banner + list se ve como heads-up
-// arriba y queda en el centro de notificaciones.
-// Sin sonido en foreground para no ser invasivos (en background el
-// sistema sí suena con el canal 'default' de Android).
-// ─────────────────────────────────────────────────────────────
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList:   true,
-    shouldPlaySound:  false,
-    shouldSetBadge:   false,
-  }),
-});
+// Nota: el handler de notificaciones en foreground
+// (Notifications.setNotificationHandler) vive en AuthContext.tsx —
+// no duplicarlo aquí: el último en registrarse pisa al anterior.
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();

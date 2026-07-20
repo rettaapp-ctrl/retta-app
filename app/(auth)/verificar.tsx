@@ -10,20 +10,29 @@ import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 
+// ─────────────────────────────────────────────────────────────
+// Paso 2 del flujo OTP: valida el código de 6 dígitos que llegó
+// por correo. Si el email no tenía cuenta, aquí se crea (el backend
+// estampa la aceptación legal del checkbox de la pantalla anterior).
+// Al persistir la sesión, el router del _layout manda solo al
+// onboarding (cuenta nueva) o a los tabs (cuenta existente).
+// ─────────────────────────────────────────────────────────────
 export default function VerificarScreen() {
-  const { verifyEmail, resendCode } = useAuth();
+  const { verifyOtp, requestOtp } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
   const email  = (params.email || '').toString();
 
-  const [codigo, setCodigo]     = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [codigo, setCodigo]       = useState('');
+  const [loading, setLoading]     = useState(false);
   const [resending, setResending] = useState(false);
-  const [error, setError]       = useState('');
-  const [info, setInfo]         = useState('');
+  const [error, setError]         = useState('');
+  const [info, setInfo]           = useState('');
 
-  // Cooldown del botón de reenviar (segundos restantes)
-  const [cooldown, setCooldown] = useState(0);
+  // Cooldown del botón de reenviar (arranca en 30s porque el código
+  // recién se mandó desde la pantalla anterior; el backend además
+  // tiene su propio cooldown server-side de 30s).
+  const [cooldown, setCooldown] = useState(30);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -36,11 +45,12 @@ export default function VerificarScreen() {
 
   async function handleVerify() {
     if (codigo.length !== 6) { setError('Ingresa el código de 6 dígitos'); return; }
-    if (!email) { setError('Falta el email. Vuelve a intentar el registro.'); return; }
+    if (!email) { setError('Falta el email. Regresa e inténtalo de nuevo.'); return; }
     setError(''); setInfo(''); setLoading(true);
     try {
-      await verifyEmail(email, codigo);
-      // Una vez verificado, el AuthContext setea el token y la app salta a (tabs) automáticamente
+      await verifyOtp(email, codigo);
+      // Sesión persistida → el router del _layout redirige solo:
+      // cuenta nueva → onboarding; existente → tabs.
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -52,7 +62,7 @@ export default function VerificarScreen() {
     if (cooldown > 0 || !email) return;
     setError(''); setInfo(''); setResending(true);
     try {
-      await resendCode(email);
+      await requestOtp(email);
       setInfo('Te enviamos un nuevo código a tu email.');
       setCodigo('');
       setCooldown(30);
@@ -72,7 +82,7 @@ export default function VerificarScreen() {
           <Text style={styles.backTxt}>← Regresar</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Verifica tu email</Text>
+        <Text style={styles.title}>Revisa tu correo</Text>
         <Text style={styles.subtitle}>
           Te enviamos un código de 6 dígitos a{'\n'}
           <Text style={styles.subtitleEmail}>{email || 'tu email'}</Text>
@@ -101,7 +111,7 @@ export default function VerificarScreen() {
             <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.btnTxt}>VERIFICAR</Text>
+                : <Text style={styles.btnTxt}>ENTRAR</Text>
               }
             </LinearGradient>
           </TouchableOpacity>
@@ -120,6 +130,10 @@ export default function VerificarScreen() {
               }
             </Text>
           </TouchableOpacity>
+
+          <Text style={styles.hint}>
+            Si no lo ves, revisa tu carpeta de spam o promociones.
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -147,4 +161,5 @@ const styles = StyleSheet.create({
   linkBtn:      { marginTop: 20, alignItems: 'center' },
   linkTxt:      { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body },
   linkAccent:   { color: DT.primary, fontFamily: FONTS.bodyBold },
+  hint:         { fontSize: 11, color: DT.outline, marginTop: 14, textAlign: 'center', lineHeight: 16, fontFamily: FONTS.body },
 });
