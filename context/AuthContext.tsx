@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
@@ -134,9 +134,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // todas comparten el mismo refresh en vez de disparar N refreshes.
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  useEffect(() => { loadSession(); }, []);
+  // Todas las funciones del contexto se memoizan con useCallback para que su
+  // identidad sea estable entre renders. Esto evita que consumidores como
+  // useApi (que dependen de handleUnauthorized) recreen `request` en cada
+  // render y disparen loops de efectos. El value del provider va en useMemo.
 
-  async function registerPushToken(authToken: string) {
+  const registerPushToken = useCallback(async (authToken: string) => {
     try {
       if (!Device.isDevice) return;
 
@@ -185,29 +188,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ expo_push_token: pushToken }),
       });
     } catch {}
-  }
-
-  async function loadSession() {
-    try {
-      const savedToken        = await SecureStore.getItemAsync(TOKEN_KEY);
-      const savedRefreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-      const savedUser         = await SecureStore.getItemAsync(USER_KEY);
-      if (savedToken && savedUser) {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-        refreshTokenRef.current = savedRefreshToken;
-        // Re-registrar el push token también al restaurar sesión vieja, no solo
-        // al loguear. Esto cubre el caso de usuarios que rechazaron permisos
-        // la primera vez y los aceptaron después manualmente — la próxima
-        // apertura sí guarda el token y empiezan a llegarles notifs.
-        registerPushToken(savedToken);
-      }
-    } catch {}
-    setLoading(false);
-  }
+  }, []);
 
   // ── Persistir tokens + user (helper interno) ──
-  async function persistSession(newToken: string, newRefreshToken: string | null, newUser: User) {
+  const persistSession = useCallback(async (newToken: string, newRefreshToken: string | null, newUser: User) => {
     await SecureStore.setItemAsync(TOKEN_KEY, newToken);
     if (newRefreshToken) {
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, newRefreshToken);
@@ -230,7 +214,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onboarding_completo:  newUser.onboarding_completo !== false,
       partidos_jug:         newUser.partidos_jug || 0,
     });
-  }
+  }, [registerPushToken]);
+
+  const loadSession = useCallback(async () => {
+    try {
+      const savedToken        = await SecureStore.getItemAsync(TOKEN_KEY);
+      const savedRefreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      const savedUser         = await SecureStore.getItemAsync(USER_KEY);
+      if (savedToken && savedUser) {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+        refreshTokenRef.current = savedRefreshToken;
+        // Re-registrar el push token también al restaurar sesión vieja, no solo
+        // al loguear. Esto cubre el caso de usuarios que rechazaron permisos
+        // la primera vez y los aceptaron después manualmente — la próxima
+        // apertura sí guarda el token y empiezan a llegarles notifs.
+        registerPushToken(savedToken);
+      }
+    } catch {}
+    setLoading(false);
+  }, [registerPushToken]);
+
+  useEffect(() => { loadSession(); }, [loadSession]);
 
   // ── Refresh: pide nuevo access + rota refresh ──
   // Devuelve el nuevo access token, o null si el refresh falló (sesión muerta).
@@ -272,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── OTP paso 1: mandar código de entrada al email ──
   // Registro y login son el MISMO flujo — el backend responde genérico
   // siempre (anti-enumeration) y manda el código por Resend.
-  async function requestOtp(email: string) {
+  const requestOtp = useCallback(async (email: string) => {
     const { res, data } = await safeFetchJSON(`${API_URL}/auth/otp/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -287,12 +292,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data?.error || fallback);
     }
     track('auth_otp_solicitado');
-  }
+  }, []);
 
   // ── OTP paso 2: validar código → crea cuenta si no existía + tokens ──
   // Manda LEGAL_VERSION: el checkbox de T&C/Aviso de la pantalla de
   // entrada es obligatorio, y el backend lo estampa con timestamp.
-  async function verifyOtp(email: string, codigo: string): Promise<{ nuevo: boolean }> {
+  const verifyOtp = useCallback(async (email: string, codigo: string): Promise<{ nuevo: boolean }> => {
     const { res, data } = await safeFetchJSON(`${API_URL}/auth/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -303,18 +308,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persistSession(data.token, data.refresh_token || null, data.usuario);
     track(data.nuevo ? 'auth_registro_completado' : 'auth_login_completado', { metodo: 'otp_email' });
     return { nuevo: !!data.nuevo };
-  }
+  }, [persistSession]);
 
-  async function clearLocalSession() {
+  const clearLocalSession = useCallback(async () => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await SecureStore.deleteItemAsync(USER_KEY);
     refreshTokenRef.current = null;
     setToken(null);
     setUser(null);
-  }
+  }, []);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     // Track ANTES de limpiar la sesión para que el evento aún se vincule
     // al user_id correcto antes del reset.
     track('auth_logout');
@@ -336,20 +341,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
     await clearLocalSession();
-  }
+  }, [clearLocalSession]);
 
-  async function handleUnauthorized() {
+  const handleUnauthorized = useCallback(async () => {
     // Token expirado y refresh falló — limpiar sesión, mandar al login,
     // y marcar el flag para que login muestre el mensaje friendly.
     await clearLocalSession();
     setSessionExpired(true);
-  }
+  }, [clearLocalSession]);
 
-  function clearSessionExpired() {
+  const clearSessionExpired = useCallback(() => {
     setSessionExpired(false);
-  }
+  }, []);
 
-  async function completarOnboarding(data: OnboardingPerfilData) {
+  const completarOnboarding = useCallback(async (data: OnboardingPerfilData) => {
     const res = await fetch(`${API_URL}/auth/onboarding-perfil`, {
       method: 'PATCH',
       headers: {
@@ -380,12 +385,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       nivel:    data.nivel,
       genero:   data.genero,
     });
-  }
+  }, [token, user]);
 
   // Pulls fresh user data from /auth/me — incluye stats actualizadas
   // (rating, racha_actual, racha_max, partidos_jug, partidos_gan).
   // El backend recalcula en cada llamada antes de devolver.
-  async function refreshUser() {
+  const refreshUser = useCallback(async () => {
     if (!token) return;
     try {
       const res = await fetch(`${API_URL}/auth/me`, {
@@ -396,7 +401,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(fresh);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(fresh));
     } catch {}
-  }
+  }, [token]);
 
   // ── Aceptar la versión actual de Términos + Aviso de Privacidad ──
   // La llama la pantalla bloqueante /aceptar-legal cuando el usuario
@@ -407,7 +412,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // reintenta UNA vez. Si el refresh falla, cierra sesión limpia.
   // Es importante porque la pantalla bloqueante suele dispararse al abrir
   // la app después de horas/días — es justo cuando los tokens caducan.
-  async function aceptarLegal() {
+  const aceptarLegal = useCallback(async () => {
     if (!token) throw new Error('Sesión inválida');
 
     const doFetch = (tk: string) => fetch(`${API_URL}/usuarios/me/aceptar-legal`, {
@@ -446,9 +451,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser));
     track('legal_aceptado', { version: LEGAL_VERSION });
-  }
+  }, [token, user, refreshAccessToken, handleUnauthorized]);
 
-  async function updateUser(data: Partial<User>) {
+  const updateUser = useCallback(async (data: Partial<User>) => {
     const res = await fetch(`${API_URL}/usuarios/me`, {
       method: 'PATCH',
       headers: {
@@ -463,17 +468,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const newUser = { ...user, ...updated } as User;
     setUser(newUser);
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser));
-  }
+  }, [token, user]);
+
+  // El value se memoiza para no recrear el objeto en cada render. Solo cambia
+  // cuando cambian el state (user/token/loading/sessionExpired) o alguna de las
+  // callbacks (que a su vez solo cambian cuando cambian sus deps reales).
+  const value = useMemo<AuthContextType>(() => ({
+    user, token, loading,
+    sessionExpired, clearSessionExpired,
+    requestOtp, verifyOtp,
+    logout, updateUser, completarOnboarding,
+    handleUnauthorized, refreshAccessToken, refreshUser,
+    aceptarLegal,
+  }), [
+    user, token, loading,
+    sessionExpired, clearSessionExpired,
+    requestOtp, verifyOtp,
+    logout, updateUser, completarOnboarding,
+    handleUnauthorized, refreshAccessToken, refreshUser,
+    aceptarLegal,
+  ]);
 
   return (
-    <AuthContext.Provider value={{
-      user, token, loading,
-      sessionExpired, clearSessionExpired,
-      requestOtp, verifyOtp,
-      logout, updateUser, completarOnboarding,
-      handleUnauthorized, refreshAccessToken, refreshUser,
-      aceptarLegal,
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

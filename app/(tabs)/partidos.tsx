@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, TextInput,
+  ActivityIndicator, RefreshControl, TextInput, FlatList,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -99,6 +99,129 @@ function getDays() {
 
 const DAYS = getDays();
 
+function formatHora(hora: string) {
+  return (hora || '00:00').slice(0, 5);
+}
+
+// ── Fila del feed principal ──
+// Memoizada (React.memo) para que al refrescar la lista (polling / pull) solo
+// se re-rendericen las cards cuyos datos cambiaron, no las ~50 visibles.
+// onPress recibe el id para no crear un closure nuevo por card en cada render.
+interface PartidoCardProps {
+  p: Partido;
+  inscrito: boolean;
+  onPress: (id: string) => void;
+}
+const PartidoCard = React.memo(function PartidoCard({ p, inscrito, onPress }: PartidoCardProps) {
+  const hora     = formatHora(p.hora_inicio);
+  const libres   = p.max_jugadores - (p.jugadores_confirmados || 0);
+  const pct      = (p.jugadores_confirmados || 0) / p.max_jugadores;
+  const lleno    = libres <= 0;
+  const tieneDescuento = !inscrito && (p.descuento_porcentaje || 0) > 0;
+
+  return (
+    <TouchableOpacity
+      style={[styles.card, lleno && !inscrito && styles.cardLleno]}
+      onPress={() => onPress(p.id)}
+      activeOpacity={0.88}
+    >
+      {/* Imagen header */}
+      <View style={styles.cardImgWrap}>
+        {p.complejo_foto_url ? (
+          <Image
+            source={{ uri: p.complejo_foto_url }}
+            style={[StyleSheet.absoluteFillObject, lleno && !inscrito && { opacity: 0.5 }]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DT.surfaceHigh }]} />
+        )}
+        <LinearGradient
+          colors={['transparent', DT.bg]}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Chip precio arriba derecha */}
+        <View style={styles.priceChip}>
+          {tieneDescuento ? (
+            p.descuento_porcentaje === 100 ? (
+              <Text style={styles.priceChipFree}>¡GRATIS!</Text>
+            ) : (
+              <View style={styles.priceChipDescRow}>
+                <Text style={styles.priceChipOld}>${p.precio_jugador}</Text>
+                <Text style={styles.priceChipNew}>${p.precio_final ?? p.precio_jugador}</Text>
+              </View>
+            )
+          ) : (
+            <Text style={styles.priceChipTxt}>${p.precio_jugador}</Text>
+          )}
+        </View>
+        {/* Chip ubicación abajo izquierda */}
+        <View style={styles.locChip}>
+          <PinIcon />
+          <Text style={styles.locChipTxt}>{(p.complejo_ciudad || 'GDL').toUpperCase()}</Text>
+        </View>
+      </View>
+
+      {/* Cuerpo */}
+      <View style={styles.cardBody}>
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {p.complejo_nombre || 'Complejo'}
+        </Text>
+        <Text style={styles.cardSub} numberOfLines={1}>
+          {p.cancha_nombre || 'Cancha'}
+        </Text>
+
+        {/* Jugadores + formato */}
+        <View style={styles.statRow}>
+          <Text style={styles.statTxt}>
+            {p.jugadores_confirmados || 0}/{p.max_jugadores} Jugadores
+          </Text>
+          <Text style={styles.statFormat}>{p.tipo}</Text>
+        </View>
+
+        {/* Barra de progreso con gradiente */}
+        <View style={styles.progressBar}>
+          <LinearGradient
+            colors={pct >= 0.9 ? ['#E24B4A', '#ffb4ab'] : GRADIENTS.progress}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
+          />
+        </View>
+
+        {/* Hora + botón */}
+        <View style={styles.cardFooter}>
+          <View style={styles.timeRow}>
+            <ClockIcon />
+            <Text style={styles.timeTxt}>{hora}</Text>
+          </View>
+
+          {inscrito ? (
+            <View style={styles.inscritoBtn}>
+              <Text style={styles.inscritoBtnTxt}>INSCRITO</Text>
+            </View>
+          ) : lleno ? (
+            <View style={styles.fullBtn}>
+              <Text style={styles.fullBtnTxt}>Lleno</Text>
+            </View>
+          ) : (
+            <LinearGradient
+              colors={GRADIENTS.button}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.joinBtn}
+            >
+              <Text style={styles.joinBtnTxt}>Unirse a Retta</Text>
+            </LinearGradient>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 export default function PartidosScreen() {
   const { request } = useApi();
   const { user }    = useAuth();
@@ -115,8 +238,16 @@ export default function PartidosScreen() {
   const [isInfraDown, setIsInfraDown] = useState(false);
   const [inscritoIds, setInscritoIds] = useState<Set<string>>(new Set());
 
-  async function loadPartidos(fecha: string) {
-    setLoading(true);
+  // Ref con el valor actual de partidos para que loadPartidos (memoizado) sepa
+  // si ya hay algo en pantalla sin recrearse en cada cambio de lista.
+  const partidosRef = useRef<Partido[]>([]);
+  partidosRef.current = partidos;
+
+  // `silent`: refresco en segundo plano (polling). No prende el spinner de
+  // pantalla completa para no hacer flashear la lista ni perder el scroll.
+  // El spinner solo aparece en la PRIMERA carga (cuando aún no hay partidos).
+  async function loadPartidos(fecha: string, silent = false) {
+    if (!silent && partidosRef.current.length === 0) setLoading(true);
     setLoadError(null);
     setIsInfraDown(false);
     try {
@@ -152,25 +283,24 @@ export default function PartidosScreen() {
     setRefreshing(false);
   }
 
-  // useFocusEffect: refresca al volver a la tab + polling cada 30s mientras
-  // la pantalla está en foco. Sin esto, cuando un complejo agrega un partido
-  // nuevo el usuario tenía que cambiar de tab y volver para verlo. Ahora se
-  // refresca solo en background mientras está mirando la lista.
-  // Cleanup limpia el interval al perder foco (no consume batería en otras
-  // pantallas).
+  // useFocusEffect: refresca al volver a la tab + polling mientras la pantalla
+  // está en foco. Sin esto, cuando un complejo agrega un partido nuevo el
+  // usuario tenía que cambiar de tab y volver para verlo. El polling corre en
+  // modo `silent` para no flashear el spinner ni perder el scroll. Cleanup
+  // limpia el interval al perder foco (no consume batería en otras pantallas).
   useFocusEffect(
     useCallback(() => {
       loadPartidos(activeDate);
       const interval = setInterval(() => {
-        loadPartidos(activeDate);
-      }, 30_000); // 30 segundos
+        loadPartidos(activeDate, true); // silent: refresco en segundo plano
+      }, 45_000); // 45 segundos
       return () => clearInterval(interval);
     }, [activeDate])
   );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadPartidos(activeDate);
+    loadPartidos(activeDate, true); // silent: el RefreshControl ya da feedback
   }, [activeDate]);
 
   function selectDay(iso: string) {
@@ -188,11 +318,17 @@ export default function PartidosScreen() {
     );
   }, [partidos, search]);
 
-  function formatHora(hora: string) {
-    return (hora || '00:00').slice(0, 5);
-  }
-
   const selectedDay = DAYS.find(d => d.iso === activeDate) || DAYS[0];
+
+  // Navegación memoizada: se pasa a cada PartidoCard sin recrear el closure,
+  // para que React.memo pueda evitar re-renders de las filas.
+  const goToPartido = useCallback((id: string) => {
+    router.push(`/partido/${id}`);
+  }, [router]);
+
+  const renderPartido = useCallback(({ item }: { item: Partido }) => (
+    <PartidoCard p={item} inscrito={inscritoIds.has(item.id)} onPress={goToPartido} />
+  ), [inscritoIds, goToPartido]);
 
   return (
     <View style={styles.root}>
@@ -276,62 +412,67 @@ export default function PartidosScreen() {
             <ActivityIndicator color={DT.primary} size="large" />
           </View>
         ) : (
-          <ScrollView
+          <FlatList
+            data={filtered}
+            keyExtractor={p => p.id}
+            renderItem={renderPartido}
             contentContainerStyle={styles.scroll}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={DT.primary} />}
             showsVerticalScrollIndicator={false}
-          >
-            {loadError && (
-              <TouchableOpacity
-                style={isInfraDown ? styles.outageBanner : styles.errBanner}
-                onPress={() => loadPartidos(activeDate)}
-                activeOpacity={0.85}
-              >
-                {isInfraDown ? (
-                  <>
-                    <View style={styles.outageRow}>
-                      <Text style={styles.outageIcon}>⚠️</Text>
-                      <Text style={styles.outageTitle}>Retta no está disponible</Text>
-                    </View>
-                    <Text style={styles.outageSub}>
-                      Estamos trabajando para resolverlo. Intenta en unos minutos. Toca para reintentar.
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.errBannerTitle}>No se pudo actualizar</Text>
-                    <Text style={styles.errBannerSub}>Toca para reintentar</Text>
-                  </>
+            ListHeaderComponent={
+              <>
+                {loadError && (
+                  <TouchableOpacity
+                    style={isInfraDown ? styles.outageBanner : styles.errBanner}
+                    onPress={() => loadPartidos(activeDate)}
+                    activeOpacity={0.85}
+                  >
+                    {isInfraDown ? (
+                      <>
+                        <View style={styles.outageRow}>
+                          <Text style={styles.outageIcon}>⚠️</Text>
+                          <Text style={styles.outageTitle}>Retta no está disponible</Text>
+                        </View>
+                        <Text style={styles.outageSub}>
+                          Estamos trabajando para resolverlo. Intenta en unos minutos. Toca para reintentar.
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.errBannerTitle}>No se pudo actualizar</Text>
+                        <Text style={styles.errBannerSub}>Toca para reintentar</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
-            )}
 
-            {calPendientesCount > 0 && (
-              <TouchableOpacity
-                style={styles.calBanner}
-                onPress={() => router.push('/calificar')}
-                activeOpacity={0.85}
-              >
-                <View style={styles.calBannerStar}>
-                  <Text style={{ fontSize: 18 }}>⭐</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.calBannerTitle}>Califica a tus compañeros</Text>
-                  <Text style={styles.calBannerSub}>
-                    Tienes {calPendientesCount} {calPendientesCount === 1 ? 'calificación pendiente' : 'calificaciones pendientes'}
-                  </Text>
-                </View>
-                <Text style={styles.calBannerArrow}>›</Text>
-              </TouchableOpacity>
-            )}
+                {calPendientesCount > 0 && (
+                  <TouchableOpacity
+                    style={styles.calBanner}
+                    onPress={() => router.push('/calificar')}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.calBannerStar}>
+                      <Text style={{ fontSize: 18 }}>⭐</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.calBannerTitle}>Califica a tus compañeros</Text>
+                      <Text style={styles.calBannerSub}>
+                        Tienes {calPendientesCount} {calPendientesCount === 1 ? 'calificación pendiente' : 'calificaciones pendientes'}
+                      </Text>
+                    </View>
+                    <Text style={styles.calBannerArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
 
-            <Text style={styles.sectionLabel}>
-              {selectedDay.today
-                ? 'PARTIDOS DISPONIBLES HOY'
-                : `PARTIDOS · ${selectedDay.dia.toUpperCase()} ${selectedDay.num} ${selectedDay.mes.toUpperCase()}`}
-            </Text>
-
-            {filtered.length === 0 ? (
+                <Text style={styles.sectionLabel}>
+                  {selectedDay.today
+                    ? 'PARTIDOS DISPONIBLES HOY'
+                    : `PARTIDOS · ${selectedDay.dia.toUpperCase()} ${selectedDay.num} ${selectedDay.mes.toUpperCase()}`}
+                </Text>
+              </>
+            }
+            ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <Image
                   source={require('../../assets/images/retta-logo-mark.png')}
@@ -342,120 +483,8 @@ export default function PartidosScreen() {
                 <Text style={styles.emptyTitle}>Sin <Text style={styles.emptyTitleAccent}>Rettas</Text> este día</Text>
                 <Text style={styles.emptySub}>Intenta con otro día o revisa más tarde</Text>
               </View>
-            ) : (
-              filtered.map(p => {
-                const hora     = formatHora(p.hora_inicio);
-                const libres   = p.max_jugadores - (p.jugadores_confirmados || 0);
-                const pct      = (p.jugadores_confirmados || 0) / p.max_jugadores;
-                const lleno    = libres <= 0;
-                const inscrito = inscritoIds.has(p.id);
-                const tieneDescuento = !inscrito && (p.descuento_porcentaje || 0) > 0;
-
-                return (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={[styles.card, lleno && !inscrito && styles.cardLleno]}
-                    onPress={() => router.push(`/partido/${p.id}`)}
-                    activeOpacity={0.88}
-                  >
-                    {/* Imagen header */}
-                    <View style={styles.cardImgWrap}>
-                      {p.complejo_foto_url ? (
-                        <Image
-                          source={{ uri: p.complejo_foto_url }}
-                          style={[StyleSheet.absoluteFillObject, lleno && !inscrito && { opacity: 0.5 }]}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                          transition={150}
-                        />
-                      ) : (
-                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: DT.surfaceHigh }]} />
-                      )}
-                      <LinearGradient
-                        colors={['transparent', DT.bg]}
-                        style={StyleSheet.absoluteFill}
-                      />
-                      {/* Chip precio arriba derecha */}
-                      <View style={styles.priceChip}>
-                        {tieneDescuento ? (
-                          p.descuento_porcentaje === 100 ? (
-                            <Text style={styles.priceChipFree}>¡GRATIS!</Text>
-                          ) : (
-                            <View style={styles.priceChipDescRow}>
-                              <Text style={styles.priceChipOld}>${p.precio_jugador}</Text>
-                              <Text style={styles.priceChipNew}>${p.precio_final ?? p.precio_jugador}</Text>
-                            </View>
-                          )
-                        ) : (
-                          <Text style={styles.priceChipTxt}>${p.precio_jugador}</Text>
-                        )}
-                      </View>
-                      {/* Chip ubicación abajo izquierda */}
-                      <View style={styles.locChip}>
-                        <PinIcon />
-                        <Text style={styles.locChipTxt}>{(p.complejo_ciudad || 'GDL').toUpperCase()}</Text>
-                      </View>
-                    </View>
-
-                    {/* Cuerpo */}
-                    <View style={styles.cardBody}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
-                        {p.complejo_nombre || 'Complejo'}
-                      </Text>
-                      <Text style={styles.cardSub} numberOfLines={1}>
-                        {p.cancha_nombre || 'Cancha'}
-                      </Text>
-
-                      {/* Jugadores + formato */}
-                      <View style={styles.statRow}>
-                        <Text style={styles.statTxt}>
-                          {p.jugadores_confirmados || 0}/{p.max_jugadores} Jugadores
-                        </Text>
-                        <Text style={styles.statFormat}>{p.tipo}</Text>
-                      </View>
-
-                      {/* Barra de progreso con gradiente */}
-                      <View style={styles.progressBar}>
-                        <LinearGradient
-                          colors={pct >= 0.9 ? ['#E24B4A', '#ffb4ab'] : GRADIENTS.progress}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
-                        />
-                      </View>
-
-                      {/* Hora + botón */}
-                      <View style={styles.cardFooter}>
-                        <View style={styles.timeRow}>
-                          <ClockIcon />
-                          <Text style={styles.timeTxt}>{hora}</Text>
-                        </View>
-
-                        {inscrito ? (
-                          <View style={styles.inscritoBtn}>
-                            <Text style={styles.inscritoBtnTxt}>INSCRITO</Text>
-                          </View>
-                        ) : lleno ? (
-                          <View style={styles.fullBtn}>
-                            <Text style={styles.fullBtnTxt}>Lleno</Text>
-                          </View>
-                        ) : (
-                          <LinearGradient
-                            colors={GRADIENTS.button}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.joinBtn}
-                          >
-                            <Text style={styles.joinBtnTxt}>Unirse a Retta</Text>
-                          </LinearGradient>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </ScrollView>
+            }
+          />
         )}
       </SafeAreaView>
     </View>

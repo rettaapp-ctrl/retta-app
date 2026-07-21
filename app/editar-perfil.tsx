@@ -45,7 +45,10 @@ export default function EditarPerfilScreen() {
 
   const [nombre,    setNombre]    = useState(user?.nombre    || '');
   const [apellido,  setApellido]  = useState(user?.apellido  || '');
-  const [email,     setEmail]     = useState(user?.email     || '');
+  // El email es la identidad de login (OTP) y NO puede cambiarse desde aquí.
+  // Se muestra como campo de solo lectura y nunca se manda en updateUser.
+  // El cambio de correo requiere un flujo con verificación OTP (pendiente
+  // en backend), por eso este campo no es editable.
   const [telefono,  setTelefono]  = useState(user?.telefono  || '');
   const [ciudad,    setCiudad]    = useState(user?.ciudad    || '');
   // Genero: leer del user, default a 'M' si no tiene
@@ -105,15 +108,12 @@ export default function EditarPerfilScreen() {
       AppAlert.alert('Error', 'El nombre no puede estar vacío.');
       return;
     }
-    // Validar formato de email (mismo patrón que en register)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email.trim() && !emailRegex.test(email.trim())) {
-      AppAlert.alert('Email inválido', 'Ingresa un email válido (ej. tu@email.com).');
-      return;
-    }
     setSaving(true);
     try {
-      await updateUser({ nombre, apellido, email, telefono, ciudad, nivel, posicion, genero, avatar_url: avatarUrl });
+      // NO se manda el email: es la identidad de login (OTP) y cambiarlo sin
+      // re-verificar permitiría secuestrar la cuenta. El cambio de correo
+      // vivirá en un flujo propio con verificación OTP.
+      await updateUser({ nombre, apellido, telefono, ciudad, nivel, posicion, genero, avatar_url: avatarUrl });
       AppAlert.alert('✓ Guardado', 'Tu perfil fue actualizado correctamente.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -203,7 +203,11 @@ export default function EditarPerfilScreen() {
               </Svg>
             </View>
             <Text style={styles.fieldLabel}>Correo</Text>
-            <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} placeholder="correo@ejemplo.com" keyboardType="email-address" autoCapitalize="none" placeholderTextColor={DT.outline}/>
+            {/* Solo lectura: el correo es la identidad de login (OTP) y no se
+                puede editar desde el perfil. */}
+            <Text style={[styles.fieldInput, styles.fieldReadonly]} numberOfLines={1}>
+              {user?.email || '—'}
+            </Text>
           </View>
 
           <View style={styles.fieldDivider}/>
