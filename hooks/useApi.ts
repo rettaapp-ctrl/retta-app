@@ -60,6 +60,16 @@ function makeNetworkError() {
   return err;
 }
 
+// 429 del rate limiter del backend. Marcado con isRateLimit para que:
+//  1) las pantallas puedan mostrar mensaje amable sin tratarlo como bug, y
+//  2) el beforeSend de Sentry (en _layout.tsx) lo filtre y no genere issues
+//     — un 429 es el backend protegiéndose, no un error de la app.
+function makeRateLimitError() {
+  const err: any = new Error('Demasiadas solicitudes. Espera un momento e intenta de nuevo.');
+  err.isRateLimit = true;
+  return err;
+}
+
 export function useApi() {
   const { token, refreshAccessToken, handleUnauthorized } = useAuth();
 
@@ -110,6 +120,9 @@ export function useApi() {
     // Detectar infra outage ANTES de intentar parsear JSON (los fallbacks
     // de Railway devuelven HTML, no JSON, así que res.json() tiraría).
     if (isInfraOutage(res)) throw makeInfraError();
+
+    // Rate limit del backend → error tipado (no es bug, no debe ir a Sentry)
+    if (res.status === 429) throw makeRateLimitError();
 
     let data: any;
     try {

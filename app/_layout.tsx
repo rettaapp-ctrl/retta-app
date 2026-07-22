@@ -37,6 +37,17 @@ Sentry.init({
   profilesSampleRate: 0,
   // Privacidad: no recolectar PII por defecto
   sendDefaultPii: false,
+  // Filtro de ruido: los 429 del rate limiter del backend NO son bugs de la
+  // app (el backend protegiéndose no es un crash). Sin este filtro, cualquier
+  // refresh de fondo sin catch generaba issues como el 7625987104 (2026-07-21
+  // "Demasiadas solicitudes, intenta más tarde"). useApi marca estos errores
+  // con isRateLimit y aquí se descartan por si algún call-site no los cachó.
+  beforeSend(event, hint) {
+    const err: any = hint?.originalException;
+    const msg = (err?.message || event?.message || '') as string;
+    if (err?.isRateLimit || msg.includes('Demasiadas solicitudes')) return null;
+    return event;
+  },
 });
 
 // Nota: el handler de notificaciones en foreground
@@ -170,6 +181,7 @@ function RootLayoutNav() {
       <Stack.Screen name="partido/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="usuario/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="amigos"       options={{ presentation: 'card' }} />
+      <Stack.Screen name="rating"       options={{ presentation: 'card' }} />
     </Stack>
   );
 }

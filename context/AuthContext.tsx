@@ -58,8 +58,10 @@ interface User {
   ciudad?: string;
   telefono?: string;
   posicion?: string;
-  nivel?: string;            // auto-declarado en onboarding (Principiante/Intermedio/Avanzado)
-  rating?: number;           // calculado tipo Playtomic (1.0 → ∞)
+  nivel?: string;            // legacy: ya no se declara — el nivel visible se deriva del rating
+  rating?: number;           // sistema v2: escala 1-10, arranca oculto en 5.0
+  rating_calibrando?: boolean;    // true durante los primeros 3 partidos
+  partidos_calibracion?: number;  // avance de la calibración (0-3)
   genero?: 'M' | 'F' | 'O' | null;
   fecha_nacimiento?: string;
   avatar_url?: string;
@@ -81,7 +83,8 @@ export interface OnboardingPerfilData {
   apellido?: string;
   fecha_nacimiento?: string;  // 'YYYY-MM-DD'
   posicion: 'POR' | 'DEF' | 'MED' | 'DEL';
-  nivel: 'Principiante' | 'Intermedio' | 'Avanzado';
+  // nivel ya NO se pide: el sistema lo calibra en los primeros 3 partidos.
+  nivel?: 'Principiante' | 'Intermedio' | 'Avanzado';
   genero: 'M' | 'F' | 'O';
   telefono?: string;
   avatar_url?: string;

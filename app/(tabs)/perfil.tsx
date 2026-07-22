@@ -1,12 +1,18 @@
+// ═══════════════════════════════════════════════════════════════
+// RETTA — Perfil propio (rediseño 2026-07-21, aprobado por Rafael y Foco)
+// Los bloques visuales (stats, posición|nivel, rating con gráfica y
+// racha) viven en components/PerfilBloques.tsx y se comparten con el
+// perfil público (app/usuario/[id].tsx) para que se vean idénticos.
+// ═══════════════════════════════════════════════════════════════
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useNotificacionesCount } from '@/hooks/useNotificacionesCount';
-import { isPartidoVisible } from '@/lib/partidos';
+import { StatsRow, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
 import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator, RefreshControl,
+  RefreshControl,
   ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -14,49 +20,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-interface Inscripcion {
-  id: string;
-  status: string;
-  equipo?: 'A' | 'B' | null;
-  v_partidos: {
-    id: string;
-    fecha: string;
-    hora_inicio: string;
-    tipo: string;
-    complejo_nombre: string;
-    cancha_nombre: string;
-    goles_a?: number | null;
-    goles_b?: number | null;
-    equipo_ganador?: 'A' | 'B' | 'EMPATE' | null;
-  };
-}
-
-const POSICION_LABEL: Record<string, string> = {
-  DEL: 'DEL — Delantero',
-  MED: 'MED — Mediocampista',
-  DEF: 'DEF — Defensa',
-  POR: 'POR — Portero',
-};
-
-function ratingLabel(rating: number): string {
-  if (rating < 2.0) return 'Principiante';
-  if (rating < 3.0) return 'Intermedio bajo';
-  if (rating < 4.0) return 'Intermedio';
-  if (rating < 5.0) return 'Avanzado';
-  if (rating < 6.0) return 'Élite';
-  return 'Pro';
-}
-
-function FlameIcon({ size = 20, color = DT.primary }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 2C12 2 6 9 6 14a6 6 0 0 0 12 0c0-1.5-.5-3-1.5-4-.4 1-1.5 1.5-2.5 1-1.4-.7-1-2.6 0-4 .5-.7.5-2-1-3-1 .5-1.5 2-1 4z"
-        fill={color}
-      />
-    </Svg>
-  );
-}
+// Throttle del refetch del perfil: cada focus del tab disparaba 4 requests
+// (amigos, solicitudes, historial de rating y /auth/me con recálculo de
+// stats). Cambiando de tab seguido eso ayudó a tirar el rate limiter global
+// (issue Sentry 2026-07-21). Con 30s de TTL el focus repetido reutiliza lo
+// que ya se tiene; el pull-to-refresh siempre fuerza.
+const PERFIL_TTL_MS = 30_000;
+let ultimoLoadPerfil = 0;
 
 function SettingsIcon() {
   return (
@@ -76,9 +46,17 @@ function BellIcon() {
   );
 }
 
+function EditIcon() {
+  return (
+    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <Path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke={DT.onBg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
+
 function AvatarPlaceholder() {
   return (
-    <Svg width="46" height="46" viewBox="0 0 48 48" fill="none">
+    <Svg width="60" height="60" viewBox="0 0 48 48" fill="none">
       <Circle cx="24" cy="18" r="9" fill={DT.outline}/>
       <Path d="M6 42C6 33.2 14.1 26 24 26C33.9 26 42 33.2 42 42" fill={DT.outline}/>
     </Svg>
@@ -89,64 +67,44 @@ export default function PerfilScreen() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
   const { request } = useApi();
-  const [partidos, setPartidos]     = useState<Inscripcion[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [verTodos, setVerTodos]     = useState(false);
+  const [historial, setHistorial]   = useState<RatingPunto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [amigosCount, setAmigosCount] = useState(0);
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const { count: notiCount } = useNotificacionesCount();
 
-  // useFocusEffect: refresca stats, amigos y partidos cada vez que vuelves
-  // al perfil. Antes había que hacer pull-to-refresh manual.
   useFocusEffect(
     useCallback(() => {
       load();
     }, [])
   );
 
-  async function load() {
+  async function load(force = false) {
+    if (!force && Date.now() - ultimoLoadPerfil < PERFIL_TTL_MS) {
+      setRefreshing(false);
+      return;
+    }
     try {
-      const [partidosRes, amigosRes, pendRes] = await Promise.all([
-        request('/usuarios/me/partidos').catch(() => ({ partidos: [] })),
+      const [amigosRes, pendRes, ratingRes] = await Promise.all([
         request('/amistades').catch(() => ({ amigos: [] })),
         request('/amistades/pendientes').catch(() => ({ solicitudes: [] })),
+        request('/usuarios/me/rating-historial').catch(() => ({ historial: [] })),
         refreshUser().catch(() => {}),
       ]);
-      const anteriores = (partidosRes.partidos || [])
-        .filter((p: Inscripcion) => p.v_partidos != null)
-        .filter((p: Inscripcion) => !isPartidoVisible(p.v_partidos.fecha, p.v_partidos.hora_inicio))
-        .sort((a: Inscripcion, b: Inscripcion) => {
-          const fa = `${a.v_partidos?.fecha || ''} ${a.v_partidos?.hora_inicio || ''}`;
-          const fb = `${b.v_partidos?.fecha || ''} ${b.v_partidos?.hora_inicio || ''}`;
-          return fb.localeCompare(fa);
-        });
-      setPartidos(anteriores);
+      ultimoLoadPerfil = Date.now();
+      setHistorial(ratingRes.historial || []);
       setAmigosCount((amigosRes.amigos || []).length);
       setSolicitudesCount((pendRes.solicitudes || []).length);
     } catch {}
-    setLoading(false);
     setRefreshing(false);
   }
 
-  const onRefresh = useCallback(() => { setRefreshing(true); load(); }, []);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, []);
 
-  function formatFecha(fecha: string) {
-    const d = new Date(fecha + 'T00:00:00');
-    return {
-      dia: d.getDate().toString().padStart(2, '0'),
-      mes: d.toLocaleDateString('es-MX', { month: 'short' }).toUpperCase(),
-    };
-  }
-
-  const visibles    = verTodos ? partidos : partidos.slice(0, 3);
-  const posLabel    = POSICION_LABEL[user?.posicion || ''] || (user?.posicion || '—');
-  const posSubtitle = posLabel !== '—' ? posLabel.split('—')[1]?.trim() : null;
-  const ciudadLabel = user?.ciudad || 'Ciudad de México';
-  const rating      = user?.rating ?? 1.0;
-  const ratingTxt   = `${rating.toFixed(1)} — ${ratingLabel(rating)}`;
-  const racha       = user?.racha_actual ?? 0;
-  const rachaMax    = user?.racha_max ?? 0;
+  const rating     = user?.rating ?? 5.0;
+  const calibrando = user?.rating_calibrando ?? false;
+  const racha      = user?.racha_actual ?? 0;
+  const rachaMax   = user?.racha_max ?? 0;
 
   return (
     <View style={styles.root}>
@@ -173,164 +131,50 @@ export default function PerfilScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Avatar hero */}
+          {/* Hero: avatar grande, nombre solo, botón editar */}
           <View style={styles.hero}>
-            <LinearGradient
-              colors={GRADIENTS.dayActive}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatarRing}
-            >
+            <View style={styles.avatarRing}>
               <View style={styles.avatarInner}>
                 {user?.avatar_url
-                  ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 42 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
+                  ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 70 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
                   : <AvatarPlaceholder />
                 }
               </View>
-            </LinearGradient>
+            </View>
             <Text style={styles.profileName}>
               {(user?.nombre || '')} {(user?.apellido || '')}
             </Text>
-            <Text style={styles.profileSub}>
-              {posSubtitle ? `${posSubtitle} · ` : ''}{ciudadLabel}
-            </Text>
-          </View>
-
-          {/* Racha */}
-          <View style={styles.rachaCard}>
-            <View style={styles.rachaIcon}>
-              <FlameIcon size={28} color={racha > 0 ? DT.primary : DT.outline} />
-            </View>
-            <View style={styles.rachaInfo}>
-              <Text style={styles.rachaTitle}>RACHA</Text>
-              <Text style={styles.rachaNum}>
-                {racha > 0 ? `${racha} ${racha === 1 ? 'semana' : 'semanas'}` : 'Sin racha'}
-              </Text>
-              {rachaMax > 0 && (
-                <Text style={styles.rachaRecord}>Récord: {rachaMax} {rachaMax === 1 ? 'semana' : 'semanas'}</Text>
-              )}
-              {racha === 0 && (
-                <Text style={styles.rachaRecord}>Juega esta semana para empezar tu racha</Text>
-              )}
-            </View>
-          </View>
-
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCell}>
-              <Text style={styles.statNum}>{user?.partidos_jug ?? 0}</Text>
-              <Text style={styles.statLabel}>PARTIDOS{'\n'}JUGADOS</Text>
-            </View>
-            <View style={[styles.statCell, styles.statCellBorder]}>
-              <Text style={styles.statNum}>{user?.partidos_gan ?? 0}</Text>
-              <Text style={styles.statLabel}>PARTIDOS{'\n'}GANADOS</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.statCell, styles.statCellBorder, styles.statCellTappable]}
-              onPress={() => router.push('/amigos')}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.statNum}>{amigosCount}</Text>
-              <Text style={styles.statLabel}>AMIGOS</Text>
-              <View style={styles.statCta}>
-                <Text style={styles.statCtaTxt}>VER ›</Text>
-              </View>
-              {solicitudesCount > 0 && (
-                <View style={styles.statBadge}>
-                  <Text style={styles.statBadgeTxt}>{solicitudesCount}</Text>
-                </View>
-              )}
+            <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/editar-perfil')} activeOpacity={0.75}>
+              <Text style={styles.editBtnTxt}>Editar perfil</Text>
+              <EditIcon />
             </TouchableOpacity>
           </View>
 
-          {/* Info card */}
-          <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoKey}>Posición</Text>
-              <Text style={styles.infoVal}>{posLabel}</Text>
-            </View>
-            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.infoKey}>Nivel</Text>
-              <Text style={styles.infoVal}>{ratingTxt}</Text>
-            </View>
-          </View>
+          <StatsRow
+            jugados={user?.partidos_jug ?? 0}
+            ganados={user?.partidos_gan ?? 0}
+            amigos={amigosCount}
+            badge={solicitudesCount}
+            onJugados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'jugados' } })}
+            onGanados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'ganados' } })}
+            onAmigos={() => router.push('/amigos')}
+          />
 
-          {/* Partidos anteriores */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>PARTIDOS ANTERIORES</Text>
-              {partidos.length > 3 && (
-                <TouchableOpacity onPress={() => setVerTodos(!verTodos)}>
-                  <Text style={styles.verTodos}>{verTodos ? 'Ver menos' : 'Ver todos →'}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {loading ? (
-              <ActivityIndicator color={DT.primary} style={{ margin: 16 }} />
-            ) : partidos.length === 0 ? (
-              <View style={styles.emptyPartidos}>
-                <Text style={styles.emptyTxt}>Sin partidos registrados</Text>
-              </View>
-            ) : (
-              visibles.map((item, i) => {
-                const p = item.v_partidos;
-                if (!p) return null;
-                const f = formatFecha(p.fecha);
-                const isLast = i === visibles.length - 1;
+          <PosNivelRow posicion={user?.posicion} rating={rating} calibrando={calibrando} />
 
-                // Calcular resultado del usuario en este partido. Si no se reportó
-                // marcador, se queda como "JUGÓ" en gris. Si sí, se muestra el
-                // marcador real y un badge GANÓ/EMPATE/PERDIÓ con color contextual.
-                const tieneMarcador =
-                  typeof p.goles_a === 'number' && typeof p.goles_b === 'number' && p.equipo_ganador;
-                let resultado: 'GANÓ' | 'EMPATE' | 'PERDIÓ' | 'JUGÓ' = 'JUGÓ';
-                let resultColor = DT.onSurfaceVar;
-                let resultBg    = 'rgba(255,255,255,0.06)';
-                if (tieneMarcador && item.equipo) {
-                  if (p.equipo_ganador === 'EMPATE') {
-                    resultado = 'EMPATE';
-                    resultColor = DT.warning;
-                    resultBg    = 'rgba(250,199,117,0.12)';
-                  } else if (p.equipo_ganador === item.equipo) {
-                    resultado = 'GANÓ';
-                    resultColor = DT.success;
-                    resultBg    = 'rgba(159,225,203,0.12)';
-                  } else {
-                    resultado = 'PERDIÓ';
-                    resultColor = DT.error;
-                    resultBg    = 'rgba(255,180,171,0.10)';
-                  }
-                }
+          <RatingCard
+            rating={rating}
+            historial={historial}
+            calibrando={calibrando}
+            partidosCalibracion={user?.partidos_calibracion ?? 0}
+            onPress={() => router.push('/rating')}
+          />
 
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => router.push(`/partido/${p.id}?desde=perfil`)}
-                    style={[styles.matchPrev, isLast && { borderBottomWidth: 0 }]}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.mpDate}>
-                      <Text style={styles.mpDateDay}>{f.dia}</Text>
-                      <Text style={styles.mpDateMes}>{f.mes}</Text>
-                    </View>
-                    <View style={styles.mpDivider} />
-                    <View style={styles.mpInfo}>
-                      <Text style={styles.mpVenue} numberOfLines={1}>{p.complejo_nombre} — {p.cancha_nombre}</Text>
-                      <Text style={styles.mpDetail}>
-                        {p.tipo} · {p.hora_inicio?.slice(0, 5)}
-                        {tieneMarcador && (
-                          <Text style={styles.mpScore}> · {p.goles_a}–{p.goles_b}</Text>
-                        )}
-                      </Text>
-                    </View>
-                    <View style={[styles.mpResult, { backgroundColor: resultBg }]}>
-                      <Text style={[styles.mpResultTxt, { color: resultColor }]}>{resultado}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
+          <RachaCard
+            racha={racha}
+            rachaMax={rachaMax}
+            onBuscarPartido={() => router.push('/(tabs)/partidos')}
+          />
 
         </ScrollView>
       </SafeAreaView>
@@ -343,52 +187,15 @@ const styles = StyleSheet.create({
   scroll:         { padding: SPACING.gutter, paddingBottom: 40 },
   // Idéntico paddingTop/Bottom que partidos.tsx y reservas.tsx para que la
   // campana quede alineada al pixel exacto al cambiar de tab.
-  topBar:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, paddingBottom: 20 },
+  topBar:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, paddingBottom: 14 },
   iconBtn:        { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, position: 'relative' },
   bellBadge:      { position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: DT.bg },
   bellBadgeTxt:   { fontSize: 9, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 12 },
-  hero:           { alignItems: 'center', paddingVertical: 18 },
-  avatarRing:     { width: 96, height: 96, borderRadius: 48, padding: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 14, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
-  avatarInner:    { width: '100%', height: '100%', borderRadius: 45, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  profileName:    { fontSize: 24, color: DT.onBg, fontFamily: FONTS.displayMed, letterSpacing: -0.4, lineHeight: 28, textAlign: 'center' },
-  profileSub:     { fontSize: 13, color: DT.onSurfaceVar, marginTop: 5, fontFamily: FONTS.body },
-  rachaCard:      { flexDirection: 'row', alignItems: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 16, marginBottom: 12 },
-  rachaIcon:      { width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(190,194,255,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  rachaInfo:      { flex: 1 },
-  rachaTitle:     { fontSize: 10, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar },
-  rachaNum:       { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.3, marginTop: 3 },
-  rachaRecord:    { fontSize: 11.5, color: DT.outline, marginTop: 3, fontFamily: FONTS.body },
-  statsRow:       { flexDirection: 'row', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
-  // Ojo: alignItems 'flex-start' + paddingTop fijo asegura que los 3 números
-  // arranquen a la MISMA altura, aunque la celda de "Amigos" tenga un botón
-  // extra debajo (VER ›) y por eso sea más alta.
-  statCell:       { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 18, paddingBottom: 18, paddingHorizontal: 8 },
-  statCellBorder: { borderLeftWidth: 1, borderColor: DT.glassBorder },
-  statCellTappable:{ backgroundColor: 'rgba(190,194,255,0.06)' },
-  statCta:        { marginTop: 8, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, backgroundColor: 'rgba(190,194,255,0.15)' },
-  statCtaTxt:     { fontSize: 10, fontFamily: FONTS.bodyBold, color: DT.primary, letterSpacing: 1 },
-  statBadge:      { position: 'absolute', top: 8, right: 12, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-  statBadgeTxt:   { fontSize: 11, color: '#5a0006', fontFamily: FONTS.bodyBold },
-  statNum:        { fontSize: 26, color: DT.onBg, fontFamily: FONTS.displayMed, lineHeight: 28 },
-  statLabel:      { fontSize: 9, color: DT.outline, marginTop: 5, textAlign: 'center', lineHeight: 13, fontFamily: FONTS.mono, letterSpacing: 0.5 },
-  card:           { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, marginBottom: 12, overflow: 'hidden' },
-  cardHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: DT.glassBorder },
-  cardTitle:      { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar },
-  verTodos:       { fontSize: 12, color: DT.primary, fontFamily: FONTS.bodyMed },
-  infoRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: DT.glassBorder },
-  infoKey:        { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body },
-  infoVal:        { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2 },
-  emptyPartidos:  { padding: 24, alignItems: 'center' },
-  emptyTxt:       { color: DT.outline, fontSize: 13, fontFamily: FONTS.body },
-  matchPrev:      { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, gap: 12 },
-  mpDate:         { minWidth: 42, alignItems: 'center' },
-  mpDateDay:      { fontSize: 15, color: DT.primary, fontFamily: FONTS.heading, lineHeight: 17 },
-  mpDateMes:      { fontSize: 10, color: DT.outline, fontFamily: FONTS.mono, lineHeight: 14 },
-  mpDivider:      { width: 1, height: 36, backgroundColor: DT.glassBorder },
-  mpInfo:         { flex: 1 },
-  mpVenue:        { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2 },
-  mpDetail:       { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
-  mpScore:        { color: DT.onBg, fontFamily: FONTS.bodyBold },
-  mpResult:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
-  mpResultTxt:    { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 0.5, color: DT.onSurfaceVar },
+
+  hero:           { alignItems: 'center', paddingVertical: 14 },
+  avatarRing:     { width: 148, height: 148, borderRadius: 74, padding: 5, borderWidth: 3, borderColor: DT.primaryStrong, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
+  avatarInner:    { width: '100%', height: '100%', borderRadius: 70, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  profileName:    { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
+  editBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 13, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },
+  editBtnTxt:     { fontSize: 13, color: DT.onBg, fontFamily: FONTS.monoMed, letterSpacing: 0.3 },
 });

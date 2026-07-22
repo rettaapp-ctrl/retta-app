@@ -28,7 +28,8 @@ function BackIcon() {
     </Svg>
   );
 }
-const NIVELES = ['Principiante', 'Intermedio', 'Avanzado'];
+// El "Nivel" ya no se edita aquí (sistema de rating v2, 2026-07-22):
+// se deriva del rating que calibra el sistema en los primeros 3 partidos.
 const POSICIONES = ['DEL', 'MED', 'DEF', 'POR'];
 // Backend usa códigos M/F/O. UI muestra labels en español.
 const GENERO_OPCIONES: { code: 'M'|'F'|'O'; label: string }[] = [
@@ -53,7 +54,6 @@ export default function EditarPerfilScreen() {
   const [ciudad,    setCiudad]    = useState(user?.ciudad    || '');
   // Genero: leer del user, default a 'M' si no tiene
   const [genero, setGenero] = useState<'M'|'F'|'O'>((user?.genero as 'M'|'F'|'O') || 'M');
-  const [nivel,     setNivel]     = useState(user?.nivel     || 'Intermedio');
   const [posicion,  setPosicion]  = useState(user?.posicion  || 'DEL');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
 
@@ -113,7 +113,8 @@ export default function EditarPerfilScreen() {
       // NO se manda el email: es la identidad de login (OTP) y cambiarlo sin
       // re-verificar permitiría secuestrar la cuenta. El cambio de correo
       // vivirá en un flujo propio con verificación OTP.
-      await updateUser({ nombre, apellido, telefono, ciudad, nivel, posicion, genero, avatar_url: avatarUrl });
+      // 'nivel' ya no se edita aquí (rating v2), por eso tampoco se envía.
+      await updateUser({ nombre, apellido, telefono, ciudad, posicion, genero, avatar_url: avatarUrl });
       AppAlert.alert('✓ Guardado', 'Tu perfil fue actualizado correctamente.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -272,17 +273,6 @@ export default function EditarPerfilScreen() {
         {/* Perfil Deportivo */}
         <Text style={styles.sectionLabel}>Perfil Deportivo</Text>
         <View style={styles.card}>
-          <View style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
-            <Text style={styles.sportSubLabel}>Nivel</Text>
-            <View style={styles.chipGroup}>
-              {NIVELES.map(n => (
-                <TouchableOpacity key={n} style={[styles.chip, nivel === n && styles.chipActive]} onPress={() => setNivel(n)}>
-                  <Text style={[styles.chipTxt, nivel === n && styles.chipTxtActive]}>{n}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          <View style={styles.fieldDivider}/>
           <View style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
             <Text style={styles.sportSubLabel}>Posición</Text>
             <View style={styles.chipGroup}>
