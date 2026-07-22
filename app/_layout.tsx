@@ -184,6 +184,7 @@ function RootLayoutNav() {
       <Stack.Screen name="partido/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="usuario/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="amigos"       options={{ presentation: 'card' }} />
+      <Stack.Screen name="rating"       options={{ presentation: 'card' }} />
     </Stack>
   );
 }

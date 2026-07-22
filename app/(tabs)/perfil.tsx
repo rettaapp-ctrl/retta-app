@@ -101,9 +101,10 @@ export default function PerfilScreen() {
 
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, []);
 
-  const rating   = user?.rating ?? 1.0;
-  const racha    = user?.racha_actual ?? 0;
-  const rachaMax = user?.racha_max ?? 0;
+  const rating     = user?.rating ?? 5.0;
+  const calibrando = user?.rating_calibrando ?? false;
+  const racha      = user?.racha_actual ?? 0;
+  const rachaMax   = user?.racha_max ?? 0;
 
   return (
     <View style={styles.root}>
@@ -159,9 +160,15 @@ export default function PerfilScreen() {
             onAmigos={() => router.push('/amigos')}
           />
 
-          <PosNivelRow posicion={user?.posicion} nivel={user?.nivel} />
+          <PosNivelRow posicion={user?.posicion} rating={rating} calibrando={calibrando} />
 
-          <RatingCard rating={rating} historial={historial} />
+          <RatingCard
+            rating={rating}
+            historial={historial}
+            calibrando={calibrando}
+            partidosCalibracion={user?.partidos_calibracion ?? 0}
+            onPress={() => router.push('/rating')}
+          />
 
           <RachaCard
             racha={racha}

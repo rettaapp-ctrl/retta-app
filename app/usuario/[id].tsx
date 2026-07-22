@@ -41,8 +41,10 @@ interface Perfil {
   apellido?: string;
   avatar_url?: string;
   posicion?: string;
-  nivel?: string;        // auto-declarado en onboarding
-  rating?: number;       // calculado tipo Playtomic
+  nivel?: string;             // legacy (ya no se muestra: el nivel se deriva del rating)
+  rating?: number;            // sistema v2: escala 1-10
+  rating_calibrando?: boolean;
+  partidos_calibracion?: number;
   ciudad?: string;
   partidos_jug?: number;
   partidos_gan?: number;
@@ -196,31 +198,26 @@ export default function PerfilPublicoScreen() {
         </TouchableOpacity>
       );
     }
+    // Un solo botón por estado (pedido de Rafael 2026-07-22): si ya son
+    // amigos, SOLO "Eliminar amigo" — sin pill de "AMIGOS" encima.
     if (a.status === 'aceptada') {
       return (
-        <View style={{ alignItems: 'center', gap: 8 }}>
-          <View style={styles.pillAmigo}>
-            <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <Path d="M5 12L10 17L19 8" stroke={DT.success} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </Svg>
-            <Text style={styles.pillAmigoTxt}>AMIGOS</Text>
-          </View>
-          <TouchableOpacity onPress={eliminarAmistad} disabled={actuando} hitSlop={8}>
-            <Text style={styles.linkDanger}>Eliminar amigo</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.pillGlass} onPress={eliminarAmistad} disabled={actuando} activeOpacity={0.75}>
+          {actuando
+            ? <ActivityIndicator color={DT.error} size="small" />
+            : <Text style={styles.pillDangerTxt}>Eliminar amigo</Text>
+          }
+        </TouchableOpacity>
       );
     }
     if (a.status === 'pendiente' && a.yo_envie) {
       return (
-        <View style={{ alignItems: 'center', gap: 8 }}>
-          <View style={styles.pillGlass}>
-            <Text style={styles.pillGlassTxt}>Solicitud enviada</Text>
-          </View>
-          <TouchableOpacity onPress={eliminarAmistad} disabled={actuando} hitSlop={8}>
-            <Text style={styles.linkDanger}>Cancelar solicitud</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.pillGlass} onPress={eliminarAmistad} disabled={actuando} activeOpacity={0.75}>
+          {actuando
+            ? <ActivityIndicator color={DT.error} size="small" />
+            : <Text style={styles.pillDangerTxt}>Cancelar solicitud</Text>
+          }
+        </TouchableOpacity>
       );
     }
     if (a.status === 'pendiente' && !a.yo_envie) {
@@ -299,9 +296,19 @@ export default function PerfilPublicoScreen() {
           amigos={perfil.amigos_count ?? 0}
         />
 
-        <PosNivelRow posicion={perfil.posicion} nivel={perfil.nivel} />
+        <PosNivelRow
+          posicion={perfil.posicion}
+          rating={perfil.rating ?? 5.0}
+          calibrando={perfil.rating_calibrando ?? false}
+        />
 
-        <RatingCard rating={perfil.rating ?? 1.0} historial={perfil.rating_historial || []} />
+        <RatingCard
+          rating={perfil.rating ?? 5.0}
+          historial={perfil.rating_historial || []}
+          calibrando={perfil.rating_calibrando ?? false}
+          partidosCalibracion={perfil.partidos_calibracion ?? 0}
+          onPress={() => router.push({ pathname: '/rating', params: { usuario_id: perfil.id, nombre: `${perfil.nombre}${perfil.apellido ? ' ' + perfil.apellido : ''}` } })}
+        />
 
         <RachaCard racha={perfil.racha_actual ?? 0} rachaMax={perfil.racha_max ?? 0} />
       </ScrollView>
@@ -343,8 +350,7 @@ const styles = StyleSheet.create({
   pillGlass:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },
   pillGlassTxt: { fontSize: 13, color: DT.onBg, fontFamily: FONTS.monoMed, letterSpacing: 0.3 },
 
-  pillAmigo:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: 'rgba(52,211,153,0.10)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.40)' },
-  pillAmigoTxt: { fontSize: 12, color: DT.success, letterSpacing: 1.2, fontFamily: FONTS.bodyBold },
+  pillDangerTxt:{ fontSize: 13, color: DT.error, fontFamily: FONTS.monoMed, letterSpacing: 0.3 },
 
   linkDanger:   { fontSize: 13, color: DT.error, fontFamily: FONTS.bodyMed },
   solicitudHint:{ fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', fontFamily: FONTS.body },

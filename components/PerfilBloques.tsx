@@ -22,6 +22,17 @@ export interface RatingPunto {
   created_at: string;
 }
 
+// ─── Sistema de rating v2 (escala 1-10) ──────────────────────────
+// El nivel YA NO se declara en el onboarding: se deriva del rating
+// que calcula el sistema (Elo + estrellas) después de la calibración.
+export const CALIB_PARTIDOS = 3;
+
+export function nivelDeRating(rating: number): string {
+  if (rating < 4.5) return 'Principiante';
+  if (rating < 6.5) return 'Intermedio';
+  return 'Avanzado';
+}
+
 // Colores de fuego para la racha (mockup aprobado del Foco)
 export const FIRE1 = '#FFB45E';
 export const FIRE2 = '#F4603E';
@@ -93,15 +104,15 @@ function buildSmoothPath(pts: { x: number; y: number }[]): string {
 
 const CHART_H = 96;
 
-function computeChart(historial: RatingPunto[], width: number) {
+function computeChart(historial: RatingPunto[], width: number, height: number = CHART_H) {
   const vals = historial.length >= 2
     ? historial.map(h => h.rating)
-    : [historial[0]?.rating ?? 1.0, historial[0]?.rating ?? 1.0];
+    : [historial[0]?.rating ?? 5.0, historial[0]?.rating ?? 5.0];
 
   const x0 = 4;
   const x1 = Math.max(x0 + 10, width - 14);
   const yTop = 10;
-  const yBot = CHART_H - 8;
+  const yBot = height - 8;
 
   let min = Math.min(...vals);
   let max = Math.max(...vals);
@@ -171,7 +182,14 @@ export function StatsRow({
 }
 
 // ═══ PosNivelRow ═════════════════════════════════════════════════
-export function PosNivelRow({ posicion, nivel }: { posicion?: string | null; nivel?: string | null }) {
+// El nivel se DERIVA del rating (sistema v2). Durante la calibración
+// (primeros 3 partidos) el pill dice "Calibrando" en tono fuego.
+export function PosNivelRow({
+  posicion, rating, calibrando = false,
+}: {
+  posicion?: string | null; rating?: number | null; calibrando?: boolean;
+}) {
+  const nivel = calibrando ? null : nivelDeRating(rating ?? 5.0);
   return (
     <View style={s.posRow}>
       <View style={s.posCell}>
@@ -180,16 +198,61 @@ export function PosNivelRow({ posicion, nivel }: { posicion?: string | null; niv
       </View>
       <View style={[s.posCell, s.posCellBorder]}>
         <Text style={s.posLabel}>Nivel:</Text>
-        <View style={s.nivelPill}>
-          <Text style={s.nivelPillTxt}>{nivel || '—'}</Text>
+        <View style={[s.nivelPill, calibrando && s.nivelPillCalib]}>
+          <Text style={[s.nivelPillTxt, calibrando && s.nivelPillTxtCalib]}>
+            {calibrando ? 'Calibrando' : nivel}
+          </Text>
         </View>
       </View>
     </View>
   );
 }
 
+// ═══ RatingChart ═════════════════════════════════════════════════
+// La gráfica sola (línea suavizada + área). Exportada para que la
+// pantalla /rating la dibuje ampliada con la MISMA curva del perfil.
+export function RatingChart({
+  historial, width, height = CHART_H, strokeWidth = 2,
+}: {
+  historial: RatingPunto[]; width: number; height?: number; strokeWidth?: number;
+}) {
+  if (width <= 0) return null;
+  const chart = computeChart(historial, width, height);
+  return (
+    <Svg width={width} height={height}>
+      <Defs>
+        <SvgGradient id="pbLineGrad" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={DT.primary} />
+          <Stop offset="1" stopColor={DT.primaryStrong} />
+        </SvgGradient>
+        <SvgGradient id="pbAreaGrad" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={DT.primaryStrong} stopOpacity="0.30" />
+          <Stop offset="1" stopColor={DT.primaryStrong} stopOpacity="0" />
+        </SvgGradient>
+      </Defs>
+      <SvgLine
+        x1="4" y1={chart.baseY} x2={width - 4} y2={chart.baseY}
+        stroke="rgba(243,242,251,0.10)" strokeWidth="1" strokeDasharray="3 4"
+      />
+      <Path d={chart.areaPath} fill="url(#pbAreaGrad)" />
+      <Path d={chart.linePath} fill="none" stroke="url(#pbLineGrad)" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx={chart.lastX} cy={chart.lastY} r="7" fill="none" stroke="rgba(110,101,234,0.35)" strokeWidth="4" />
+      <Circle cx={chart.lastX} cy={chart.lastY} r="4.5" fill="#fff" stroke={DT.primaryStrong} strokeWidth="3" />
+    </Svg>
+  );
+}
+
 // ═══ RatingCard ══════════════════════════════════════════════════
-export function RatingCard({ rating, historial }: { rating: number; historial: RatingPunto[] }) {
+// calibrando: el rating arranca OCULTO — en vez del número se muestra
+// el avance de la calibración (partido X de 3), sin gráfica.
+// onPress: hace la card clicable (abre /rating con la gráfica ampliada
+// y la explicación del sistema).
+export function RatingCard({
+  rating, historial, calibrando = false, partidosCalibracion = 0, onPress,
+}: {
+  rating: number; historial: RatingPunto[];
+  calibrando?: boolean; partidosCalibracion?: number; onPress?: () => void;
+}) {
   const [chartW, setChartW] = useState(0);
 
   // Cambio de la última semana (▲/▼ junto al número)
@@ -200,13 +263,39 @@ export function RatingCard({ rating, historial }: { rating: number; historial: R
   const datosChart: RatingPunto[] = historial.length
     ? historial
     : [{ rating, delta: 0, fuente: 'inicial', created_at: new Date().toISOString() }];
-  const chart = chartW > 0 ? computeChart(datosChart, chartW) : null;
   const primerPunto = historial[0] ? fechaCorta(new Date(historial[0].created_at)) : 'inicio';
 
-  return (
-    <View style={s.ratingCard} onLayout={e => setChartW(e.nativeEvent.layout.width - 36)}>
+  const contenido = calibrando ? (
+    <>
       <View style={s.ratingHead}>
         <Text style={s.ratingLabel}>RATING</Text>
+        {onPress && <Text style={s.ratingVerMas}>¿Cómo funciona? ›</Text>}
+      </View>
+      <View style={s.calibWrap}>
+        <View style={s.calibDots}>
+          {Array.from({ length: CALIB_PARTIDOS }, (_, i) => (
+            <View key={i} style={[s.calibDot, i < partidosCalibracion && s.calibDotOn]}>
+              {i < partidosCalibracion && (
+                <Svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <Path d="M5 12L10 17L19 8" stroke="#FFF3E4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                </Svg>
+              )}
+            </View>
+          ))}
+        </View>
+        <Text style={s.calibTitle}>Calibrando · {Math.min(partidosCalibracion, CALIB_PARTIDOS)}/{CALIB_PARTIDOS}</Text>
+        <Text style={s.calibSub}>
+          Tus primeros 3 partidos miden tu nivel.{'\n'}Al terminar el 3° se revela tu rating.
+        </Text>
+      </View>
+    </>
+  ) : (
+    <>
+      <View style={s.ratingHead}>
+        <View>
+          <Text style={s.ratingLabel}>RATING</Text>
+          {onPress && <Text style={s.ratingVerMas}>Ver más ›</Text>}
+        </View>
         <View style={s.ratingNumRow}>
           <Text style={s.ratingBig}>{rating.toFixed(1)}</Text>
           {deltaSemana !== 0 && (
@@ -217,36 +306,34 @@ export function RatingCard({ rating, historial }: { rating: number; historial: R
         </View>
       </View>
 
-      {chart && (
-        <Svg width={chartW} height={CHART_H} style={{ marginTop: 12 }}>
-          <Defs>
-            <SvgGradient id="pbLineGrad" x1="0" y1="0" x2="1" y2="0">
-              <Stop offset="0" stopColor={DT.primary} />
-              <Stop offset="1" stopColor={DT.primaryStrong} />
-            </SvgGradient>
-            <SvgGradient id="pbAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={DT.primaryStrong} stopOpacity="0.30" />
-              <Stop offset="1" stopColor={DT.primaryStrong} stopOpacity="0" />
-            </SvgGradient>
-          </Defs>
-          <SvgLine
-            x1="4" y1={chart.baseY} x2={chartW - 4} y2={chart.baseY}
-            stroke="rgba(243,242,251,0.10)" strokeWidth="1" strokeDasharray="3 4"
-          />
-          <Path d={chart.areaPath} fill="url(#pbAreaGrad)" />
-          <Path d={chart.linePath} fill="none" stroke="url(#pbLineGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <Circle cx={chart.lastX} cy={chart.lastY} r="7" fill="none" stroke="rgba(110,101,234,0.35)" strokeWidth="4" />
-          <Circle cx={chart.lastX} cy={chart.lastY} r="4.5" fill="#fff" stroke={DT.primaryStrong} strokeWidth="3" />
-        </Svg>
+      {chartW > 0 && (
+        <View style={{ marginTop: 12 }}>
+          <RatingChart historial={datosChart} width={chartW} />
+        </View>
       )}
 
       <View style={s.ratingScale}>
         <Text style={s.ratingScaleTxt}>{primerPunto}</Text>
         <Text style={s.ratingScaleTxt}>hoy</Text>
       </View>
-      {historial.length < 2 && (
-        <Text style={s.ratingHint}>La gráfica se dibuja partido a partido</Text>
-      )}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        style={s.ratingCard}
+        onLayout={e => setChartW(e.nativeEvent.layout.width - 36)}
+        onPress={onPress}
+        activeOpacity={0.75}
+      >
+        {contenido}
+      </TouchableOpacity>
+    );
+  }
+  return (
+    <View style={s.ratingCard} onLayout={e => setChartW(e.nativeEvent.layout.width - 36)}>
+      {contenido}
     </View>
   );
 }
@@ -334,6 +421,8 @@ const s = StyleSheet.create({
   posVal:         { fontSize: 15, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   nivelPill:      { backgroundColor: 'rgba(110,101,234,0.28)', borderWidth: 1, borderColor: 'rgba(173,168,245,0.4)', borderRadius: RADIUS.full, paddingHorizontal: 13, paddingVertical: 4 },
   nivelPillTxt:   { fontSize: 12.5, color: DT.primary, fontFamily: FONTS.bodyMed },
+  nivelPillCalib:    { backgroundColor: 'rgba(255,180,94,0.14)', borderColor: 'rgba(255,180,94,0.4)' },
+  nivelPillTxtCalib: { color: FIRE1 },
 
   ratingCard:     { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 18, paddingBottom: 14, marginBottom: 12 },
   ratingHead:     { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
@@ -343,7 +432,14 @@ const s = StyleSheet.create({
   ratingDelta:    { fontSize: 11.5, fontFamily: FONTS.bodyBold },
   ratingScale:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   ratingScaleTxt: { fontSize: 10, color: DT.outline, fontFamily: FONTS.body },
-  ratingHint:     { fontSize: 11, color: DT.outline, fontFamily: FONTS.body, textAlign: 'center', marginTop: 8 },
+  ratingVerMas:   { fontSize: 10.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 3 },
+
+  calibWrap:      { alignItems: 'center', paddingVertical: 16, gap: 10 },
+  calibDots:      { flexDirection: 'row', gap: 14 },
+  calibDot:       { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderColor: 'rgba(255,180,94,0.45)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,180,94,0.05)' },
+  calibDotOn:     { backgroundColor: FIRE1, borderColor: FIRE1, borderStyle: 'solid' },
+  calibTitle:     { fontSize: 16, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
+  calibSub:       { fontSize: 11.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 17 },
 
   rachaCard:      { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, padding: 18, marginBottom: 12, gap: 18 },
   rachaTop:       { flexDirection: 'row', alignItems: 'center', gap: 14 },

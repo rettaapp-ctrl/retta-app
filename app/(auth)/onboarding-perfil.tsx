@@ -24,7 +24,6 @@ import { supabase } from '@/lib/supabase';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type Posicion = 'POR' | 'DEF' | 'MED' | 'DEL';
-type Nivel    = 'Principiante' | 'Intermedio' | 'Avanzado';
 type Genero   = 'M' | 'F' | 'O';
 
 // ─── Edad mínima (misma regla que el backend valida server-side) ───
@@ -63,11 +62,9 @@ const POSICIONES: { value: Posicion; label: string; sub: string }[] = [
   { value: 'DEL', label: 'Delantero',     sub: 'Definir al arco' },
 ];
 
-const NIVELES: { value: Nivel; label: string; sub: string }[] = [
-  { value: 'Principiante', label: 'Principiante', sub: 'Empezando o juego ocasional' },
-  { value: 'Intermedio',   label: 'Intermedio',   sub: 'Juego regular y técnica básica' },
-  { value: 'Avanzado',     label: 'Avanzado',     sub: 'Buen nivel técnico y físico' },
-];
+// Nota: el paso de "nivel" se eliminó (2026-07-22) — con el sistema de
+// rating v2 el nivel ya no se declara: se calibra solo en los primeros
+// 3 partidos (escala 1-10, arranque oculto en 5.0).
 
 const GENEROS: { value: Genero; label: string }[] = [
   { value: 'M', label: 'Masculino' },
@@ -82,7 +79,7 @@ export default function OnboardingPerfilScreen() {
   const { user, completarOnboarding, logout } = useAuth();
   const router = useRouter();
 
-  const [step, setStep]         = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [step, setStep]         = useState<1 | 2 | 3 | 4>(1);
   // Paso 1 — datos personales (con OTP la cuenta nace solo con email)
   const [nombre, setNombre]     = useState(user?.nombre || '');
   const [apellido, setApellido] = useState(user?.apellido || '');
@@ -90,7 +87,6 @@ export default function OnboardingPerfilScreen() {
   const [fechaTocada, setFechaTocada] = useState(false);
   const [showPicker, setShowPicker]   = useState(false);
   const [posicion, setPosicion] = useState<Posicion | null>(null);
-  const [nivel, setNivel]       = useState<Nivel | null>(null);
   const [genero, setGenero]     = useState<Genero | null>(null);
   const [telefono, setTelefono] = useState('');
   const [avatarUrl, setAvatarUrl]   = useState<string>('');
@@ -108,7 +104,7 @@ export default function OnboardingPerfilScreen() {
     }
   }
 
-  function animarA(nuevoStep: 1 | 2 | 3 | 4 | 5) {
+  function animarA(nuevoStep: 1 | 2 | 3 | 4) {
     const delta = nuevoStep > step ? -1 : 1;
     Animated.timing(slideAnim, {
       toValue: delta * 300,
@@ -142,18 +138,15 @@ export default function OnboardingPerfilScreen() {
       if (!posicion) { setError('Selecciona una posición'); return; }
       animarA(3);
     } else if (step === 3) {
-      if (!nivel) { setError('Selecciona tu nivel'); return; }
-      animarA(4);
-    } else if (step === 4) {
       if (!genero) { setError('Selecciona una opción'); return; }
-      animarA(5);
+      animarA(4);
     }
   }
 
   function handleAtras() {
     setError('');
     if (step === 1) return;
-    animarA((step - 1) as 1 | 2 | 3 | 4);
+    animarA((step - 1) as 1 | 2 | 3);
   }
 
   async function pickImage() {
@@ -196,7 +189,7 @@ export default function OnboardingPerfilScreen() {
   }
 
   async function handleListo() {
-    if (!datosCompletos() || !posicion || !nivel || !genero) {
+    if (!datosCompletos() || !posicion || !genero) {
       setError('Completa todos los pasos'); return;
     }
     if (!avatarUrl) {
@@ -208,7 +201,7 @@ export default function OnboardingPerfilScreen() {
         nombre:           nombre.trim(),
         apellido:         apellido.trim() || undefined,
         fecha_nacimiento: toISODate(fechaNac),
-        posicion, nivel, genero,
+        posicion, genero,
         avatar_url: avatarUrl,
       };
       const tel = telefono.replace(/\D/g, '');
@@ -240,7 +233,7 @@ export default function OnboardingPerfilScreen() {
             </TouchableOpacity>
           )}
           <View style={styles.steps}>
-            {[1,2,3,4,5].map(n => (
+            {[1,2,3,4].map(n => (
               <View
                 key={n}
                 style={[
@@ -361,36 +354,7 @@ export default function OnboardingPerfilScreen() {
 
             {step === 3 && (
               <>
-                <Text style={styles.eyebrow}>PASO 3 DE 5</Text>
-                <Text style={styles.title}>¿Cuál es tu nivel de juego?</Text>
-                <Text style={styles.subtitle}>Sé honesto — esto cuida la experiencia de todos.</Text>
-                <View style={styles.cards}>
-                  {NIVELES.map(n => {
-                    const active = nivel === n.value;
-                    return (
-                      <TouchableOpacity
-                        key={n.value}
-                        style={[styles.card, active && styles.cardActive]}
-                        onPress={() => setNivel(n.value)}
-                        activeOpacity={0.85}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.cardLabel, active && styles.cardLabelActive]}>{n.label}</Text>
-                          <Text style={styles.cardSub}>{n.sub}</Text>
-                        </View>
-                        <View style={[styles.checkRing, active && styles.checkRingActive]}>
-                          {active && <Text style={styles.checkMark}>✓</Text>}
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-
-            {step === 4 && (
-              <>
-                <Text style={styles.eyebrow}>PASO 4 DE 5</Text>
+                <Text style={styles.eyebrow}>PASO 3 DE 4</Text>
                 <Text style={styles.title}>Tu género</Text>
                 <Text style={styles.subtitle}>Para futuros partidos por categoría.</Text>
                 <View style={styles.cards}>
@@ -430,7 +394,7 @@ export default function OnboardingPerfilScreen() {
               </>
             )}
 
-            {step === 5 && (
+            {step === 4 && (
               <>
                 <Text style={styles.eyebrow}>ÚLTIMO PASO</Text>
                 <Text style={styles.title}>Tu foto de perfil</Text>
@@ -485,14 +449,14 @@ export default function OnboardingPerfilScreen() {
 
         {/* Footer button */}
         <View style={styles.footer}>
-          {step < 5 ? (
+          {step < 4 ? (
             <TouchableOpacity
               style={[
                 styles.btn,
-                ((step === 1 && !datosCompletos()) || (step === 2 && !posicion) || (step === 3 && !nivel) || (step === 4 && !genero)) && styles.btnDisabled,
+                ((step === 1 && !datosCompletos()) || (step === 2 && !posicion) || (step === 3 && !genero)) && styles.btnDisabled,
               ]}
               onPress={handleSiguiente}
-              disabled={(step === 1 && !datosCompletos()) || (step === 2 && !posicion) || (step === 3 && !nivel) || (step === 4 && !genero)}
+              disabled={(step === 1 && !datosCompletos()) || (step === 2 && !posicion) || (step === 3 && !genero)}
               activeOpacity={0.85}
             >
               <Text style={styles.btnTxt}>SIGUIENTE</Text>
