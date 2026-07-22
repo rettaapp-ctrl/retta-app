@@ -135,6 +135,14 @@ function buildSmoothPath(pts: { x: number; y: number }[]): string {
 
 const CHART_H = 96;
 
+// Throttle del refetch del perfil: cada focus del tab disparaba 4 requests
+// (amigos, solicitudes, historial de rating y /auth/me con recálculo de
+// stats). Cambiando de tab seguido eso ayudó a tirar el rate limiter global
+// (issue Sentry 2026-07-21). Con 30s de TTL el focus repetido reutiliza lo
+// que ya se tiene; el pull-to-refresh siempre fuerza.
+const PERFIL_TTL_MS = 30_000;
+let ultimoLoadPerfil = 0;
+
 function computeChart(historial: RatingPunto[], width: number) {
   // Con 0 o 1 puntos dibujamos línea plana con el valor disponible
   const vals = historial.length >= 2
@@ -206,7 +214,11 @@ export default function PerfilScreen() {
     }, [])
   );
 
-  async function load() {
+  async function load(force = false) {
+    if (!force && Date.now() - ultimoLoadPerfil < PERFIL_TTL_MS) {
+      setRefreshing(false);
+      return;
+    }
     try {
       const [amigosRes, pendRes, ratingRes] = await Promise.all([
         request('/amistades').catch(() => ({ amigos: [] })),
@@ -214,6 +226,7 @@ export default function PerfilScreen() {
         request('/usuarios/me/rating-historial').catch(() => ({ historial: [] })),
         refreshUser().catch(() => {}),
       ]);
+      ultimoLoadPerfil = Date.now();
       setHistorial(ratingRes.historial || []);
       setAmigosCount((amigosRes.amigos || []).length);
       setSolicitudesCount((pendRes.solicitudes || []).length);
@@ -221,7 +234,7 @@ export default function PerfilScreen() {
     setRefreshing(false);
   }
 
-  const onRefresh = useCallback(() => { setRefreshing(true); load(); }, []);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, []);
 
   const rating    = user?.rating ?? 1.0;
   const racha     = user?.racha_actual ?? 0;
