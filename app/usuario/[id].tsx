@@ -1,4 +1,12 @@
-import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
+// ═══════════════════════════════════════════════════════════════
+// RETTA — app/usuario/[id].tsx — Perfil público de otro jugador
+// (rediseño 2026-07-21): réplica exacta del layout del perfil propio
+// usando los bloques compartidos de components/PerfilBloques.tsx —
+// stats con íconos (no clicables aquí), Posición|Nivel, RATING con
+// gráfica y Racha con track. En lugar de "Editar perfil" va el botón
+// de amistad (agregar / eliminar / aceptar / cancelar según estado).
+// ═══════════════════════════════════════════════════════════════
+import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -18,6 +26,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import ReporteModal from '@/components/ReporteModal';
+import { StatsRow, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
 
 interface AmistadInfo {
   id: string;
@@ -40,29 +49,10 @@ interface Perfil {
   racha_actual?: number;
   racha_max?: number;
   color_hex?: string;
+  amigos_count?: number;
+  rating_historial?: RatingPunto[];
   es_yo: boolean;
   amistad: AmistadInfo | null;
-}
-
-// Convierte rating numérico (1.0 → ∞) a label descriptivo.
-function ratingLabel(rating: number): string {
-  if (rating < 2.0) return 'Principiante';
-  if (rating < 3.0) return 'Intermedio bajo';
-  if (rating < 4.0) return 'Intermedio';
-  if (rating < 5.0) return 'Avanzado';
-  if (rating < 6.0) return 'Élite';
-  return 'Pro';
-}
-
-function FlameIcon({ size = 22, color = '#FF6B35' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 2C12 2 6 9 6 14a6 6 0 0 0 12 0c0-1.5-.5-3-1.5-4-.4 1-1.5 1.5-2.5 1-1.4-.7-1-2.6 0-4 .5-.7.5-2-1-3-1 .5-1.5 2-1 4z"
-        fill={color}
-      />
-    </Svg>
-  );
 }
 
 function BackIcon() {
@@ -72,9 +62,14 @@ function BackIcon() {
     </Svg>
   );
 }
-const POSICION_LABEL: Record<string, string> = {
-  POR: 'Portero', DEF: 'Defensa', MED: 'Mediocampista', DEL: 'Delantero',
-};
+
+function EditIcon() {
+  return (
+    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <Path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke={DT.onBg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
 
 export default function PerfilPublicoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -175,95 +170,75 @@ export default function PerfilPublicoScreen() {
   }
 
   const initials = ((perfil.nombre?.[0] || '') + (perfil.apellido?.[0] || '')).toUpperCase() || '?';
-  const avatarBg = perfil.color_hex || DT.primaryContainer;
+  const avatarBg = perfil.color_hex || DT.surfaceHigh;
 
-  // Decidir botón según estado de amistad
+  // Botón de acción bajo el nombre — mismo lugar donde el perfil propio
+  // tiene "Editar perfil", cambia según el estado de amistad.
   function renderActionBtn() {
     if (perfil!.es_yo) {
       return (
-        <TouchableOpacity
-          style={styles.btnPrimary}
-          onPress={() => router.push('/editar-perfil')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.btnPrimaryTxt}>EDITAR MI PERFIL</Text>
+        <TouchableOpacity style={styles.pillGlass} onPress={() => router.push('/editar-perfil')} activeOpacity={0.75}>
+          <Text style={styles.pillGlassTxt}>Editar perfil</Text>
+          <EditIcon />
         </TouchableOpacity>
       );
     }
     const a = perfil!.amistad;
-    if (!a) {
+    if (!a || a.status === 'rechazada') {
       return (
-        <TouchableOpacity
-          style={styles.btnPrimary}
-          onPress={enviarSolicitud}
-          disabled={actuando}
-          activeOpacity={0.85}
-        >
-          {actuando
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.btnPrimaryTxt}>+  AGREGAR AMIGO</Text>
-          }
+        <TouchableOpacity onPress={enviarSolicitud} disabled={actuando} activeOpacity={0.85}>
+          <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.pillPrimary}>
+            {actuando
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.pillPrimaryTxt}>+  AGREGAR AMIGO</Text>
+            }
+          </LinearGradient>
         </TouchableOpacity>
       );
     }
     if (a.status === 'aceptada') {
       return (
-        <View style={{ gap: 10 }}>
-          <View style={styles.btnAmigo}>
+        <View style={{ alignItems: 'center', gap: 8 }}>
+          <View style={styles.pillAmigo}>
             <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <Path d="M5 12L10 17L19 8" stroke={DT.success} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </Svg>
-            <Text style={styles.btnAmigoTxt}>YA SON AMIGOS</Text>
+            <Text style={styles.pillAmigoTxt}>AMIGOS</Text>
           </View>
-          <TouchableOpacity style={styles.btnSec} onPress={eliminarAmistad} disabled={actuando}>
-            <Text style={styles.btnSecTxt}>Eliminar amigo</Text>
+          <TouchableOpacity onPress={eliminarAmistad} disabled={actuando} hitSlop={8}>
+            <Text style={styles.linkDanger}>Eliminar amigo</Text>
           </TouchableOpacity>
         </View>
       );
     }
     if (a.status === 'pendiente' && a.yo_envie) {
       return (
-        <View style={{ gap: 10 }}>
-          <View style={styles.btnPendiente}>
-            <Text style={styles.btnPendienteTxt}>SOLICITUD ENVIADA</Text>
+        <View style={{ alignItems: 'center', gap: 8 }}>
+          <View style={styles.pillGlass}>
+            <Text style={styles.pillGlassTxt}>Solicitud enviada</Text>
           </View>
-          <TouchableOpacity style={styles.btnSec} onPress={eliminarAmistad} disabled={actuando}>
-            <Text style={styles.btnSecTxt}>Cancelar solicitud</Text>
+          <TouchableOpacity onPress={eliminarAmistad} disabled={actuando} hitSlop={8}>
+            <Text style={styles.linkDanger}>Cancelar solicitud</Text>
           </TouchableOpacity>
         </View>
       );
     }
     if (a.status === 'pendiente' && !a.yo_envie) {
       return (
-        <View style={{ gap: 10 }}>
-          <Text style={styles.solicitudHint}>{perfil!.nombre} te envió una solicitud.</Text>
-          <TouchableOpacity
-            style={styles.btnPrimary}
-            onPress={() => responderSolicitud('aceptar')}
-            disabled={actuando}
-            activeOpacity={0.85}
-          >
-            {actuando ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryTxt}>ACEPTAR SOLICITUD</Text>}
+        <View style={{ alignItems: 'center', gap: 8, alignSelf: 'stretch' }}>
+          <Text style={styles.solicitudHint}>{perfil!.nombre} te envió una solicitud</Text>
+          <TouchableOpacity onPress={() => responderSolicitud('aceptar')} disabled={actuando} activeOpacity={0.85} style={{ alignSelf: 'stretch' }}>
+            <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.pillPrimary}>
+              {actuando ? <ActivityIndicator color="#fff" /> : <Text style={styles.pillPrimaryTxt}>ACEPTAR SOLICITUD</Text>}
+            </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.btnSec} onPress={() => responderSolicitud('rechazar')} disabled={actuando}>
-            <Text style={styles.btnSecTxt}>Rechazar</Text>
+          <TouchableOpacity onPress={() => responderSolicitud('rechazar')} disabled={actuando} hitSlop={8}>
+            <Text style={styles.linkDanger}>Rechazar</Text>
           </TouchableOpacity>
         </View>
       );
     }
-    if (a.status === 'rechazada') {
-      return (
-        <TouchableOpacity
-          style={styles.btnPrimary}
-          onPress={enviarSolicitud}
-          disabled={actuando}
-          activeOpacity={0.85}
-        >
-          {actuando ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryTxt}>+  AGREGAR AMIGO</Text>}
-        </TouchableOpacity>
-      );
-    }
-    return null; // bloqueada → no mostrar nada
+    return null; // bloqueada → sin acciones
   }
 
   return (
@@ -276,7 +251,7 @@ export default function PerfilPublicoScreen() {
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>Perfil</Text>
         {perfil.es_yo ? (
-          <View style={{ width: 40 }} />
+          <View style={{ width: 42 }} />
         ) : (
           <TouchableOpacity
             onPress={() => {
@@ -289,7 +264,7 @@ export default function PerfilPublicoScreen() {
                 ]
               );
             }}
-            style={styles.menuBtn}
+            style={styles.backBtn}
             hitSlop={8}
           >
             <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -302,86 +277,33 @@ export default function PerfilPublicoScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Avatar + nombre */}
-        <View style={styles.heroBlock}>
+        {/* Hero: avatar grande + nombre (sin subtítulo, igual que el propio) */}
+        <View style={styles.hero}>
           <View style={styles.avatarRing}>
             <View style={[styles.avatarInner, { backgroundColor: avatarBg }]}>
               {perfil.avatar_url
-                ? <Image source={{ uri: perfil.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 50 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
+                ? <Image source={{ uri: perfil.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 70 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
                 : <Text style={styles.avatarTxt}>{initials}</Text>
               }
             </View>
           </View>
           <Text style={styles.nombre}>{perfil.nombre}{perfil.apellido ? ` ${perfil.apellido}` : ''}</Text>
-          {perfil.ciudad && (
-            <Text style={styles.ciudad}>{perfil.ciudad}</Text>
-          )}
-        </View>
-
-        {/* Action button */}
-        <View style={styles.actionWrap}>
-          {renderActionBtn()}
-        </View>
-
-        {/* Racha */}
-        <View style={styles.rachaCard}>
-          <View style={styles.rachaIcon}>
-            <FlameIcon size={28} color={(perfil.racha_actual ?? 0) > 0 ? '#FF6B35' : DT.outline} />
-          </View>
-          <View style={styles.rachaInfo}>
-            <Text style={styles.rachaTitle}>RACHA</Text>
-            <Text style={styles.rachaNum}>
-              {(perfil.racha_actual ?? 0) > 0
-                ? `${perfil.racha_actual} ${perfil.racha_actual === 1 ? 'semana' : 'semanas'}`
-                : 'Sin racha'}
-            </Text>
-            {(perfil.racha_max ?? 0) > 0 && (
-              <Text style={styles.rachaRecord}>
-                Récord: {perfil.racha_max} {perfil.racha_max === 1 ? 'semana' : 'semanas'}
-              </Text>
-            )}
+          <View style={styles.actionWrap}>
+            {renderActionBtn()}
           </View>
         </View>
 
-        {/* Stats — 3 celdas */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNum}>{perfil.partidos_jug || 0}</Text>
-            <Text style={styles.statLbl}>Partidos jugados</Text>
-          </View>
-          <View style={styles.statDiv} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNum}>{perfil.partidos_gan || 0}</Text>
-            <Text style={styles.statLbl}>Partidos ganados</Text>
-          </View>
-        </View>
+        <StatsRow
+          jugados={perfil.partidos_jug ?? 0}
+          ganados={perfil.partidos_gan ?? 0}
+          amigos={perfil.amigos_count ?? 0}
+        />
 
-        {/* Perfil deportivo */}
-        <Text style={styles.sectionLabel}>Perfil deportivo</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Circle cx="12" cy="12" r="9" stroke={DT.outline} strokeWidth="1.8"/>
-                <Path d="M3 12H21M12 3 V21" stroke={DT.outline} strokeWidth="1.4"/>
-              </Svg>
-            </View>
-            <Text style={styles.rowLabel}>Posición</Text>
-            <Text style={styles.rowVal}>{POSICION_LABEL[perfil.posicion || ''] || '—'}</Text>
-          </View>
-          <View style={styles.rowDivider} />
-          <View style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <Path d="M5 13L9 17L19 7" stroke={DT.outline} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              </Svg>
-            </View>
-            <Text style={styles.rowLabel}>Nivel</Text>
-            <Text style={styles.rowVal}>
-              {`${(perfil.rating ?? 1.0).toFixed(1)} — ${ratingLabel(perfil.rating ?? 1.0)}`}
-            </Text>
-          </View>
-        </View>
+        <PosNivelRow posicion={perfil.posicion} nivel={perfil.nivel} />
+
+        <RatingCard rating={perfil.rating ?? 1.0} historial={perfil.rating_historial || []} />
+
+        <RachaCard racha={perfil.racha_actual ?? 0} rachaMax={perfil.racha_max ?? 0} />
       </ScrollView>
       </SafeAreaView>
 
@@ -398,57 +320,32 @@ export default function PerfilPublicoScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: DT.bg },
-  center:         { flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' },
+  root:         { flex: 1, backgroundColor: DT.bg },
+  center:       { flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' },
 
-  topbar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
-  menuBtn:        { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
-  topbarTitle:    { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
+  topbar:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.gutter, paddingVertical: 14 },
+  backBtn:      { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  topbarTitle:  { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
 
-  scroll:         { paddingHorizontal: 20, paddingBottom: 30 },
+  scroll:       { paddingHorizontal: SPACING.gutter, paddingBottom: 40 },
 
-  heroBlock:      { alignItems: 'center', paddingTop: 12, paddingBottom: 18 },
-  avatarRing:     { width: 110, height: 110, borderRadius: 55, padding: 4, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  avatarInner:    { width: '100%', height: '100%', borderRadius: 50, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarTxt:      { fontSize: 36, color: '#fff', fontFamily: FONTS.heading },
-  nombre:         { fontSize: 24, color: DT.onBg, letterSpacing: 0.4, textAlign: 'center', marginBottom: 2, fontFamily: FONTS.heading },
-  ciudad:         { fontSize: 13, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
+  hero:         { alignItems: 'center', paddingVertical: 6 },
+  avatarRing:   { width: 148, height: 148, borderRadius: 74, padding: 5, borderWidth: 3, borderColor: DT.primaryStrong, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
+  avatarInner:  { width: '100%', height: '100%', borderRadius: 70, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarTxt:    { fontSize: 42, color: '#fff', fontFamily: FONTS.heading },
+  nombre:       { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
 
-  actionWrap:     { marginBottom: 22 },
+  actionWrap:   { marginTop: 13, alignSelf: 'stretch', alignItems: 'center' },
 
-  btnPrimary:     { height: 52, backgroundColor: DT.primaryContainer, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryTxt:  { fontSize: 13, color: '#fff', letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
+  pillPrimary:    { height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, minWidth: 220 },
+  pillPrimaryTxt: { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
 
-  btnAmigo:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52, borderRadius: 14, backgroundColor: 'rgba(159,225,203,0.10)', borderWidth: 1, borderColor: 'rgba(159,225,203,0.40)' },
-  btnAmigoTxt:    { fontSize: 12, color: DT.success, letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
+  pillGlass:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },
+  pillGlassTxt: { fontSize: 13, color: DT.onBg, fontFamily: FONTS.monoMed, letterSpacing: 0.3 },
 
-  btnPendiente:   { height: 52, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: DT.glassBorder },
-  btnPendienteTxt:{ fontSize: 12, color: DT.onSurfaceVar, letterSpacing: 1.5, fontFamily: FONTS.bodyBold },
+  pillAmigo:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: 'rgba(52,211,153,0.10)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.40)' },
+  pillAmigoTxt: { fontSize: 12, color: DT.success, letterSpacing: 1.2, fontFamily: FONTS.bodyBold },
 
-  btnSec:         { height: 42, alignItems: 'center', justifyContent: 'center' },
-  btnSecTxt:      { fontSize: 13, color: DT.error, letterSpacing: 0.3, fontFamily: FONTS.bodyMed },
-
-  solicitudHint:  { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', marginBottom: 4, fontFamily: FONTS.body },
-
-  rachaCard:      { flexDirection: 'row', alignItems: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 16, padding: 16, marginBottom: 14 },
-  rachaIcon:      { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,107,53,0.14)', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  rachaInfo:      { flex: 1 },
-  rachaTitle:     { fontSize: 10, letterSpacing: 1.5, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
-  rachaNum:       { fontSize: 20, color: DT.onBg, letterSpacing: 0.3, marginTop: 2, fontFamily: FONTS.heading },
-  rachaRecord:    { fontSize: 11, color: DT.onSurfaceVar, marginTop: 3, fontFamily: FONTS.body },
-
-  statsRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 18, paddingVertical: 16, marginBottom: 22 },
-  statBox:        { flex: 1, alignItems: 'center' },
-  statDiv:        { width: 1, height: 28, backgroundColor: DT.glassBorder },
-  statNum:        { fontSize: 22, color: DT.onBg, fontFamily: FONTS.heading },
-  statLbl:        { fontSize: 11, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
-
-  sectionLabel:   { fontSize: 11, color: DT.onSurfaceVar, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4, fontFamily: FONTS.mono },
-  card:           { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 16, overflow: 'hidden', marginBottom: 14 },
-  row:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  rowIcon:        { width: 28, alignItems: 'center', marginRight: 10 },
-  rowLabel:       { flex: 1, fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.bodyMed },
-  rowVal:         { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyBold },
-  rowDivider:     { height: 1, backgroundColor: DT.glassBorder, marginLeft: 16 },
+  linkDanger:   { fontSize: 13, color: DT.error, fontFamily: FONTS.bodyMed },
+  solicitudHint:{ fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', fontFamily: FONTS.body },
 });

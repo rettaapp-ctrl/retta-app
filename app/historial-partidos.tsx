@@ -38,6 +38,14 @@ interface Inscripcion {
   };
 }
 
+function BackIcon() {
+  return (
+    <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <Path d="M15 18L9 12L15 6" stroke={DT.onBg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
+
 function TrofeoGrande() {
   return (
     <Svg width="54" height="54" viewBox="0 0 24 24" fill="none">
@@ -108,14 +116,23 @@ export default function HistorialPartidosScreen() {
 
   const lista = soloGanados ? partidos.filter(esGanado) : partidos;
 
+  // Resumen para el pie de la lista (que la parte de abajo no se vea vacía)
+  const totalJugados  = partidos.length;
+  const totalGanados  = partidos.filter(esGanado).length;
+  const conMarcador   = partidos.filter(p => {
+    const v = p.v_partidos;
+    return v && typeof v.goles_a === 'number' && typeof v.goles_b === 'number' && v.equipo_ganador;
+  }).length;
+  const efectividad   = conMarcador > 0 ? Math.round((totalGanados / conMarcador) * 100) : null;
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
 
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.backTxt}>← Regresar</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <BackIcon />
           </TouchableOpacity>
         </View>
 
@@ -211,6 +228,35 @@ export default function HistorialPartidosScreen() {
               })}
             </View>
           )}
+
+          {/* Pie: resumen + CTA para que el final de la lista no quede vacío */}
+          {!loading && lista.length > 0 && (
+            <>
+              <View style={styles.resumen}>
+                <View style={styles.resumenCell}>
+                  <Text style={styles.resumenNum}>{totalJugados}</Text>
+                  <Text style={styles.resumenLabel}>JUGADOS</Text>
+                </View>
+                <View style={[styles.resumenCell, styles.resumenBorder]}>
+                  <Text style={styles.resumenNum}>{totalGanados}</Text>
+                  <Text style={styles.resumenLabel}>GANADOS</Text>
+                </View>
+                <View style={[styles.resumenCell, styles.resumenBorder]}>
+                  <Text style={styles.resumenNum}>{efectividad != null ? `${efectividad}%` : '—'}</Text>
+                  <Text style={styles.resumenLabel}>EFECTIVIDAD</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity onPress={() => router.push('/(tabs)/partidos')} activeOpacity={0.85} style={{ marginTop: 14 }}>
+                <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.footerBtn}>
+                  <Text style={styles.footerBtnTxt}>EXPLORAR PARTIDOS</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <Text style={styles.footerHint}>
+                La efectividad cuenta solo partidos con marcador reportado.
+              </Text>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -219,8 +265,8 @@ export default function HistorialPartidosScreen() {
 
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: DT.bg },
-  topBar:     { paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 16 },
-  backTxt:    { color: DT.primary, fontSize: 14, fontFamily: FONTS.bodyMed },
+  topBar:     { paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 14 },
+  backBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   title:      { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.6, paddingHorizontal: SPACING.gutter },
   subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: SPACING.gutter, marginTop: 4 },
   scroll:     { padding: SPACING.gutter, paddingTop: 16, paddingBottom: 40 },
@@ -237,6 +283,15 @@ const styles = StyleSheet.create({
   mpScore:    { color: DT.onBg, fontFamily: FONTS.bodyBold },
   mpResult:   { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   mpResultTxt:{ fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 0.5 },
+
+  resumen:      { flexDirection: 'row', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, marginTop: 14, overflow: 'hidden' },
+  resumenCell:  { flex: 1, alignItems: 'center', paddingVertical: 14, gap: 3 },
+  resumenBorder:{ borderLeftWidth: 1, borderColor: DT.glassBorder },
+  resumenNum:   { fontSize: 20, color: DT.onBg, fontFamily: FONTS.display, lineHeight: 24 },
+  resumenLabel: { fontSize: 9, color: DT.onSurfaceVar, fontFamily: FONTS.mono, letterSpacing: 0.8 },
+  footerBtn:    { height: 50, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
+  footerBtnTxt: { fontSize: 13, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },
+  footerHint:   { fontSize: 10.5, color: DT.outline, fontFamily: FONTS.body, textAlign: 'center', marginTop: 10 },
 
   empty:      { alignItems: 'center', paddingTop: 70, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 19, color: DT.onBg, fontFamily: FONTS.heading, marginTop: 20, textAlign: 'center' },
