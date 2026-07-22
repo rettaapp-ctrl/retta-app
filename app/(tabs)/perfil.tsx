@@ -2,17 +2,17 @@
 // RETTA — Perfil (rediseño 2026-07-21, aprobado por Rafael y Foco)
 // Layout estilo Plei adaptado a marca Retta (Sora/Inter, violeta):
 //   avatar grande sin subtítulo → Editar perfil → stats con íconos
-//   (los 3 clicables) → Posición|Nivel → RATING con gráfica de
-//   evolución (rating_historial) → Racha con track de semanas →
-//   Partidos anteriores (con filtro "solo ganados").
+//   (los 3 clicables: Jugados y Ganados abren /historial-partidos,
+//   Amigos abre /amigos) → Posición|Nivel → RATING con gráfica de
+//   evolución (rating_historial) → Racha con track de semanas.
+// El historial de partidos vive en su propia pantalla.
 // ═══════════════════════════════════════════════════════════════
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useNotificacionesCount } from '@/hooks/useNotificacionesCount';
-import { isPartidoVisible } from '@/lib/partidos';
 import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator, RefreshControl,
   ScrollView, StyleSheet, Text, TouchableOpacity, View,
@@ -21,23 +21,6 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop, Line as SvgLine } from 'react-native-svg';
-
-interface Inscripcion {
-  id: string;
-  status: string;
-  equipo?: 'A' | 'B' | null;
-  v_partidos: {
-    id: string;
-    fecha: string;
-    hora_inicio: string;
-    tipo: string;
-    complejo_nombre: string;
-    cancha_nombre: string;
-    goles_a?: number | null;
-    goles_b?: number | null;
-    equipo_ganador?: 'A' | 'B' | 'EMPATE' | null;
-  };
-}
 
 interface RatingPunto {
   rating: number;
@@ -210,19 +193,12 @@ export default function PerfilScreen() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
   const { request } = useApi();
-  const [partidos, setPartidos]     = useState<Inscripcion[]>([]);
   const [historial, setHistorial]   = useState<RatingPunto[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [verTodos, setVerTodos]     = useState(false);
-  const [soloGanados, setSoloGanados] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [amigosCount, setAmigosCount] = useState(0);
   const [solicitudesCount, setSolicitudesCount] = useState(0);
   const [chartW, setChartW]         = useState(0);
   const { count: notiCount } = useNotificacionesCount();
-
-  const scrollRef     = useRef<ScrollView>(null);
-  const historialYRef = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -232,53 +208,20 @@ export default function PerfilScreen() {
 
   async function load() {
     try {
-      const [partidosRes, amigosRes, pendRes, ratingRes] = await Promise.all([
-        request('/usuarios/me/partidos').catch(() => ({ partidos: [] })),
+      const [amigosRes, pendRes, ratingRes] = await Promise.all([
         request('/amistades').catch(() => ({ amigos: [] })),
         request('/amistades/pendientes').catch(() => ({ solicitudes: [] })),
         request('/usuarios/me/rating-historial').catch(() => ({ historial: [] })),
         refreshUser().catch(() => {}),
       ]);
-      const anteriores = (partidosRes.partidos || [])
-        .filter((p: Inscripcion) => p.v_partidos != null)
-        .filter((p: Inscripcion) => !isPartidoVisible(p.v_partidos.fecha, p.v_partidos.hora_inicio))
-        .sort((a: Inscripcion, b: Inscripcion) => {
-          const fa = `${a.v_partidos?.fecha || ''} ${a.v_partidos?.hora_inicio || ''}`;
-          const fb = `${b.v_partidos?.fecha || ''} ${b.v_partidos?.hora_inicio || ''}`;
-          return fb.localeCompare(fa);
-        });
-      setPartidos(anteriores);
       setHistorial(ratingRes.historial || []);
       setAmigosCount((amigosRes.amigos || []).length);
       setSolicitudesCount((pendRes.solicitudes || []).length);
     } catch {}
-    setLoading(false);
     setRefreshing(false);
   }
 
   const onRefresh = useCallback(() => { setRefreshing(true); load(); }, []);
-
-  function formatFecha(fecha: string) {
-    const d = new Date(fecha + 'T00:00:00');
-    return {
-      dia: d.getDate().toString().padStart(2, '0'),
-      mes: d.toLocaleDateString('es-MX', { month: 'short' }).toUpperCase(),
-    };
-  }
-
-  function esGanado(item: Inscripcion): boolean {
-    const p = item.v_partidos;
-    return !!(p && item.equipo && p.equipo_ganador && p.equipo_ganador !== 'EMPATE' && p.equipo_ganador === item.equipo);
-  }
-
-  function scrollAHistorial(filtrarGanados: boolean) {
-    setSoloGanados(filtrarGanados);
-    if (filtrarGanados) setVerTodos(true); // con filtro, mostrar todos los ganados
-    scrollRef.current?.scrollTo({ y: Math.max(0, historialYRef.current - 8), animated: true });
-  }
-
-  const filtrados = soloGanados ? partidos.filter(esGanado) : partidos;
-  const visibles  = verTodos ? filtrados : filtrados.slice(0, 3);
 
   const rating    = user?.rating ?? 1.0;
   const racha     = user?.racha_actual ?? 0;
@@ -313,7 +256,6 @@ export default function PerfilScreen() {
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
-          ref={scrollRef}
           contentContainerStyle={styles.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={DT.primary} />}
           showsVerticalScrollIndicator={false}
@@ -354,12 +296,20 @@ export default function PerfilScreen() {
 
           {/* Stats con íconos — los 3 clicables */}
           <View style={styles.statsRow}>
-            <TouchableOpacity style={styles.statCell} onPress={() => scrollAHistorial(false)} activeOpacity={0.6}>
+            <TouchableOpacity
+              style={styles.statCell}
+              onPress={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'jugados' } })}
+              activeOpacity={0.6}
+            >
               <BalonIcon />
               <Text style={styles.statLabel}>PARTIDOS{'\n'}JUGADOS</Text>
               <Text style={styles.statNum}>{user?.partidos_jug ?? 0}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.statCell, styles.statCellBorder]} onPress={() => scrollAHistorial(true)} activeOpacity={0.6}>
+            <TouchableOpacity
+              style={[styles.statCell, styles.statCellBorder]}
+              onPress={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'ganados' } })}
+              activeOpacity={0.6}
+            >
               <TrofeoIcon />
               <Text style={styles.statLabel}>PARTIDOS{'\n'}GANADOS</Text>
               <Text style={styles.statNum}>{user?.partidos_gan ?? 0}</Text>
@@ -495,89 +445,6 @@ export default function PerfilScreen() {
             )}
           </View>
 
-          {/* Partidos anteriores */}
-          <View style={styles.card} onLayout={e => { historialYRef.current = e.nativeEvent.layout.y; }}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>PARTIDOS ANTERIORES</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                {soloGanados && (
-                  <TouchableOpacity style={styles.filtroChip} onPress={() => setSoloGanados(false)}>
-                    <Text style={styles.filtroChipTxt}>SOLO GANADOS ✕</Text>
-                  </TouchableOpacity>
-                )}
-                {filtrados.length > 3 && (
-                  <TouchableOpacity onPress={() => setVerTodos(!verTodos)}>
-                    <Text style={styles.verTodos}>{verTodos ? 'Ver menos' : 'Ver todos →'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-            {loading ? (
-              <ActivityIndicator color={DT.primary} style={{ margin: 16 }} />
-            ) : filtrados.length === 0 ? (
-              <View style={styles.emptyPartidos}>
-                <Text style={styles.emptyTxt}>
-                  {soloGanados ? 'Aún no tienes partidos ganados con marcador' : 'Sin partidos registrados'}
-                </Text>
-              </View>
-            ) : (
-              visibles.map((item, i) => {
-                const p = item.v_partidos;
-                if (!p) return null;
-                const f = formatFecha(p.fecha);
-                const isLast = i === visibles.length - 1;
-
-                const tieneMarcador =
-                  typeof p.goles_a === 'number' && typeof p.goles_b === 'number' && p.equipo_ganador;
-                let resultado: 'GANÓ' | 'EMPATE' | 'PERDIÓ' | 'JUGÓ' = 'JUGÓ';
-                let resultColor = DT.onSurfaceVar;
-                let resultBg    = 'rgba(255,255,255,0.06)';
-                if (tieneMarcador && item.equipo) {
-                  if (p.equipo_ganador === 'EMPATE') {
-                    resultado = 'EMPATE';
-                    resultColor = DT.warning;
-                    resultBg    = 'rgba(250,199,117,0.12)';
-                  } else if (p.equipo_ganador === item.equipo) {
-                    resultado = 'GANÓ';
-                    resultColor = DT.success;
-                    resultBg    = 'rgba(159,225,203,0.12)';
-                  } else {
-                    resultado = 'PERDIÓ';
-                    resultColor = DT.error;
-                    resultBg    = 'rgba(255,180,171,0.10)';
-                  }
-                }
-
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => router.push(`/partido/${p.id}?desde=perfil`)}
-                    style={[styles.matchPrev, isLast && { borderBottomWidth: 0 }]}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.mpDate}>
-                      <Text style={styles.mpDateDay}>{f.dia}</Text>
-                      <Text style={styles.mpDateMes}>{f.mes}</Text>
-                    </View>
-                    <View style={styles.mpDivider} />
-                    <View style={styles.mpInfo}>
-                      <Text style={styles.mpVenue} numberOfLines={1}>{p.complejo_nombre} — {p.cancha_nombre}</Text>
-                      <Text style={styles.mpDetail}>
-                        {p.tipo} · {p.hora_inicio?.slice(0, 5)}
-                        {tieneMarcador && (
-                          <Text style={styles.mpScore}> · {p.goles_a}–{p.goles_b}</Text>
-                        )}
-                      </Text>
-                    </View>
-                    <View style={[styles.mpResult, { backgroundColor: resultBg }]}>
-                      <Text style={[styles.mpResultTxt, { color: resultColor }]}>{resultado}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -645,23 +512,4 @@ const styles = StyleSheet.create({
   ctaFire:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingVertical: 14, borderRadius: RADIUS.full },
   ctaFireTxt:     { fontSize: 13, color: '#FFF7EF', fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
 
-  card:           { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, marginBottom: 12, overflow: 'hidden' },
-  cardHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: DT.glassBorder },
-  cardTitle:      { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar },
-  filtroChip:     { backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.35)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 3 },
-  filtroChipTxt:  { fontSize: 9.5, color: DT.success, fontFamily: FONTS.bodyBold, letterSpacing: 0.6 },
-  verTodos:       { fontSize: 12, color: DT.primary, fontFamily: FONTS.bodyMed },
-  emptyPartidos:  { padding: 24, alignItems: 'center' },
-  emptyTxt:       { color: DT.outline, fontSize: 13, fontFamily: FONTS.body },
-  matchPrev:      { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, gap: 12 },
-  mpDate:         { minWidth: 42, alignItems: 'center' },
-  mpDateDay:      { fontSize: 15, color: DT.primary, fontFamily: FONTS.heading, lineHeight: 17 },
-  mpDateMes:      { fontSize: 10, color: DT.outline, fontFamily: FONTS.mono, lineHeight: 14 },
-  mpDivider:      { width: 1, height: 36, backgroundColor: DT.glassBorder },
-  mpInfo:         { flex: 1 },
-  mpVenue:        { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2 },
-  mpDetail:       { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
-  mpScore:        { color: DT.onBg, fontFamily: FONTS.bodyBold },
-  mpResult:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
-  mpResultTxt:    { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 0.5, color: DT.onSurfaceVar },
 });
