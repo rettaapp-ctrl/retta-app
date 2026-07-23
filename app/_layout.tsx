@@ -17,15 +17,12 @@ import { AppAlertHost } from '@/lib/appAlert';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { STRIPE_PUBLISHABLE_KEY } from '@/constants';
 // ── Fuentes oficiales del manual de marca 2026 ──
-// - Sora (títulos) + Inter (cuerpo/labels/datos) según brand manual.
-// - Space Grotesk se mantiene solo para el wordmark del logo si aplica.
-// - JetBrains Mono se mantiene temporalmente por compatibilidad; ya no
-//   se referencia desde FONTS pero podría haber pantallas legacy.
-import { useFonts as useAppFonts } from '@expo-google-fonts/space-grotesk';
-import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+// - Sora (títulos) + Inter (cuerpo/labels/datos) son las únicas que usa FONTS.
+// - Se quitaron Space Grotesk y JetBrains Mono: ninguna pantalla las
+//   referencia (FONTS mapea solo a Sora/Inter), así que ya no se cargan.
+import { useFonts as useAppFonts } from '@expo-google-fonts/inter';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { Sora_500Medium, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
-import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 
 // ─────────────────────────────────────────────────────────────
 // Sentry — solo activo en builds de producción (no en Expo Go dev).
@@ -213,13 +210,6 @@ function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    // Space Grotesk queda por si acaso (algún wordmark de logo)
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_700Bold,
-    // JetBrains Mono se mantiene por compatibilidad con pantallas legacy
-    // que aún no hayan migrado — se puede eliminar en un futuro cleanup.
-    JetBrainsMono_400Regular,
-    JetBrainsMono_500Medium,
   });
 
   if (!fontsLoaded) {
