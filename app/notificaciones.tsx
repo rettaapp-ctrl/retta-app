@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, RefreshControl, Modal,
+  TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,12 +11,10 @@ import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Swipeable } from 'react-native-gesture-handler';
-import * as SecureStore from 'expo-secure-store';
 
-// Flag para el hint animado de swipe-to-delete. La primera vez que el user
-// abre notifs, la primera fila se abre y cierra sola (~1s) revelando el
-// botón "Eliminar" detrás. Después queda persistido y nunca más se muestra.
-const SWIPE_HINT_KEY = 'retta_notif_swipe_hint_seen_v1';
+// Swipe-to-delete directo (pedido del Foco 2026-07-27): deslizar la fila
+// hacia CUALQUIER lado la elimina al soltar — sin botón intermedio ni
+// modal de confirmación. Son solo notificaciones; menos fricción.
 
 interface Notif {
   id: string;
@@ -34,16 +32,6 @@ function BackIcon() {
     </Svg>
   );
 }
-function TrashIcon() {
-  // Antes era un icono de basurero (muy "destructivo"). Cambiado a X sutil
-  // para que el botón se sienta más integrado y menos amenazante.
-  return (
-    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <Path d="M6 6L18 18M6 18L18 6" stroke={DT.outline} strokeWidth="2" strokeLinecap="round"/>
-    </Svg>
-  );
-}
-
 function NotifIcon({ tipo }: { tipo: string }) {
   if (tipo === 'warning') return (
     <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -67,14 +55,6 @@ function NotifIcon({ tipo }: { tipo: string }) {
       <Path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke={DT.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </Svg>
   );
-  // Partido confirmado (se alcanzó el mínimo de jugadores) — palomita
-  // verde en círculo, mismo verde 'estado confirmado' del manual.
-  if (tipo === 'partido_confirmado') return (
-    <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9" stroke={DT.success} strokeWidth="2"/>
-      <Path d="M8.5 12.5L11 15L15.5 9.5" stroke={DT.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </Svg>
-  );
   return (
     <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke={DT.primary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -84,13 +64,12 @@ function NotifIcon({ tipo }: { tipo: string }) {
 }
 
 const ICON_BG: Record<string, string> = {
-  warning:            'rgba(250,199,117,0.12)',
-  pago:               'rgba(53,138,221,0.15)',
-  cancelacion:        'rgba(255,180,171,0.12)',
-  retta:              'rgba(190,194,255,0.12)',
-  resultado:          'rgba(190,194,255,0.12)',
-  recordatorio:       'rgba(190,194,255,0.12)',
-  partido_confirmado: 'rgba(52,211,153,0.12)',
+  warning:      'rgba(250,199,117,0.12)',
+  pago:         'rgba(53,138,221,0.15)',
+  cancelacion:  'rgba(255,180,171,0.12)',
+  retta:        'rgba(190,194,255,0.12)',
+  resultado:    'rgba(190,194,255,0.12)',
+  recordatorio: 'rgba(190,194,255,0.12)',
 };
 
 function formatTiempo(created_at: string) {
@@ -151,14 +130,6 @@ export default function NotificacionesScreen() {
   const [notifs, setNotifs]         = useState<Notif[]>([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  // Modal de confirmación para eliminar. Antes era Alert.alert nativo de
-  // Android (gris con CTAs verde) que se veía viejo y rompía el tema dark.
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [deleting, setDeleting]         = useState(false);
-  // Ref al PRIMER Swipeable de la lista — se usa para disparar el "peek"
-  // animado (abrir/cerrar solo) la primera vez que el user abre la pantalla.
-  const firstSwipeRef = useRef<Swipeable | null>(null);
-  const [hintPlayed, setHintPlayed] = useState(false);
 
   // useFocusEffect: re-carga notificaciones cada vez que el usuario entra
   // a esta pantalla. Sin esto las notifs quedaban viejas hasta refresh.
@@ -181,26 +152,6 @@ export default function NotificacionesScreen() {
 
   const onRefresh = useCallback(() => { setRefreshing(true); load(); }, []);
 
-  // Peek animado del swipe-to-delete — solo la PRIMERA vez que el user abre
-  // la pantalla y siempre que haya al menos 1 notif. Abre 60px, espera 900ms,
-  // vuelve a cerrar, y persiste flag para no repetir.
-  useEffect(() => {
-    if (loading || hintPlayed || notifs.length === 0) return;
-    SecureStore.getItemAsync(SWIPE_HINT_KEY).then(v => {
-      if (v === '1') { setHintPlayed(true); return; }
-      const openTimer = setTimeout(() => {
-        firstSwipeRef.current?.openRight();
-        const closeTimer = setTimeout(() => {
-          firstSwipeRef.current?.close();
-          SecureStore.setItemAsync(SWIPE_HINT_KEY, '1').catch(() => {});
-          setHintPlayed(true);
-        }, 900);
-        return () => clearTimeout(closeTimer);
-      }, 500);
-      return () => clearTimeout(openTimer);
-    }).catch(() => setHintPlayed(true));
-  }, [loading, notifs.length, hintPlayed]);
-
   async function marcarLeida(id: string) {
     try {
       await request(`/usuarios/me/notificaciones/${id}/leer`, { method: 'PATCH' });
@@ -208,56 +159,41 @@ export default function NotificacionesScreen() {
     } catch {}
   }
 
-  async function marcarTodasLeidas() {
-    const noLeidas = notifs.filter(n => !n.leida);
-    await Promise.all(noLeidas.map(n => marcarLeida(n.id)));
-  }
-
-  // Solicitar confirmación: abre el modal custom en vez de Alert.alert.
+  // Eliminación directa al completar el swipe: la fila sale de la lista al
+  // instante (optimista) y el DELETE viaja en background. Si el server
+  // falla, recargamos para que la notif reaparezca.
   function eliminarNotif(id: string) {
-    setDeleteTarget(id);
-  }
-
-  // Acción real cuando el usuario confirma en el modal.
-  async function confirmarEliminar() {
-    if (!deleteTarget || deleting) return;
-    setDeleting(true);
-    try {
-      await request(`/usuarios/me/notificaciones/${deleteTarget}`, { method: 'DELETE' });
-      setNotifs(prev => prev.filter(n => n.id !== deleteTarget));
-    } catch {}
-    setDeleting(false);
-    setDeleteTarget(null);
+    setNotifs(prev => prev.filter(n => n.id !== id));
+    request(`/usuarios/me/notificaciones/${id}`, { method: 'DELETE' }).catch(() => load());
   }
 
   const nuevas     = notifs.filter(n => !n.leida);
   const anteriores = notifs.filter(n => n.leida);
 
-  // Renderiza el botón "Eliminar" que aparece al hacer swipe hacia la
-  // izquierda — estilo iOS. Tocarlo abre el modal de confirmación.
-  function renderRightAction(id: string) {
+  // Fondo rojo con basurero que se revela mientras arrastras. Es solo
+  // visual: no hay que tocarlo — al soltar el swipe la notif se elimina.
+  function renderAccionEliminar(lado: 'izq' | 'der') {
     return (
-      <TouchableOpacity
-        style={styles.swipeDelete}
-        onPress={() => eliminarNotif(id)}
-        activeOpacity={0.85}
-      >
-        <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <Path d="M3 6H21M8 6V4A2 2 0 0 1 10 2H14A2 2 0 0 1 16 4V6M10 11V17M14 11V17M5 6L6 20A2 2 0 0 0 8 22H16A2 2 0 0 0 18 20L19 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        </Svg>
-        <Text style={styles.swipeDeleteTxt}>Eliminar</Text>
-      </TouchableOpacity>
+      <View style={[styles.swipeFill, { alignItems: lado === 'izq' ? 'flex-start' : 'flex-end' }]}>
+        <View style={styles.swipeContent}>
+          <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <Path d="M3 6H21M8 6V4A2 2 0 0 1 10 2H14A2 2 0 0 1 16 4V6M10 11V17M14 11V17M5 6L6 20A2 2 0 0 0 8 22H16A2 2 0 0 0 18 20L19 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </Svg>
+          <Text style={styles.swipeDeleteTxt}>Eliminar</Text>
+        </View>
+      </View>
     );
   }
 
-  function renderNotif(n: Notif, isFirst: boolean = false) {
+  function renderNotif(n: Notif) {
     return (
       <Swipeable
         key={n.id}
-        ref={isFirst ? firstSwipeRef : undefined}
-        renderRightActions={() => renderRightAction(n.id)}
-        overshootRight={false}
-        rightThreshold={40}
+        renderLeftActions={() => renderAccionEliminar('izq')}
+        renderRightActions={() => renderAccionEliminar('der')}
+        leftThreshold={70}
+        rightThreshold={70}
+        onSwipeableOpen={() => eliminarNotif(n.id)}
       >
         <TouchableOpacity
           style={[styles.notifItem, !n.leida && styles.notifUnread]}
@@ -293,11 +229,6 @@ export default function NotificacionesScreen() {
             <BackIcon />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Notificaciones</Text>
-          {nuevas.length > 0 && (
-            <TouchableOpacity onPress={marcarTodasLeidas}>
-              <Text style={styles.markAll}>Marcar leídas</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {loading ? (
@@ -316,9 +247,7 @@ export default function NotificacionesScreen() {
                 <View style={styles.card}>
                   {nuevas.map((n, i) => (
                     <View key={n.id} style={i < nuevas.length - 1 ? styles.notifBorder : {}}>
-                      {/* isFirst=true en el primer item para que reciba el ref
-                          del peek animado del swipe-to-delete. */}
-                      {renderNotif(n, i === 0)}
+                      {renderNotif(n)}
                     </View>
                   ))}
                 </View>
@@ -331,9 +260,7 @@ export default function NotificacionesScreen() {
                 <View style={styles.card}>
                   {anteriores.map((n, i) => (
                     <View key={n.id} style={i < anteriores.length - 1 ? styles.notifBorder : {}}>
-                      {/* Si no hubo NUEVAS, el peek va sobre el primer item
-                          de ANTERIORES en su lugar. */}
-                      {renderNotif(n, i === 0 && nuevas.length === 0)}
+                      {renderNotif(n)}
                     </View>
                   ))}
                 </View>
@@ -355,54 +282,6 @@ export default function NotificacionesScreen() {
           </ScrollView>
         )}
 
-        {/* Modal custom para confirmar eliminación. Reemplaza al Alert.alert
-            nativo de Android que se veía gris con CTAs verde — incompatible
-            con el dark theme. Ahora respeta el lenguaje visual de la app. */}
-        <Modal
-          visible={deleteTarget !== null}
-          transparent
-          animationType="fade"
-          onRequestClose={() => !deleting && setDeleteTarget(null)}
-        >
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            activeOpacity={1}
-            onPress={() => !deleting && setDeleteTarget(null)}
-          >
-            <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-              <View style={styles.modalIcon}>
-                <Svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <Path d="M6 6L18 18M6 18L18 6" stroke={DT.error} strokeWidth="2" strokeLinecap="round"/>
-                </Svg>
-              </View>
-              <Text style={styles.modalTitle}>Eliminar notificación</Text>
-              <Text style={styles.modalBody}>
-                Esta acción no se puede deshacer.
-              </Text>
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.modalBtnGhost}
-                  onPress={() => setDeleteTarget(null)}
-                  disabled={deleting}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.modalBtnGhostTxt}>CANCELAR</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalBtnDanger}
-                  onPress={confirmarEliminar}
-                  disabled={deleting}
-                  activeOpacity={0.85}
-                >
-                  {deleting
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={styles.modalBtnDangerTxt}>ELIMINAR</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -414,7 +293,6 @@ const styles = StyleSheet.create({
   topbar:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.gutter, paddingVertical: 14, gap: 12 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   title:        { flex: 1, fontSize: 22, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5 },
-  markAll:      { fontSize: 11, color: DT.primary, letterSpacing: 0.5, fontFamily: FONTS.bodyBold },
   scroll:       { padding: SPACING.gutter, paddingTop: 4, paddingBottom: 40 },
   sectionLabel: { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.8, marginBottom: 10, marginLeft: 2, fontFamily: FONTS.mono },
   card:         { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
@@ -427,25 +305,13 @@ const styles = StyleSheet.create({
   notifTime:    { fontSize: 11, color: DT.outline, marginTop: 4, fontFamily: FONTS.mono },
   unreadDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: DT.primary, flexShrink: 0 },
   notifRight:   { alignItems: 'center', gap: 6, flexShrink: 0 },
-  deleteBtn:    { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: DT.glassBorder },
-  // Botón "Eliminar" que aparece detrás de la notificación al hacer swipe
-  // hacia la izquierda. Estilo iOS: rojo sólido, ancho fijo, ícono + texto.
-  swipeDelete:  { width: 90, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.error, gap: 4 },
+  // Fondo rojo del swipe-to-delete (ambos lados). flex:1 para que cubra
+  // también el overshoot al arrastrar de más — sin huecos.
+  swipeFill:    { flex: 1, backgroundColor: DT.error, justifyContent: 'center', paddingHorizontal: 26 },
+  swipeContent: { alignItems: 'center', gap: 4 },
   swipeDeleteTxt: { color: '#fff', fontSize: 12, fontFamily: FONTS.bodyBold, letterSpacing: 0.3 },
   empty:        { alignItems: 'center', paddingTop: 70 },
   emptyLogo:    { width: 56, height: 56, marginBottom: 22, opacity: 0.9 },
   emptyTitle:   { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, marginBottom: 6 },
   emptySub:     { fontSize: 13, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 20, fontFamily: FONTS.body },
-
-  // Modal custom de confirmación (reemplaza Alert.alert nativo)
-  modalBackdrop:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  modalCard:        { width: '100%', maxWidth: 360, backgroundColor: '#1a1d28', borderRadius: RADIUS.xl, padding: 24, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center' },
-  modalIcon:        { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,180,171,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  modalTitle:       { fontSize: 17, color: DT.onBg, fontFamily: FONTS.heading, marginBottom: 6, textAlign: 'center' },
-  modalBody:        { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 19, marginBottom: 22 },
-  modalActions:     { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
-  modalBtnGhost:    { flex: 1, height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder },
-  modalBtnGhostTxt: { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
-  modalBtnDanger:   { flex: 1, height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.error },
-  modalBtnDangerTxt:{ fontSize: 12, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 1 },
 });

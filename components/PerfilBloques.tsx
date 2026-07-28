@@ -38,12 +38,15 @@ export const FIRE1 = '#FFB45E';
 export const FIRE2 = '#F4603E';
 
 // ─── Íconos ──────────────────────────────────────────────────────
+// Balón rediseñado (Foco 2026-07-27): el anterior parecía timón/rueda
+// por las costuras que llegaban hasta el borde. Ahora: pentágono central
+// relleno + costuras cortas + parches parciales en el aro — lee a balón.
 function BalonIcon() {
   return (
     <Svg width="26" height="26" viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="12" r="9.2" stroke={DT.primary} strokeWidth="1.6"/>
-      <Path d="M12 7.2l3.4 2.5-1.3 4h-4.2l-1.3-4L12 7.2z" stroke={DT.primary} strokeWidth="1.5" strokeLinejoin="round"/>
-      <Path d="M12 2.8v4.4M20.8 9.4l-5.4.3M18.4 19l-3-3.3M5.6 19l3-3.3M3.2 9.4l5.4.3" stroke={DT.primary} strokeWidth="1.2"/>
+      <Path d="M12 7.6l4.2 3.05-1.6 4.95H9.4l-1.6-4.95L12 7.6z" fill={DT.primary}/>
+      <Path d="M12 3.3v2M19.9 8.5l-1.85.85M17.15 19l-1.3-1.6M6.85 19l1.3-1.6M4.1 8.5l1.85.85" stroke={DT.primary} strokeWidth="1.6" strokeLinecap="round"/>
     </Svg>
   );
 }

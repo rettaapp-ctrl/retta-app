@@ -35,23 +35,28 @@ function IconPerfil({ color }: { color: string }) {
 }
 
 // Fondo de la tab bar: gradiente índigo-oscuro → casi negro, esquinas
-// redondeadas y borde superior lavanda sutil. Como es un gradiente real
-// (no color sólido + borde blanco), las esquinas no muestran filos.
+// redondeadas y borde superior lavanda sutil.
+// El View exterior pinta DT.bg en TODO el rectángulo de la barra: eso
+// rellena el hueco que las esquinas redondeadas dejan ver (antes se
+// asomaba el fondo del Stack #11131b, más claro — se veía una cuñita
+// rara en la esquina; reporte del Foco 2026-07-27).
 function TabBarBackground() {
   return (
-    <LinearGradient
-      colors={['#212542', '#0c0e16']}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={{
-        flex: 1,
-        borderTopLeftRadius:  28,
-        borderTopRightRadius: 28,
-        borderTopWidth:       1,
-        borderTopColor:       'rgba(190,194,255,0.18)',
-        overflow:             'hidden',
-      }}
-    />
+    <View style={{ flex: 1, backgroundColor: DT.bg }}>
+      <LinearGradient
+        colors={['#212542', '#0c0e16']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{
+          flex: 1,
+          borderTopLeftRadius:  28,
+          borderTopRightRadius: 28,
+          borderTopWidth:       1,
+          borderTopColor:       'rgba(190,194,255,0.18)',
+          overflow:             'hidden',
+        }}
+      />
+    </View>
   );
 }
 
@@ -69,11 +74,13 @@ export default function TabsLayout() {
         // Fondo oscuro sólido detrás del gradiente: así las esquinas
         // curveadas revelan oscuro (no el blanco default de iOS).
         sceneStyle: { backgroundColor: DT.bg },
+        // Sin backgroundColor ni radius aquí: el fondo completo (incluida
+        // la esquina redondeada y su relleno) lo pinta TabBarBackground.
+        // Si el contenedor también trae radius, recorta el relleno de la
+        // esquina y reaparece la cuñita del fondo del Stack.
         tabBarStyle: {
-          backgroundColor:      DT.surfaceLowest,
+          backgroundColor:      'transparent',
           borderTopWidth:       0,
-          borderTopLeftRadius:  28,
-          borderTopRightRadius: 28,
           height:               tabBarHeight,
           paddingBottom:        tabBarPaddingBottom,
           paddingTop:           10,

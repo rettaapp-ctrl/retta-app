@@ -24,7 +24,7 @@ function BackIcon() {
 }
 function AvatarIcon() {
   return (
-    <Svg width="42" height="42" viewBox="0 0 48 48" fill="none">
+    <Svg width="56" height="56" viewBox="0 0 48 48" fill="none">
       <Circle cx="24" cy="18" r="9" fill={DT.outline}/>
       <Path d="M6 42C6 33.2 14.1 26 24 26C33.9 26 42 33.2 42 42" fill={DT.outline}/>
     </Svg>
@@ -97,23 +97,19 @@ export default function ConfiguracionScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Profile block */}
+          {/* Profile block — sin botón "Editar Perfil" (Foco 2026-07-27):
+              la foto creció y absorbió ese espacio. Editar vive en el perfil. */}
           <View style={styles.profileBlock}>
             <LinearGradient colors={GRADIENTS.dayActive} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatarRing}>
               <View style={styles.avatarInner}>
                 {user?.avatar_url
-                  ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 34 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
+                  ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 58 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
                   : <AvatarIcon />
                 }
               </View>
             </LinearGradient>
             <Text style={styles.profileName}>{user?.nombre} {user?.apellido || ''}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
-            <TouchableOpacity onPress={() => router.push('/editar-perfil')} activeOpacity={0.85}>
-              <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.editBtn}>
-                <Text style={styles.editBtnTxt}>Editar Perfil</Text>
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
 
           <Text style={styles.sectionLabel}>CUENTA</Text>
@@ -185,12 +181,10 @@ const styles = StyleSheet.create({
   topbarTitle:  { flex: 1, textAlign: 'center', fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: 0.2 },
   scroll:       { padding: SPACING.gutter, paddingTop: 0, paddingBottom: 40 },
   profileBlock: { alignItems: 'center', paddingVertical: 24 },
-  avatarRing:   { width: 84, height: 84, borderRadius: 42, padding: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  avatarInner:  { width: '100%', height: '100%', borderRadius: 39, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarRing:   { width: 124, height: 124, borderRadius: 62, padding: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  avatarInner:  { width: '100%', height: '100%', borderRadius: 59, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileName:  { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.2, marginBottom: 3 },
-  profileEmail: { fontSize: 12.5, color: DT.onSurfaceVar, marginBottom: 16, fontFamily: FONTS.body },
-  editBtn:      { borderRadius: RADIUS.full, paddingHorizontal: 26, paddingVertical: 11 },
-  editBtnTxt:   { fontSize: 13, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
+  profileEmail: { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.body },
   sectionLabel: { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.8, marginBottom: 10, marginLeft: 2, fontFamily: FONTS.mono },
   section:      { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
   row:          { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, gap: 14 },

@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import ReporteModal from '@/components/ReporteModal';
 import { StatsRow, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
 
@@ -250,6 +250,8 @@ export default function PerfilPublicoScreen() {
         {perfil.es_yo ? (
           <View style={{ width: 42 }} />
         ) : (
+          /* Botón directo de reportar (bandera) — antes era un menú de 3
+             puntitos que no se entendía. Pedido del Foco 2026-07-27. */
           <TouchableOpacity
             onPress={() => {
               AppAlert.alert(
@@ -261,13 +263,11 @@ export default function PerfilPublicoScreen() {
                 ]
               );
             }}
-            style={styles.backBtn}
+            style={[styles.backBtn, styles.reportBtn]}
             hitSlop={8}
           >
-            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <Circle cx="12" cy="5"  r="1.6" fill={DT.onBg} />
-              <Circle cx="12" cy="12" r="1.6" fill={DT.onBg} />
-              <Circle cx="12" cy="19" r="1.6" fill={DT.onBg} />
+            <Svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+              <Path d="M4 21V4.5C4 4.5 5.5 3 8.5 3C11.5 3 12.5 4.8 15.5 4.8C18.5 4.8 20 3.6 20 3.6V14.4C20 14.4 18.5 15.6 15.5 15.6C12.5 15.6 11.5 13.8 8.5 13.8C5.5 13.8 4 15.3 4 15.3" stroke={DT.error} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
             </Svg>
           </TouchableOpacity>
         )}
@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
 
   topbar:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.gutter, paddingVertical: 14 },
   backBtn:      { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  reportBtn:    { backgroundColor: 'rgba(255,180,171,0.08)', borderColor: 'rgba(255,180,171,0.3)' },
   topbarTitle:  { fontSize: 16, color: DT.onBg, letterSpacing: 0.3, fontFamily: FONTS.heading },
 
   scroll:       { paddingHorizontal: SPACING.gutter, paddingBottom: 40 },

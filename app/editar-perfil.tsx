@@ -148,8 +148,8 @@ export default function EditarPerfilScreen() {
           <LinearGradient colors={GRADIENTS.dayActive} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatarRing}>
             <View style={styles.avatarInner}>
               {avatarUrl
-                ? <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%', borderRadius: 42 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
-                : <Svg width="42" height="42" viewBox="0 0 48 48" fill="none">
+                ? <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%', borderRadius: 70 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
+                : <Svg width="60" height="60" viewBox="0 0 48 48" fill="none">
                     <Circle cx="24" cy="18" r="9" fill={DT.outline}/>
                     <Path d="M6 42C6 33.2 14.1 26 24 26C33.9 26 42 33.2 42 42" fill={DT.outline}/>
                   </Svg>
@@ -303,10 +303,11 @@ const styles = StyleSheet.create({
   saveBtn:          { paddingHorizontal: 4, minWidth: 60, alignItems: 'flex-end' },
   saveBtnTxt:       { fontSize: 14, color: DT.primary, letterSpacing: 0.3, fontFamily: FONTS.bodyBold },
   scroll:           { padding: 20, paddingTop: 8, paddingBottom: 40 },
+  // Mismo tamaño de foto que el perfil (148) — pedido del Foco 2026-07-27
   avatarBlock:      { alignItems: 'center', paddingVertical: 20, position: 'relative' },
-  avatarRing:       { width: 90, height: 90, borderRadius: 45, padding: 3, alignItems: 'center', justifyContent: 'center' },
-  avatarInner:      { width: '100%', height: '100%', borderRadius: 42, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarEditBadge:  { position: 'absolute', top: 62, left: '50%', marginLeft: 18, width: 28, height: 28, borderRadius: 14, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: DT.bg },
+  avatarRing:       { width: 148, height: 148, borderRadius: 74, padding: 4, alignItems: 'center', justifyContent: 'center' },
+  avatarInner:      { width: '100%', height: '100%', borderRadius: 70, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarEditBadge:  { position: 'absolute', top: 126, left: '50%', marginLeft: 34, width: 30, height: 30, borderRadius: 15, backgroundColor: DT.primaryContainer, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: DT.bg },
   avatarLabel:      { fontSize: 12, color: DT.onSurfaceVar, marginTop: 10, fontFamily: FONTS.body },
   sectionLabel:     { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.6, marginBottom: 8, marginLeft: 2, textTransform: 'uppercase', fontFamily: FONTS.mono },
   card:             { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 18, overflow: 'hidden', marginBottom: 16 },
