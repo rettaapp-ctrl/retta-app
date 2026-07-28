@@ -48,17 +48,57 @@ export default function ConfirmarPagoScreen() {
   const router = useRouter();
   const { request } = useApi();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  // partido_id es el ÚNICO parámetro de confianza. Todas las rutas son
+  // deep-linkeables vía retta://, así que un link malicioso podría inyectar
+  // texto arbitrario (complejo/fecha/precio) en esta pantalla de pago. Por eso
+  // los datos que se muestran (complejo, cancha, fecha, hora, precio, tipo) se
+  // traen del backend con el partido_id, no de los params de navegación.
+  // El resto (equipo, invitado) solo alimenta el cargo, que ya es
+  // backend-autoritativo.
   const {
-    partido_id, equipo, complejo, cancha, fecha,
-    hora, precio, tipo, es_invitado, nombre_invitado, posicion_invitado,
+    partido_id, equipo, es_invitado, nombre_invitado, posicion_invitado,
   } = useLocalSearchParams<{
-    partido_id: string; equipo: string; complejo: string;
-    cancha: string; fecha: string; hora: string;
-    precio: string; tipo: string;
+    partido_id: string; equipo: string;
     es_invitado?: string; nombre_invitado?: string; posicion_invitado?: string;
   }>();
 
   const esInvitado = es_invitado === 'true';
+
+  // Detalle del partido traído del backend (fuente de verdad para el display).
+  interface PartidoDetalle {
+    complejo_nombre?: string;
+    cancha_nombre?: string;
+    fecha?: string;
+    hora_inicio?: string;
+    precio_jugador?: number;
+    tipo?: string;
+  }
+  const [detalle, setDetalle] = useState<PartidoDetalle | null>(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(true);
+
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const data = await request(`/partidos/${partido_id}`);
+        if (activo) setDetalle(data);
+      } catch {
+        // Si falla, dejamos detalle en null: se muestra un placeholder en vez
+        // de datos potencialmente inyectados por el deep-link.
+      } finally {
+        if (activo) setCargandoDetalle(false);
+      }
+    })();
+    return () => { activo = false; };
+  }, [partido_id, request]);
+
+  // Valores de display derivados SOLO del backend (nunca de los params).
+  const complejo = detalle?.complejo_nombre ?? '';
+  const cancha   = detalle?.cancha_nombre ?? '';
+  const fecha    = detalle?.fecha ?? '';
+  const hora     = detalle?.hora_inicio ?? '';
+  const tipo     = detalle?.tipo ?? '';
+  const precio   = detalle?.precio_jugador != null ? String(detalle.precio_jugador) : '';
 
   const [stage, setStage] = useState<Stage>('confirm');
   const scaleAnim   = useRef(new Animated.Value(0)).current;
@@ -242,6 +282,21 @@ export default function ConfirmarPagoScreen() {
     );
   }
 
+  // ── CARGANDO DETALLE ──
+  // Mientras traemos el partido del backend mostramos un loader, para no
+  // pintar la pantalla con datos vacíos ni con params del deep-link.
+  if (cargandoDetalle) {
+    return (
+      <View style={styles.root}>
+        <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+        <SafeAreaView style={styles.processingWrap}>
+          <ActivityIndicator color={DT.primary} size="large" />
+          <Text style={styles.processingSubtitle}>Cargando detalles del partido…</Text>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   // ── CONFIRMAR ──
   return (
     <View style={styles.root}>
@@ -301,8 +356,8 @@ export default function ConfirmarPagoScreen() {
 
         {/* Botón pagar */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={handlePagar} disabled={stage !== 'confirm'} activeOpacity={0.85}>
-            <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.pagarBtn, stage !== 'confirm' && { opacity: 0.6 }]}>
+          <TouchableOpacity onPress={handlePagar} disabled={stage !== 'confirm' || !detalle} activeOpacity={0.85}>
+            <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.pagarBtn, (stage !== 'confirm' || !detalle) && { opacity: 0.6 }]}>
               <CardIcon />
               <Text style={styles.pagarBtnTxt}>PAGAR ${precio} MXN</Text>
             </LinearGradient>

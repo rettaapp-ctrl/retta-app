@@ -27,7 +27,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { CHAT_URL } from '@/constants';
+import { CHAT_URL, CHAT_WORKER_TOKEN } from '@/constants';
 import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import { track } from '@/lib/analytics';
 
@@ -41,6 +41,10 @@ interface Mensaje {
 
 const STORAGE_KEY = 'retta_chat_ia_v1';
 const MAX_HISTORIAL = 6; // turnos enviados al modelo
+// Tope de mensajes que se persisten en AsyncStorage. La conversación se guarda
+// en claro, así que acotamos el historial a los últimos N mensajes para no
+// dejar crecer sin límite la copia local en el dispositivo.
+const MAX_GUARDADOS = 50;
 
 function BackIcon() {
   return (
@@ -92,7 +96,7 @@ export default function ChatIAScreen() {
         if (saved) {
           const parsed: Mensaje[] = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setMensajes(parsed);
+            setMensajes(parsed.slice(-MAX_GUARDADOS));
           }
         }
       } catch {}
@@ -100,8 +104,11 @@ export default function ChatIAScreen() {
   }, []);
 
   // ── Persistir cada vez que cambie la conversación ──
+  // Solo guardamos los últimos MAX_GUARDADOS mensajes para acotar el tamaño
+  // de la copia local en claro.
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mensajes)).catch(() => {});
+    const aGuardar = mensajes.slice(-MAX_GUARDADOS);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(aGuardar)).catch(() => {});
   }, [mensajes]);
 
   // ── Auto-scroll al fondo cuando llega un mensaje nuevo ──
@@ -143,7 +150,11 @@ export default function ChatIAScreen() {
 
       const res = await fetch(CHAT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // El Worker exige este header para filtrar tráfico ajeno a la app.
+          'X-Retta-App-Token': CHAT_WORKER_TOKEN,
+        },
         body: JSON.stringify({ message: limpio, history: historial }),
       });
 

@@ -4,6 +4,18 @@ export const API_URL = 'https://retta-backend-production.up.railway.app/api';
 // Es público sin auth — el rate limiting vive del lado del Worker.
 export const CHAT_URL = 'https://retta-chat.rettaapp.workers.dev';
 
+// Token de aplicación para el Worker de chat. El Worker exige el header
+// X-Retta-App-Token; la app lo manda en cada request para filtrar tráfico que
+// no venga de la app. NO es un secreto de alto valor (termina en el bundle),
+// solo una barrera básica anti-abuso.
+//
+// El valor se inyecta en build via EXPO_PUBLIC_CHAT_WORKER_TOKEN (EAS secret o
+// .env local) y DEBE coincidir con el secreto APP_TOKEN del Worker de
+// Cloudflare (`wrangler secret put APP_TOKEN`). Se lee de env en vez de
+// hardcodearse para poder rotarlo sin tocar el código ni dejarlo en el
+// historial de git. Si queda vacío, el Worker responde 401 (falla visible).
+export const CHAT_WORKER_TOKEN = process.env.EXPO_PUBLIC_CHAT_WORKER_TOKEN ?? '';
+
 // ─────────────────────────────────────────────────────────────────
 // LEGAL_VERSION
 // Versión actual de Términos y Aviso de Privacidad.
