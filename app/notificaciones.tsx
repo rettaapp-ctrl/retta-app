@@ -12,6 +12,7 @@ import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Swipeable } from 'react-native-gesture-handler';
+import { ajustarNotificacionesCount } from '@/hooks/useNotificacionesCount';
 
 // Swipe-to-delete estilo Gmail/Spotify (referencias en video de Rafael,
 // 2026-08-01): al deslizar hacia cualquier lado se revela una píldora
@@ -187,9 +188,12 @@ export default function NotificacionesScreen() {
   const onRefresh = useCallback(() => { setRefreshing(true); load(); }, []);
 
   async function marcarLeida(id: string) {
+    const era = notifs.find(n => n.id === id);
     try {
       await request(`/usuarios/me/notificaciones/${id}/leer`, { method: 'PATCH' });
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
+      // Bajar la campanita al instante si era no leída
+      if (era && !era.leida) ajustarNotificacionesCount(-1);
     } catch {}
   }
 
@@ -211,6 +215,8 @@ export default function NotificacionesScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     setNotifs(prev => prev.filter(n => n.id !== notif.id));
     setPendientes(prev => [...prev, notif]);
+    // La campanita baja al momento (si era no leída); si deshace, se repone.
+    if (!notif.leida) ajustarNotificacionesCount(-1);
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     flushTimerRef.current = setTimeout(flushPendientes, UNDO_MS);
   }
@@ -224,6 +230,9 @@ export default function NotificacionesScreen() {
     setNotifs(prev =>
       [...prev, ...regresan].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
     );
+    // Reponer en la campanita las no leídas que regresaron
+    const noLeidas = regresan.filter(n => !n.leida).length;
+    if (noLeidas > 0) ajustarNotificacionesCount(noLeidas);
     setPendientes([]);
   }
 

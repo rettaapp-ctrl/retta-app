@@ -23,9 +23,36 @@ const TTL_MS = 30_000;
 let cacheCount = 0;
 let cacheTs = 0;
 
+// Suscriptores: cada pantalla montada con el hook escucha aquí. Así un
+// ajuste hecho desde CUALQUIER pantalla actualiza todas las campanitas
+// al instante (perfil, explorar, etc.) sin fetch de por medio.
+const listeners = new Set<(n: number) => void>();
+
+function setCache(n: number) {
+  cacheCount = Math.max(0, n);
+  cacheTs = Date.now();
+  listeners.forEach(l => l(cacheCount));
+}
+
+// Ajuste optimista del contador desde otras pantallas — p. ej. la de
+// notificaciones llama con -1 al borrar/leer una NO leída y con +1 si
+// el usuario deshace. El badge baja al momento (pedido del Foco
+// 2026-08-02: "se tiene que quitar el contador automáticamente"), y el
+// próximo fetch real (post-TTL) re-sincroniza con el servidor.
+export function ajustarNotificacionesCount(delta: number) {
+  setCache(cacheCount + delta);
+}
+
 export function useNotificacionesCount() {
   const { request } = useApi();
   const [count, setCount] = useState(cacheCount);
+
+  // Escuchar ajustes hechos desde cualquier pantalla
+  useEffect(() => {
+    const l = (n: number) => setCount(n);
+    listeners.add(l);
+    return () => { listeners.delete(l); };
+  }, []);
 
   const load = useCallback(async (force = false) => {
     if (!force && Date.now() - cacheTs < TTL_MS) {
@@ -35,8 +62,7 @@ export function useNotificacionesCount() {
     try {
       const data = await request('/usuarios/me/notificaciones');
       const noLeidas = (data.notificaciones || []).filter((n: Notificacion) => !n.leida).length;
-      cacheCount = noLeidas;
-      cacheTs = Date.now();
+      setCache(noLeidas);
       setCount(noLeidas);
     } catch {
       setCount(cacheCount);
