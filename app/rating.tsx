@@ -163,13 +163,14 @@ export default function RatingScreen() {
             <Text style={st.sectionTitle}>SISTEMA DE NIVEL RETTA</Text>
           </View>
 
-          {/* La escala — sin cifras internas (Foco 2026-07-30): no se
-              menciona el arranque en 5.0 ni la zona 3-7; eso es referencia
-              interna del equipo, no info pública. */}
+          {/* Copy SIMPLE (Rafael 2026-08-02): cero tecnicismos — nada de
+              "Elo", cifras de deltas, ni la palabra "calibración" a secas.
+              Tampoco cifras internas (5.0 inicial, zona 3-7). Los goles se
+              presentan como parte normal del sistema (sin "próximamente"). */}
           <View style={st.card}>
-            <Text style={st.cardTitle}>Escala del 1 al 10</Text>
+            <Text style={st.cardTitle}>Tu nivel va del 1 al 10</Text>
             <Text style={st.cardBody}>
-              Tu nivel es un número entre 1 y 10 que refleja cómo juegas, partido a partido.
+              Es un número que refleja cómo juegas, y se mueve partido a partido.
             </Text>
             <View style={st.escala}>
               <LinearGradient
@@ -184,64 +185,54 @@ export default function RatingScreen() {
             </View>
           </View>
 
-          {/* Calibración */}
           <View style={st.card}>
             <View style={st.cardTitleRow}>
-              <Text style={st.cardTitle}>Primeros 3 partidos: calibración</Text>
+              <Text style={st.cardTitle}>Tus primeros 3 partidos</Text>
             </View>
             <Text style={st.cardBody}>
-              El sistema te mide con tus resultados en tus primeros 3 partidos. Al cerrar el
-              3° te asigna tu nivel inicial.
+              Retta te va midiendo con tus resultados. Al terminar el tercer partido,
+              te asigna tu nivel.
             </Text>
-            <Text style={st.cardNota}>Ya no eliges tu nivel: se calcula jugando.</Text>
+            <Text style={st.cardNota}>No eliges tu nivel: se gana jugando.</Text>
           </View>
 
-          {/* Las 3 vías */}
           <View style={st.card}>
-            <Text style={st.cardTitle}>Del partido 4 en adelante</Text>
-            <Text style={st.cardBody}>Tu número se mueve por 3 vías, en orden de peso:</Text>
+            <Text style={st.cardTitle}>¿Cómo sube y baja?</Text>
 
             <View style={st.via}>
               <View style={st.viaBadge}><Text style={st.viaBadgeTxt}>1</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={st.viaTitle}>Resultado — lo que más pesa</Text>
+                <Text style={st.viaTitle}>Ganar o perder — lo que más pesa</Text>
                 <Text style={st.viaBody}>
-                  Elo estilo ajedrez: ganarle al más fuerte paga más, y jugar incompleto (6 vs 7)
-                  cuenta como hazaña — ganas más y pierdes menos.
+                  Si tu equipo gana, subes; si pierde, bajas. Ganarle a un equipo
+                  mejor sube más, y ganar jugando con uno menos vale doble.
                 </Text>
-                <Text style={st.viaDato}>±0.15 típico · tope ±0.4</Text>
               </View>
             </View>
 
             <View style={st.via}>
               <View style={st.viaBadge}><Text style={st.viaBadgeTxt}>2</Text></View>
               <View style={{ flex: 1 }}>
-                <View style={st.viaTitleRow}>
-                  <Text style={st.viaTitle}>Individual — solo suma</Text>
-                  <View style={st.proximamente}><Text style={st.proximamenteTxt}>PRÓXIMAMENTE</Text></View>
-                </View>
-                <Text style={st.viaBody}>Gol +0.02, con tope +0.06 por partido (hat trick).</Text>
+                <Text style={st.viaTitle}>Tus goles</Text>
+                <Text style={st.viaBody}>Meter gol te da un empujón extra. Los goles solo suman, nunca restan.</Text>
               </View>
             </View>
 
-            {/* Sin cifras (Foco 2026-07-30): se menciona que las estrellas
-                influyen, pero no se hace público cuánto. */}
             <View style={[st.via, { marginBottom: 0 }]}>
               <View style={st.viaBadge}><Text style={st.viaBadgeTxt}>3</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={st.viaTitle}>Estrellas de tus compañeros</Text>
+                <Text style={st.viaTitle}>Las estrellas de tus compañeros</Text>
                 <Text style={st.viaBody}>
-                  Al final del partido tus compañeros te califican de forma anónima.
-                  Buenas calificaciones suman un poco; malas restan un poco.
+                  Al final del partido tus compañeros te califican en anónimo:
+                  buenas estrellas suman un poquito, malas restan.
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Regla de oro */}
           <View style={st.reglaCard}>
             <Text style={st.reglaTxt}>
-              El resultado siempre manda; lo individual es ajuste fino.
+              Lo que más mueve tu nivel siempre es ganar.
             </Text>
           </View>
 
@@ -293,12 +284,8 @@ const st = StyleSheet.create({
   via:          { flexDirection: 'row', gap: 12, marginTop: 14, marginBottom: 2 },
   viaBadge:     { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(110,101,234,0.28)', borderWidth: 1, borderColor: 'rgba(173,168,245,0.4)', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   viaBadgeTxt:  { fontSize: 12.5, color: DT.primary, fontFamily: FONTS.bodyBold },
-  viaTitleRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   viaTitle:     { fontSize: 13.5, color: DT.onBg, fontFamily: FONTS.bodyBold, marginBottom: 3 },
   viaBody:      { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, lineHeight: 19 },
-  viaDato:      { fontSize: 11.5, color: DT.primary, fontFamily: FONTS.monoMed, marginTop: 5 },
-  proximamente:    { backgroundColor: 'rgba(255,180,94,0.14)', borderWidth: 1, borderColor: 'rgba(255,180,94,0.4)', borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 3 },
-  proximamenteTxt: { fontSize: 8.5, color: FIRE1, fontFamily: FONTS.mono, letterSpacing: 1 },
 
   reglaCard:    { backgroundColor: 'rgba(110,101,234,0.12)', borderWidth: 1, borderColor: 'rgba(173,168,245,0.3)', borderRadius: RADIUS.lg, padding: 16, marginBottom: 12 },
   reglaTxt:     { fontSize: 13, color: DT.primary, fontFamily: FONTS.bodyMed, textAlign: 'center', lineHeight: 19 },

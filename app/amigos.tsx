@@ -21,6 +21,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { nivelDeRating } from '@/components/PerfilBloques';
 
 interface Amigo {
   id: string;          // amistad id
@@ -33,7 +34,9 @@ interface Amigo {
     apellido?: string;
     avatar_url?: string;
     posicion?: string;
-    nivel?: string;
+    nivel?: string;               // legacy — ya no se muestra
+    rating?: number;              // sistema v2: el nivel visible se deriva de aquí
+    rating_calibrando?: boolean;
     ciudad?: string;
     partidos_jug?: number;
   } | null;
@@ -180,7 +183,12 @@ export default function AmigosScreen() {
         <View style={styles.rowInfo}>
           <Text style={styles.rowName}>{item.amigo.nombre}{item.amigo.apellido ? ` ${item.amigo.apellido}` : ''}</Text>
           <Text style={styles.rowSub}>
-            {[POSICION_LABEL[item.amigo.posicion || ''], item.amigo.nivel].filter(Boolean).join(' · ')}
+            {/* Nivel DERIVADO del rating (v2) — nunca el declarado legacy */}
+            {[
+              POSICION_LABEL[item.amigo.posicion || ''],
+              item.amigo.rating_calibrando ? 'Calibrando'
+                : item.amigo.rating != null ? nivelDeRating(item.amigo.rating) : null,
+            ].filter(Boolean).join(' · ')}
           </Text>
         </View>
         <Text style={styles.rowChev}>›</Text>

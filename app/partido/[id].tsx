@@ -25,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import ReporteModal from '@/components/ReporteModal';
+import { nivelDeRating } from '@/components/PerfilBloques';
 import { track } from '@/lib/analytics';
 
 interface Jugador {
@@ -888,7 +889,8 @@ export default function PartidoDetailScreen() {
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={styles.amigoNombre}>{u.nombre} {u.apellido || ''}</Text>
-                            {u.posicion && <Text style={styles.amigoMeta}>{u.posicion}{u.nivel ? ` · ${u.nivel}` : ''}</Text>}
+                            {/* Nivel derivado del rating (v2), nunca el legacy declarado */}
+                            {u.posicion && <Text style={styles.amigoMeta}>{u.posicion}{u.rating_calibrando ? ' · Calibrando' : u.rating != null ? ` · ${nivelDeRating(u.rating)}` : ''}</Text>}
                           </View>
                           <View style={[styles.amigoCheck, isSel && styles.amigoCheckSel]}>
                             {isSel && (

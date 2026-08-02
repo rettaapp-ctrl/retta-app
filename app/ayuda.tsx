@@ -73,8 +73,8 @@ const FAQS = [
         <Path d="M12 2L14.39 8.26L21 9.27L16 14.14L17.18 21L12 17.77L6.82 21L8 14.14L3 9.27L9.61 8.26L12 2Z" stroke={DT.primary} strokeWidth="1.8" strokeLinejoin="round"/>
       </Svg>
     ),
-    q: '¿Cómo funciona mi nivel y rating?',
-    a: 'Tu nivel se calcula con un sistema tipo ELO que sube o baja según los resultados de tus partidos:\n\n• Cuando tu equipo gana, tu rating sube. Cuando pierde, baja.\n• Ganarle a un equipo más fuerte da más puntos que ganarle a uno más débil.\n• Tu rating individual se promedia con el de tu equipo para calcular si fue un upset o un resultado esperado.\n\nMientras más juegas, más exacto se vuelve tu nivel y mejor te empareja Retta con partidos de tu nivel.',
+    q: '¿Cómo funciona mi nivel?',
+    a: 'Tu nivel es un número del 1 al 10 que se gana jugando — no lo eliges tú.\n\n• En tus primeros 3 partidos, Retta te mide con tus resultados y al terminar el tercero te asigna tu nivel.\n• Después sube y baja partido a partido: si tu equipo gana, subes; si pierde, bajas. Ganarle a un equipo mejor sube más.\n• Tus goles y las estrellas que te dan tus compañeros también ayudan.\n\nToca la gráfica de RATING en tu perfil para ver la explicación completa.',
   },
   {
     icon: (
@@ -83,7 +83,7 @@ const FAQS = [
       </Svg>
     ),
     q: '¿Qué son las rachas?',
-    a: 'Tu racha es la cantidad de días seguidos que has jugado en Retta. Cada vez que asistes a un partido, se renueva. Si dejas pasar muchos días sin jugar, se reinicia.\n\nLas rachas son una forma divertida de mantenerte activo y se muestran en tu perfil para que otros jugadores las vean.',
+    a: 'Tu racha es la cantidad de semanas seguidas en las que has jugado al menos un partido en Retta. Si cierras una semana sin jugar, se reinicia.\n\nLas rachas son una forma divertida de mantenerte activo y se muestran en tu perfil para que otros jugadores las vean.',
   },
   {
     icon: (
@@ -93,7 +93,7 @@ const FAQS = [
       </Svg>
     ),
     q: '¿Cómo se reportan los marcadores?',
-    a: 'Cuando termina el partido, recibes un link seguro por notificación para reportar el marcador final. El primer jugador en reportarlo lo deja registrado y los demás pueden confirmar o disputar el resultado.\n\nUna vez confirmado, los ratings de todos los jugadores se actualizan automáticamente.',
+    a: 'Al final de cada partido, el árbitro del complejo registra el marcador oficial con un link seguro.\n\nEn cuanto queda registrado, los ratings, las victorias y las rachas de todos los jugadores se actualizan automáticamente. Si crees que hubo un error en el marcador, repórtalo desde el detalle del partido y el equipo de Retta lo revisará.',
   },
   {
     icon: (
@@ -104,7 +104,7 @@ const FAQS = [
       </Svg>
     ),
     q: '¿Cómo califico a otros jugadores?',
-    a: 'Después de cada partido, puedes calificar a los compañeros y rivales con quienes jugaste (de 1 a 5 estrellas). Estas calificaciones son anónimas y ayudan a construir la reputación deportiva de cada jugador en Retta.\n\nLos invitados (jugadores que no son usuarios de la app) no aparecen en la calificación.',
+    a: 'Después de cada partido, calificas a 3 compañeros de tu equipo (de 1 a 5 estrellas). Estas calificaciones son anónimas y hacen un ajuste fino al rating de cada jugador.\n\nLos invitados (jugadores que no son usuarios de la app) no aparecen en la calificación.',
   },
   {
     icon: (
@@ -136,7 +136,7 @@ const FAQS = [
       </Svg>
     ),
     q: '¿Qué puedo configurar en mi perfil?',
-    a: 'Desde Configuración puedes editar tu nombre, foto, posición (portero, defensa, medio, delantero) y tu nivel inicial. También puedes:\n\n• Hacer tu perfil público o privado\n• Cambiar tu correo o teléfono\n• Administrar preferencias de notificaciones\n• Ver tu historial de partidos\n\nTu perfil deportivo ayuda a que Retta te empareje con partidos de tu nivel.',
+    a: 'Desde tu perfil, toca "Editar perfil" para cambiar tu nombre, foto, teléfono, ciudad, posición (portero, defensa, medio, delantero) y género.\n\nTu nivel NO se edita: se calcula solo con tus partidos. Tu correo tampoco, porque es tu llave de entrada a Retta.\n\nTu historial completo está en tu perfil, tocando PARTIDOS JUGADOS.',
   },
 ];
 
