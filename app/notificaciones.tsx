@@ -376,8 +376,13 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 10, color: DT.onSurfaceVar, letterSpacing: 1.8, marginBottom: 10, marginLeft: 2, fontFamily: FONTS.mono },
   card:         { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
   notifBorder:  { borderBottomWidth: 1, borderBottomColor: DT.glassBorder },
-  notifItem:    { flexDirection: 'row', alignItems: 'flex-start', padding: 14, gap: 12 },
-  notifUnread:  { backgroundColor: 'rgba(190,194,255,0.05)' },
+  // ⚠️ La fila que se desliza DEBE tener fondo OPACO: la píldora roja del
+  // swipe se dibuja detrás de TODA la fila, y con el fondo glass
+  // (semitransparente) el rojo se veía a través del bloque completo
+  // (video de Rafael 2026-08-02). Estos sólidos son el compuesto exacto
+  // de glassBg/tinte-unread sobre el fondo de la página.
+  notifItem:    { flexDirection: 'row', alignItems: 'flex-start', padding: 14, gap: 12, backgroundColor: '#101020' },
+  notifUnread:  { backgroundColor: '#19192B' },
   notifIcon:    { width: 40, height: 40, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   notifBody:    { flex: 1 },
   notifMsg:     { fontSize: 13, color: DT.onSurfaceVar, lineHeight: 19, fontFamily: FONTS.body },
