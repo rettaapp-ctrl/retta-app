@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, RefreshControl,
+  LayoutAnimation, Platform, UIManager,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,9 +13,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Swipeable } from 'react-native-gesture-handler';
 
-// Swipe-to-delete directo (pedido del Foco 2026-07-27): deslizar la fila
-// hacia CUALQUIER lado la elimina al soltar — sin botón intermedio ni
-// modal de confirmación. Son solo notificaciones; menos fricción.
+// Swipe-to-delete estilo Gmail/Spotify (referencias en video de Rafael,
+// 2026-08-01): al deslizar hacia cualquier lado se revela una píldora
+// redondeada con el basurero que acompaña el gesto; al soltar, la fila
+// sale animada y abajo aparece "eliminada · Deshacer". El DELETE real se
+// manda al servidor unos segundos después — si el usuario deshace, se
+// cancela y la notificación regresa (undo sin cambios de backend).
+
+// LayoutAnimation en Android con arquitectura vieja requiere este flag
+// (en la nueva es no-op inofensivo).
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Cuánto espera el borrado real en el server (ventana para "Deshacer").
+const UNDO_MS = 3500;
 
 interface Notif {
   id: string;
@@ -130,6 +143,12 @@ export default function NotificacionesScreen() {
   const [notifs, setNotifs]         = useState<Notif[]>([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Eliminadas visualmente pero aún NO borradas en el server (ventana de
+  // deshacer). El snackbar vive mientras haya algo aquí.
+  const [pendientes, setPendientes] = useState<Notif[]>([]);
+  const pendientesRef = useRef<Notif[]>([]);
+  pendientesRef.current = pendientes;
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // useFocusEffect: re-carga notificaciones cada vez que el usuario entra
   // a esta pantalla. Sin esto las notifs quedaban viejas hasta refresh.
@@ -139,10 +158,25 @@ export default function NotificacionesScreen() {
     }, [])
   );
 
+  // Al salir de la pantalla, borrar de inmediato lo que siga pendiente —
+  // si no, esas notifs "revivirían" en la próxima visita.
+  useEffect(() => {
+    return () => {
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+      pendientesRef.current.forEach(n => {
+        request(`/usuarios/me/notificaciones/${n.id}`, { method: 'DELETE' }).catch(() => {});
+      });
+    };
+  }, []);
+
   async function load() {
     try {
       const data = await request('/usuarios/me/notificaciones');
-      setNotifs(data.notificaciones || []);
+      // Excluir las que están en la ventana de deshacer: el server aún las
+      // tiene, pero visualmente ya salieron — sin esto se duplicarían al
+      // volver a enfocar la pantalla con el snackbar activo.
+      const enUndo = new Set(pendientesRef.current.map(p => p.id));
+      setNotifs((data.notificaciones || []).filter((n: Notif) => !enUndo.has(n.id)));
     } catch {
       setNotifs([]);
     }
@@ -159,27 +193,52 @@ export default function NotificacionesScreen() {
     } catch {}
   }
 
-  // Eliminación directa al completar el swipe: la fila sale de la lista al
-  // instante (optimista) y el DELETE viaja en background. Si el server
-  // falla, recargamos para que la notif reaparezca.
-  function eliminarNotif(id: string) {
-    setNotifs(prev => prev.filter(n => n.id !== id));
-    request(`/usuarios/me/notificaciones/${id}`, { method: 'DELETE' }).catch(() => load());
+  // Manda al server los borrados acumulados y cierra el snackbar.
+  function flushPendientes() {
+    if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+    const aBorrar = pendientesRef.current;
+    if (!aBorrar.length) return;
+    aBorrar.forEach(n => {
+      request(`/usuarios/me/notificaciones/${n.id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    setPendientes([]);
+  }
+
+  // Al completar el swipe: la fila sale ANIMADA de la lista y entra a la
+  // cola de deshacer. El DELETE real espera UNDO_MS; cada nuevo swipe
+  // reinicia el temporizador (los borrados se acumulan, como en Gmail).
+  function eliminarNotif(notif: Notif) {
+    LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
+    setNotifs(prev => prev.filter(n => n.id !== notif.id));
+    setPendientes(prev => [...prev, notif]);
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = setTimeout(flushPendientes, UNDO_MS);
+  }
+
+  // "Deshacer": cancela el borrado y regresa las notifs a su lugar.
+  function deshacerEliminar() {
+    if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+    const regresan = pendientesRef.current;
+    if (!regresan.length) return;
+    LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
+    setNotifs(prev =>
+      [...prev, ...regresan].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+    );
+    setPendientes([]);
   }
 
   const nuevas     = notifs.filter(n => !n.leida);
   const anteriores = notifs.filter(n => n.leida);
 
-  // Fondo rojo con basurero que se revela mientras arrastras. Es solo
-  // visual: no hay que tocarlo — al soltar el swipe la notif se elimina.
+  // Píldora redondeada con basurero que se revela mientras arrastras —
+  // estilo Gmail/Spotify: acompaña el gesto, solo ícono, sin texto.
   function renderAccionEliminar(lado: 'izq' | 'der') {
     return (
-      <View style={[styles.swipeFill, { alignItems: lado === 'izq' ? 'flex-start' : 'flex-end' }]}>
-        <View style={styles.swipeContent}>
-          <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <View style={styles.swipeWrap}>
+        <View style={[styles.swipePill, { alignItems: lado === 'izq' ? 'flex-start' : 'flex-end' }]}>
+          <Svg width="21" height="21" viewBox="0 0 24 24" fill="none">
             <Path d="M3 6H21M8 6V4A2 2 0 0 1 10 2H14A2 2 0 0 1 16 4V6M10 11V17M14 11V17M5 6L6 20A2 2 0 0 0 8 22H16A2 2 0 0 0 18 20L19 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </Svg>
-          <Text style={styles.swipeDeleteTxt}>Eliminar</Text>
         </View>
       </View>
     );
@@ -191,9 +250,9 @@ export default function NotificacionesScreen() {
         key={n.id}
         renderLeftActions={() => renderAccionEliminar('izq')}
         renderRightActions={() => renderAccionEliminar('der')}
-        leftThreshold={70}
-        rightThreshold={70}
-        onSwipeableOpen={() => eliminarNotif(n.id)}
+        leftThreshold={56}
+        rightThreshold={56}
+        onSwipeableOpen={() => eliminarNotif(n)}
       >
         <TouchableOpacity
           style={[styles.notifItem, !n.leida && styles.notifUnread]}
@@ -282,6 +341,17 @@ export default function NotificacionesScreen() {
           </ScrollView>
         )}
 
+        {/* Snackbar de deshacer (estilo "1 archivada · Deshacer" de Gmail) */}
+        {pendientes.length > 0 && (
+          <View style={styles.snackbar}>
+            <Text style={styles.snackbarTxt}>
+              {pendientes.length === 1 ? 'Notificación eliminada' : `${pendientes.length} notificaciones eliminadas`}
+            </Text>
+            <TouchableOpacity onPress={deshacerEliminar} hitSlop={10}>
+              <Text style={styles.snackbarBtn}>DESHACER</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -305,11 +375,14 @@ const styles = StyleSheet.create({
   notifTime:    { fontSize: 11, color: DT.outline, marginTop: 4, fontFamily: FONTS.mono },
   unreadDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: DT.primary, flexShrink: 0 },
   notifRight:   { alignItems: 'center', gap: 6, flexShrink: 0 },
-  // Fondo rojo del swipe-to-delete (ambos lados). flex:1 para que cubra
-  // también el overshoot al arrastrar de más — sin huecos.
-  swipeFill:    { flex: 1, backgroundColor: DT.error, justifyContent: 'center', paddingHorizontal: 26 },
-  swipeContent: { alignItems: 'center', gap: 4 },
-  swipeDeleteTxt: { color: '#fff', fontSize: 12, fontFamily: FONTS.bodyBold, letterSpacing: 0.3 },
+  // Píldora del swipe-to-delete: rojo redondeado con inset, como el verde
+  // de archivar de Gmail. flex:1 para cubrir también el overshoot.
+  swipeWrap:    { flex: 1, padding: 5 },
+  swipePill:    { flex: 1, backgroundColor: DT.error, borderRadius: 14, justifyContent: 'center', paddingHorizontal: 22 },
+
+  snackbar:     { position: 'absolute', left: 16, right: 16, bottom: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#22253a', borderWidth: 1, borderColor: DT.glassBorderStrong, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+  snackbarTxt:  { fontSize: 13.5, color: DT.onBg, fontFamily: FONTS.body },
+  snackbarBtn:  { fontSize: 12.5, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },
   empty:        { alignItems: 'center', paddingTop: 70 },
   emptyLogo:    { width: 56, height: 56, marginBottom: 22, opacity: 0.9 },
   emptyTitle:   { fontSize: 20, color: DT.onBg, fontFamily: FONTS.heading, marginBottom: 6 },
