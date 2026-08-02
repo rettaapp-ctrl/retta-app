@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator
@@ -87,6 +88,28 @@ export default function ChatIAScreen() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([MENSAJE_BIENVENIDA]);
   const [texto, setTexto]       = useState('');
   const [enviando, setEnviando] = useState(false);
+  // Android: alto actual del teclado, manejado A MANO (ver comentario abajo).
+  const [kbHeight, setKbHeight] = useState(0);
+
+  // ── Teclado en Android: compensación manual ──
+  // Historial del bug (Foco lo reportó 2 veces): KeyboardAvoidingView en
+  // Android con edge-to-edge NUNCA cuadró — con behavior='height' dejaba un
+  // hueco fantasma al cerrar el teclado, y con 'padding' + offset negativo
+  // el teclado tapaba parte de la conversación. La raíz: la ventana no se
+  // redimensiona sola y KAV calcula mal el alto en edge-to-edge.
+  // Solución definitiva: escuchar el teclado directamente y ponerle al
+  // contenedor un paddingBottom EXACTO (alto del teclado menos el inset
+  // inferior que la SafeAreaView ya aporta). Al cerrarse, padding 0 — sin
+  // huecos. En iOS el KAV clásico funciona bien y se queda como está.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const show = Keyboard.addListener('keyboardDidShow', e => {
+      setKbHeight(e.endCoordinates?.height ?? 0);
+      scrollAlFinal();
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // ── Cargar historial guardado al abrir ──
   useEffect(() => {
@@ -250,14 +273,15 @@ export default function ChatIAScreen() {
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        // En Android moderno con edge-to-edge habilitado, behavior='height'
-        // dejaba un espacio fantasma del bottom safe-area entre el teclado y
-        // el inputBar. Usamos 'padding' en ambas plataformas y compensamos
-        // con keyboardVerticalOffset = -insets.bottom en Android para
-        // colapsar ese gap. iOS no lo necesita.
+        style={{
+          flex: 1,
+          // Android: compensación manual exacta (ver useEffect del teclado).
+          // La SafeAreaView ya aporta insets.bottom, por eso se resta.
+          paddingBottom: Platform.OS === 'android' ? Math.max(0, kbHeight - insets.bottom) : 0,
+        }}
         behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -insets.bottom}
+        // El KAV solo trabaja en iOS; en Android queda inerte (View normal).
+        enabled={Platform.OS === 'ios'}
       >
         {/* Conversación */}
         <ScrollView

@@ -249,11 +249,22 @@ export default function EditarPerfilScreen() {
           </View>
         </View>
 
-        {/* Género */}
-        <Text style={styles.sectionLabel}>Género</Text>
+        {/* Perfil Deportivo — una sola sección (Foco 2026-07-30): se
+            quitaron los headers "Género/Soy" y el label "Posición"; los
+            chips de posición y género viven juntos aquí. */}
+        <Text style={styles.sectionLabel}>Perfil Deportivo</Text>
         <View style={styles.card}>
-          <View style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
-            <Text style={styles.sportSubLabel}>Soy</Text>
+          <View style={{ paddingVertical: 14, paddingHorizontal: 16 }}>
+            <View style={styles.chipGroup}>
+              {POSICIONES.map(p => (
+                <TouchableOpacity key={p} style={[styles.chip, posicion === p && styles.chipActive]} onPress={() => setPosicion(p)}>
+                  <Text style={[styles.chipTxt, posicion === p && styles.chipTxtActive]}>{p}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.fieldDivider}/>
+          <View style={{ paddingVertical: 14, paddingHorizontal: 16 }}>
             <View style={styles.chipGroup}>
               {GENERO_OPCIONES.map(g => (
                 <TouchableOpacity
@@ -264,21 +275,6 @@ export default function EditarPerfilScreen() {
                   <Text style={[styles.chipTxt, genero === g.code && styles.chipTxtActive]}>
                     {g.label}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Perfil Deportivo */}
-        <Text style={styles.sectionLabel}>Perfil Deportivo</Text>
-        <View style={styles.card}>
-          <View style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
-            <Text style={styles.sportSubLabel}>Posición</Text>
-            <View style={styles.chipGroup}>
-              {POSICIONES.map(p => (
-                <TouchableOpacity key={p} style={[styles.chip, posicion === p && styles.chipActive]} onPress={() => setPosicion(p)}>
-                  <Text style={[styles.chipTxt, posicion === p && styles.chipTxtActive]}>{p}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -327,7 +323,6 @@ const styles = StyleSheet.create({
   toggleBtnActive:  { backgroundColor: DT.primaryContainer, borderColor: DT.primaryContainer },
   toggleBtnTxt:     { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.bodyMed },
   toggleBtnTxtActive: { color: '#fff', fontFamily: FONTS.bodyBold },
-  sportSubLabel:    { fontSize: 12, color: DT.onSurfaceVar, marginBottom: 8, fontFamily: FONTS.bodyMed },
   chipGroup:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip:             { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder },
   chipActive:       { backgroundColor: DT.primaryContainer, borderColor: DT.primaryContainer },

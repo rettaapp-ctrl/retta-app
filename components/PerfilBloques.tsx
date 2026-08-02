@@ -13,6 +13,7 @@ import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop, Line as SvgLine } from 'react-native-svg';
 
 export interface RatingPunto {
@@ -38,17 +39,11 @@ export const FIRE1 = '#FFB45E';
 export const FIRE2 = '#F4603E';
 
 // ─── Íconos ──────────────────────────────────────────────────────
-// Balón rediseñado (Foco 2026-07-27): el anterior parecía timón/rueda
-// por las costuras que llegaban hasta el borde. Ahora: pentágono central
-// relleno + costuras cortas + parches parciales en el aro — lee a balón.
+// Balón v3 (Foco 2026-07-30): las dos versiones dibujadas a mano no
+// convencieron (parecían rueda/timón). Se usa el glifo profesional de
+// Ionicons — balón clásico con parche pentagonal, lee bien a 26px.
 function BalonIcon() {
-  return (
-    <Svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9.2" stroke={DT.primary} strokeWidth="1.6"/>
-      <Path d="M12 7.6l4.2 3.05-1.6 4.95H9.4l-1.6-4.95L12 7.6z" fill={DT.primary}/>
-      <Path d="M12 3.3v2M19.9 8.5l-1.85.85M17.15 19l-1.3-1.6M6.85 19l1.3-1.6M4.1 8.5l1.85.85" stroke={DT.primary} strokeWidth="1.6" strokeLinecap="round"/>
-    </Svg>
-  );
+  return <Ionicons name="football-outline" size={26} color={DT.primary} />;
 }
 
 function TrofeoIcon() {

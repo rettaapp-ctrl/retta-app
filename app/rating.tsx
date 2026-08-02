@@ -163,23 +163,24 @@ export default function RatingScreen() {
             <Text style={st.sectionTitle}>SISTEMA DE NIVEL RETTA</Text>
           </View>
 
-          {/* La escala */}
+          {/* La escala — sin cifras internas (Foco 2026-07-30): no se
+              menciona el arranque en 5.0 ni la zona 3-7; eso es referencia
+              interna del equipo, no info pública. */}
           <View style={st.card}>
             <Text style={st.cardTitle}>Escala del 1 al 10</Text>
             <Text style={st.cardBody}>
-              Tu nivel es un número entre 1 y 10. La mayoría de los jugadores queda entre 3 y 7.
+              Tu nivel es un número entre 1 y 10 que refleja cómo juegas, partido a partido.
             </Text>
             <View style={st.escala}>
-              <View style={st.escalaTrack}>
-                <View style={st.escalaZona} />
-              </View>
+              <LinearGradient
+                colors={[DT.primary, DT.primaryStrong]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={st.escalaTrack}
+              />
               <View style={st.escalaLabels}>
                 <Text style={[st.escalaNum, { left: '0%' }]}>1</Text>
-                <Text style={[st.escalaNum, { left: '22.2%' }]}>3</Text>
-                <Text style={[st.escalaNum, { left: '66.7%' }]}>7</Text>
                 <Text style={[st.escalaNum, { right: 0 }]}>10</Text>
               </View>
-              <Text style={st.escalaHint}>zona típica: 3 – 7</Text>
             </View>
           </View>
 
@@ -189,8 +190,8 @@ export default function RatingScreen() {
               <Text style={st.cardTitle}>Primeros 3 partidos: calibración</Text>
             </View>
             <Text style={st.cardBody}>
-              Arrancas oculto en 5.0 y el sistema te mide según tus resultados. Al cerrar el 3er
-              partido te asigna tu nivel inicial, entre 3 y 7.
+              El sistema te mide con tus resultados en tus primeros 3 partidos. Al cerrar el
+              3° te asigna tu nivel inicial.
             </Text>
             <Text style={st.cardNota}>Ya no eliges tu nivel: se calcula jugando.</Text>
           </View>
@@ -223,13 +224,15 @@ export default function RatingScreen() {
               </View>
             </View>
 
+            {/* Sin cifras (Foco 2026-07-30): se menciona que las estrellas
+                influyen, pero no se hace público cuánto. */}
             <View style={[st.via, { marginBottom: 0 }]}>
               <View style={st.viaBadge}><Text style={st.viaBadgeTxt}>3</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={st.viaTitle}>Estrellas de tus compañeros</Text>
                 <Text style={st.viaBody}>
-                  Al final del partido tus compañeros te califican de forma anónima:
-                  de +0.04 (5 estrellas) a −0.07 (1 estrella).
+                  Al final del partido tus compañeros te califican de forma anónima.
+                  Buenas calificaciones suman un poco; malas restan un poco.
                 </Text>
               </View>
             </View>
@@ -283,11 +286,9 @@ const st = StyleSheet.create({
   cardNota:     { fontSize: 12.5, color: DT.primary, fontFamily: FONTS.bodyMed, marginTop: 9 },
 
   escala:       { marginTop: 14 },
-  escalaTrack:  { height: 8, borderRadius: 4, backgroundColor: 'rgba(243,242,251,0.08)', overflow: 'hidden' },
-  escalaZona:   { position: 'absolute', left: '22.2%', width: '44.5%', top: 0, bottom: 0, backgroundColor: DT.primaryStrong, borderRadius: 4, opacity: 0.85 },
+  escalaTrack:  { height: 8, borderRadius: 4, opacity: 0.9 },
   escalaLabels: { height: 16, marginTop: 6 },
   escalaNum:    { position: 'absolute', fontSize: 10.5, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
-  escalaHint:   { fontSize: 10.5, color: DT.outline, fontFamily: FONTS.body, textAlign: 'center', marginTop: 8 },
 
   via:          { flexDirection: 'row', gap: 12, marginTop: 14, marginBottom: 2 },
   viaBadge:     { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(110,101,234,0.28)', borderWidth: 1, borderColor: 'rgba(173,168,245,0.4)', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
