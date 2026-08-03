@@ -193,7 +193,6 @@ export default function RatingScreen() {
               Retta te va midiendo con tus resultados. Al terminar el tercer partido,
               te asigna tu nivel.
             </Text>
-            <Text style={st.cardNota}>No eliges tu nivel: se gana jugando.</Text>
           </View>
 
           <View style={st.card}>
@@ -274,7 +273,6 @@ const st = StyleSheet.create({
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle:    { fontSize: 15.5, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.2, marginBottom: 7 },
   cardBody:     { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, lineHeight: 20 },
-  cardNota:     { fontSize: 12.5, color: DT.primary, fontFamily: FONTS.bodyMed, marginTop: 9 },
 
   escala:       { marginTop: 14 },
   escalaTrack:  { height: 8, borderRadius: 4, opacity: 0.9 },

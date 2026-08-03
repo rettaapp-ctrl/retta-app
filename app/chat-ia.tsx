@@ -19,11 +19,15 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Keyboard,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator
 } from 'react-native';
+import Animated, {
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+  useDerivedValue,
+  runOnJS,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -88,28 +92,23 @@ export default function ChatIAScreen() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([MENSAJE_BIENVENIDA]);
   const [texto, setTexto]       = useState('');
   const [enviando, setEnviando] = useState(false);
-  // Android: alto actual del teclado, manejado A MANO (ver comentario abajo).
-  const [kbHeight, setKbHeight] = useState(0);
 
-  // ── Teclado en Android: compensación manual ──
-  // Historial del bug (Foco lo reportó 2 veces): KeyboardAvoidingView en
-  // Android con edge-to-edge NUNCA cuadró — con behavior='height' dejaba un
-  // hueco fantasma al cerrar el teclado, y con 'padding' + offset negativo
-  // el teclado tapaba parte de la conversación. La raíz: la ventana no se
-  // redimensiona sola y KAV calcula mal el alto en edge-to-edge.
-  // Solución definitiva: escuchar el teclado directamente y ponerle al
-  // contenedor un paddingBottom EXACTO (alto del teclado menos el inset
-  // inferior que la SafeAreaView ya aporta). Al cerrarse, padding 0 — sin
-  // huecos. En iOS el KAV clásico funciona bien y se queda como está.
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const show = Keyboard.addListener('keyboardDidShow', e => {
-      setKbHeight(e.endCoordinates?.height ?? 0);
-      scrollAlFinal();
-    });
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
+  // ── Teclado: rastreador NATIVO de Reanimated (fix definitivo) ──
+  // Historial del bug (Foco lo reportó 3 veces): ni KeyboardAvoidingView
+  // ni los eventos Keyboard.addListener funcionan confiablemente en
+  // Android con edge-to-edge (SDK 54) — los eventos ni siquiera disparan
+  // en algunos modos, y el input quedaba ENTERRADO bajo el teclado
+  // (video 2026-08-03). useAnimatedKeyboard rastrea la altura real del
+  // teclado a nivel nativo, cuadro a cuadro, sin depender de eventos ni
+  // del softInputMode. Al cerrar, la altura baja a 0 en la misma
+  // animación — sin huecos fantasma. Funciona igual en iOS y Android.
+  const keyboard = useAnimatedKeyboard();
+  const kbAnimStyle = useAnimatedStyle(() => ({
+    // Cerrado (altura 0) → queda el inset inferior normal (sin hueco).
+    // Abierto → la barra de escribir viaja exactamente sobre el teclado.
+    paddingBottom: Math.max(insets.bottom, keyboard.height.value),
+  }));
+
 
   // ── Cargar historial guardado al abrir ──
   useEffect(() => {
@@ -142,6 +141,14 @@ export default function ChatIAScreen() {
   }, []);
 
   useEffect(() => { scrollAlFinal(); }, [mensajes, enviando, scrollAlFinal]);
+
+  // Al abrirse el teclado (estado 2 = OPEN), bajar la conversación al
+  // último mensaje para que no quede tapado.
+  useDerivedValue(() => {
+    if (keyboard.state.value === 2) {
+      runOnJS(scrollAlFinal)();
+    }
+  });
 
   async function enviarMensaje() {
     const limpio = texto.trim();
@@ -245,7 +252,10 @@ export default function ChatIAScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top','bottom']}>
+    // edges solo 'top': el inset inferior lo maneja el contenedor animado
+    // del teclado (max(inset, altura del teclado)) — si la SafeAreaView
+    // también lo pusiera, se duplicaría.
+    <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -272,17 +282,7 @@ export default function ChatIAScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        style={{
-          flex: 1,
-          // Android: compensación manual exacta (ver useEffect del teclado).
-          // La SafeAreaView ya aporta insets.bottom, por eso se resta.
-          paddingBottom: Platform.OS === 'android' ? Math.max(0, kbHeight - insets.bottom) : 0,
-        }}
-        behavior="padding"
-        // El KAV solo trabaja en iOS; en Android queda inerte (View normal).
-        enabled={Platform.OS === 'ios'}
-      >
+      <Animated.View style={[{ flex: 1 }, kbAnimStyle]}>
         {/* Conversación */}
         <ScrollView
           ref={scrollRef}
@@ -355,7 +355,7 @@ export default function ChatIAScreen() {
         <Text style={styles.disclaimer}>
           Retta IA puede equivocarse. Para casos importantes contacta a rettaapp@gmail.com.
         </Text>
-      </KeyboardAvoidingView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
