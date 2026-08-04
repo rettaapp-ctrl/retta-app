@@ -26,6 +26,7 @@ import Animated, {
   useAnimatedKeyboard,
   useAnimatedStyle,
   useDerivedValue,
+  useSharedValue,
   runOnJS,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -103,11 +104,25 @@ export default function ChatIAScreen() {
   // del softInputMode. Al cerrar, la altura baja a 0 en la misma
   // animación — sin huecos fantasma. Funciona igual en iOS y Android.
   const keyboard = useAnimatedKeyboard();
-  const kbAnimStyle = useAnimatedStyle(() => ({
-    // Cerrado (altura 0) → queda el inset inferior normal (sin hueco).
-    // Abierto → la barra de escribir viaja exactamente sobre el teclado.
-    paddingBottom: Math.max(insets.bottom, keyboard.height.value),
-  }));
+  // Bug de Foco (video 2026-08-03 2:00 PM): si sales del chat con el
+  // teclado abierto y vuelves a entrar, el rastreador arranca con la
+  // altura VIEJA del teclado → pantalla negra abajo del tamaño del
+  // teclado sin teclado visible. Blindaje: el padding solo se aplica
+  // después de ver al teclado ABRIRSE en esta pantalla (estado 1 =
+  // OPENING, que es transición y no puede venir heredada del mount).
+  const tecladoVisto = useSharedValue(false);
+  const kbAnimStyle = useAnimatedStyle(() => {
+    const s = keyboard.state.value;
+    if (s === 1) tecladoVisto.value = true;
+    // 1 OPENING · 2 OPEN · 3 CLOSING: seguir la altura real.
+    // Cualquier otro estado (o altura heredada): inset normal, sin hueco.
+    const activo = tecladoVisto.value && (s === 1 || s === 2 || s === 3);
+    return {
+      paddingBottom: activo
+        ? Math.max(insets.bottom, keyboard.height.value)
+        : insets.bottom,
+    };
+  });
 
 
   // ── Cargar historial guardado al abrir ──
@@ -118,7 +133,14 @@ export default function ChatIAScreen() {
         if (saved) {
           const parsed: Mensaje[] = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setMensajes(parsed.slice(-MAX_GUARDADOS));
+            // Los globos de error son transitorios ("inténtalo en unos
+            // segundos") — no tiene sentido revivirlos de sesiones pasadas.
+            // Esto además limpia los errores que quedaron grabados en
+            // teléfonos que usaron el chat cuando el servicio falló.
+            const sinErrores = parsed.filter(m => !m.error);
+            if (sinErrores.length > 0) {
+              setMensajes(sinErrores.slice(-MAX_GUARDADOS));
+            }
           }
         }
       } catch {}
@@ -127,9 +149,10 @@ export default function ChatIAScreen() {
 
   // ── Persistir cada vez que cambie la conversación ──
   // Solo guardamos los últimos MAX_GUARDADOS mensajes para acotar el tamaño
-  // de la copia local en claro.
+  // de la copia local en claro. Los mensajes de error NO se guardan:
+  // solo viven en la sesión donde ocurrieron.
   useEffect(() => {
-    const aGuardar = mensajes.slice(-MAX_GUARDADOS);
+    const aGuardar = mensajes.filter(m => !m.error).slice(-MAX_GUARDADOS);
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(aGuardar)).catch(() => {});
   }, [mensajes]);
 
