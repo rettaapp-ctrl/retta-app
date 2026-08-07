@@ -20,6 +20,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import BalonIcon from '@/components/BalonIcon';
 
 interface Inscripcion {
   id: string;
@@ -56,14 +57,9 @@ function TrofeoGrande() {
   );
 }
 
+// Mismo balón que el resto de la app, en grande y apagado.
 function BalonGrande() {
-  return (
-    <Svg width="54" height="54" viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9.2" stroke={DT.outline} strokeWidth="1.4"/>
-      <Path d="M12 7.2l3.4 2.5-1.3 4h-4.2l-1.3-4L12 7.2z" stroke={DT.outline} strokeWidth="1.3" strokeLinejoin="round"/>
-      <Path d="M12 2.8v4.4M20.8 9.4l-5.4.3M18.4 19l-3-3.3M5.6 19l3-3.3M3.2 9.4l5.4.3" stroke={DT.outline} strokeWidth="1"/>
-    </Svg>
-  );
+  return <BalonIcon size={54} color={DT.outline} />;
 }
 
 export default function HistorialPartidosScreen() {

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DT, FONTS } from '@/constants/designTokens';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 
 function IconReservas({ color }: { color: string }) {
   // Logo de Retta (R) teñido con el color activo/inactivo de la tab
@@ -16,13 +17,11 @@ function IconReservas({ color }: { color: string }) {
   );
 }
 
+// Brújula de Ionicons (Rafael 2026-08-07): la anterior estaba dibujada a
+// mano y se veía de baja calidad. Misma familia que el balón del perfil,
+// así que la barra queda pareja. Mismo tamaño de siempre: 24.
 function IconExplorar({ color }: { color: string }) {
-  return (
-    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8"/>
-      <Path d="M15.5 8.5L13.5 13.5L8.5 15.5L10.5 10.5L15.5 8.5Z" stroke={color} strokeWidth="1.6" strokeLinejoin="round"/>
-    </Svg>
-  );
+  return <Ionicons name="compass-outline" size={24} color={color} />;
 }
 
 function IconPerfil({ color }: { color: string }) {

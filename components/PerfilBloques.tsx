@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import BalonIcon from '@/components/BalonIcon';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop, Line as SvgLine } from 'react-native-svg';
 
 export interface RatingPunto {
@@ -39,12 +40,8 @@ export const FIRE1 = '#FFB45E';
 export const FIRE2 = '#F4603E';
 
 // ─── Íconos ──────────────────────────────────────────────────────
-// Balón v3 (Foco 2026-07-30): las dos versiones dibujadas a mano no
-// convencieron (parecían rueda/timón). Se usa el glifo profesional de
-// Ionicons — balón clásico con parche pentagonal, lee bien a 26px.
-function BalonIcon() {
-  return <Ionicons name="football-outline" size={26} color={DT.primary} />;
-}
+// El balón vive en components/BalonIcon.tsx — es EL balón de toda la
+// app (Rafael 2026-08-07). Aquí solo se importa.
 
 function TrofeoIcon() {
   return (

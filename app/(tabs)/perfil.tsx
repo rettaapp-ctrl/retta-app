@@ -133,14 +133,14 @@ export default function PerfilScreen() {
 
           {/* Hero: avatar grande, nombre solo, botón editar */}
           <View style={styles.hero}>
-            <View style={styles.avatarRing}>
+            <LinearGradient colors={GRADIENTS.dayActive} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatarRing}>
               <View style={styles.avatarInner}>
                 {user?.avatar_url
                   ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 70 }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
                   : <AvatarPlaceholder />
                 }
               </View>
-            </View>
+            </LinearGradient>
             <Text style={styles.profileName}>
               {(user?.nombre || '')} {(user?.apellido || '')}
             </Text>
@@ -193,7 +193,11 @@ const styles = StyleSheet.create({
   bellBadgeTxt:   { fontSize: 9, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 12 },
 
   hero:           { alignItems: 'center', paddingVertical: 14 },
-  avatarRing:     { width: 148, height: 148, borderRadius: 74, padding: 5, borderWidth: 3, borderColor: DT.primaryStrong, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
+  // Aro PEGADO a la foto, idéntico al de Editar Perfil (Rafael 2026-08-07).
+  // Antes era un borde de 3 con 5 de padding: ese hueco entre el aro y la
+  // imagen lo hacía ver como historia de Instagram. Ahora el aro es el
+  // degradado relleno y solo se asoman 4px alrededor de la foto.
+  avatarRing:     { width: 148, height: 148, borderRadius: 74, padding: 4, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
   avatarInner:    { width: '100%', height: '100%', borderRadius: 70, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileName:    { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
   editBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 13, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },

@@ -557,6 +557,12 @@ export default function PartidoDetailScreen() {
     partido.status === 'cancelado' ||
     partido.status === 'cerrado';
   const canUnirse = !partidoYaPaso && partido.status === 'abierto' && libres > 0 && !yaInscrito;
+
+  // Un solo texto para los DOS botones de unirse (el de arriba y el de
+  // abajo): si algún día cambia el precio o el descuento, cambia en ambos.
+  const textoUnirse = (partido.descuento_porcentaje || 0) > 0
+    ? `UNIRME · $${partido.precio_final ?? partido.precio_jugador}${partido.descuento_porcentaje === 100 ? ' (¡GRATIS!)' : ` (-${partido.descuento_porcentaje}%)`}`
+    : `UNIRME AL PARTIDO · $${partido.precio_jugador}`;
   const slotsA = getJugadoresByEquipo('A');
   const slotsB = getJugadoresByEquipo('B');
   const pct = (partido.jugadores_confirmados || 0) / partido.max_jugadores;
@@ -672,12 +678,25 @@ export default function PartidoDetailScreen() {
               <Text style={styles.elegirTxt}>SELECCIONA UN LUGAR LIBRE</Text>
             </View>
           )}
+          {/* Con el lugar ya elegido, el botón de unirse aparece AQUÍ ARRIBA
+              (Rafael 2026-08-07). Antes esta barra solo informaba "EQUIPO A
+              SELECCIONADO" y había que bajar hasta el fondo de la pantalla
+              para poder unirse — se prestaba a que la gente creyera que ya
+              estaba dentro. El botón de abajo se queda igual para quien
+              siga leyendo el partido completo. La ✕ suelta el lugar.
+              marginHorizontal 16 = el mismo del mapa de arriba y el de la
+              card de Alineación de abajo, para que los tres cuadren. */}
           {equipoSeleccionado && !yaInscrito && !modoInvitado && (
-            <View style={[styles.elegirBanner, { flexDirection: 'row', alignItems: 'center' }]}>
-              <Text style={[styles.elegirTxt, { flex: 1 }]}>
-                EQUIPO {equipoSeleccionado} SELECCIONADO
-              </Text>
-              <TouchableOpacity onPress={handleCancelSelection} style={styles.cancelBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <View style={styles.unirseTopRow}>
+              <TouchableOpacity onPress={handleUnirse} disabled={joining} activeOpacity={0.85} style={{ flex: 1 }}>
+                <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.joinBtnTop}>
+                  {joining
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={styles.joinBtnTxt}>{textoUnirse}</Text>
+                  }
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleCancelSelection} style={styles.unirseTopX} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Text style={styles.cancelBtnTxt}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -812,11 +831,7 @@ export default function PartidoDetailScreen() {
                   {joining ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.joinBtnTxt}>
-                      {(partido.descuento_porcentaje || 0) > 0
-                        ? `UNIRME · $${partido.precio_final ?? partido.precio_jugador}${partido.descuento_porcentaje === 100 ? ' (¡GRATIS!)' : ` (-${partido.descuento_porcentaje}%)`}`
-                        : `UNIRME AL PARTIDO · $${partido.precio_jugador}`}
-                    </Text>
+                    <Text style={styles.joinBtnTxt}>{textoUnirse}</Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
@@ -1080,7 +1095,15 @@ const styles = StyleSheet.create({
   mapHint:            { position: 'absolute', bottom: 10, right: 12, backgroundColor: 'rgba(190,194,255,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   mapHintTxt:         { fontSize: 9, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.5 },
   // Banner elegir
-  elegirBanner:       { marginHorizontal: SPACING.gutter, backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.3)', borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  // marginHorizontal 16 (antes 24): así el banner cae exactamente sobre el
+  // mismo eje que mapBox y alineacionCard, que ya estaban en 16.
+  elegirBanner:       { marginHorizontal: 16, backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.3)', borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  // Fila del botón de unirse de arriba: botón que se estira + ✕ para soltar.
+  unirseTopRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 14 },
+  // 52 de alto (el de abajo mide 56): un pelín más bajo porque va entre dos
+  // cards y no debe robarles protagonismo. Misma tipografía y mismo radio.
+  joinBtnTop:         { height: 52, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
+  unirseTopX:         { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
   elegirTxt:          { fontSize: 12, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 1, textAlign: 'center' },
   sectionLabel:       { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar, paddingHorizontal: SPACING.gutter, marginBottom: 12, marginTop: 4 },
   // Card contenedora para la sección ALINEACIÓN (equipo A + VS + equipo B).
@@ -1122,7 +1145,7 @@ const styles = StyleSheet.create({
   joinBar:            { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 16, backgroundColor: DT.surfaceLowest, borderTopWidth: 1, borderTopColor: DT.glassBorder },
   // Nuevas acciones inline al final del scroll (reemplazan joinBar fixed).
   // Sin barra fixed, la pantalla queda 100% libre para explorar el partido.
-  actionsInline:      { marginHorizontal: SPACING.gutter, marginTop: 8 },
+  actionsInline:      { marginHorizontal: 16, marginTop: 8 },
   actionsRow:         { flexDirection: 'row', gap: 8 },
   invBarHalf:         { flex: 1 },
   invBarTxtSm:        { fontSize: 11, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },

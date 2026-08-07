@@ -94,35 +94,42 @@ export default function ChatIAScreen() {
   const [texto, setTexto]       = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  // ── Teclado: rastreador NATIVO de Reanimated (fix definitivo) ──
-  // Historial del bug (Foco lo reportó 3 veces): ni KeyboardAvoidingView
-  // ni los eventos Keyboard.addListener funcionan confiablemente en
-  // Android con edge-to-edge (SDK 54) — los eventos ni siquiera disparan
-  // en algunos modos, y el input quedaba ENTERRADO bajo el teclado
-  // (video 2026-08-03). useAnimatedKeyboard rastrea la altura real del
-  // teclado a nivel nativo, cuadro a cuadro, sin depender de eventos ni
-  // del softInputMode. Al cerrar, la altura baja a 0 en la misma
-  // animación — sin huecos fantasma. Funciona igual en iOS y Android.
+  // ── Teclado: altura nativa + candado por FOCO del input ──
+  // Cuarta vuelta a este bug (Rafael 2026-08-07: "a veces cuando entro sí
+  // me sale bien y a veces no"). Lo que ya se descartó y por qué:
+  //   • KeyboardAvoidingView y Keyboard.addListener no son confiables en
+  //     Android con edge-to-edge (SDK 54): hay modos donde ni disparan.
+  //   • useAnimatedKeyboard SÍ da la altura real cuadro a cuadro, pero al
+  //     montar la pantalla puede arrancar con la altura VIEJA heredada del
+  //     teclado anterior → hueco negro abajo (video 2026-08-03).
+  //   • El blindaje anterior esperaba ver el estado OPENING (1) para
+  //     activarse. En Android ese estado NO siempre se emite: a veces
+  //     salta directo a OPEN (2). Cuando no llegaba, el padding jamás se
+  //     aplicaba y el input quedaba ENTERRADO bajo el teclado. Eso es
+  //     exactamente el "a veces sí y a veces no", y por eso era aleatorio.
+  // Arreglo de raíz: dejar de depender de los estados del teclado, que son
+  // un aviso del sistema que puede no llegar nunca. Se usan dos hechos que
+  // sí son deterministas:
+  //   1) la altura es CONFIABLE en cuanto reporta 0 aunque sea una vez
+  //      (ya es de esta pantalla, no puede ser la heredada), y
+  //   2) el foco del input, que es JavaScript puro y siempre ocurre — en
+  //      esta pantalla el teclado solo puede subir por este campo.
+  // Con cualquiera de los dos se destraba, así que no hay camino en el que
+  // el input se quede enterrado.
   const keyboard = useAnimatedKeyboard();
-  // Bug de Foco (video 2026-08-03 2:00 PM): si sales del chat con el
-  // teclado abierto y vuelves a entrar, el rastreador arranca con la
-  // altura VIEJA del teclado → pantalla negra abajo del tamaño del
-  // teclado sin teclado visible. Blindaje: el padding solo se aplica
-  // después de ver al teclado ABRIRSE en esta pantalla (estado 1 =
-  // OPENING, que es transición y no puede venir heredada del mount).
-  const tecladoVisto = useSharedValue(false);
-  const kbAnimStyle = useAnimatedStyle(() => {
-    const s = keyboard.state.value;
-    if (s === 1) tecladoVisto.value = true;
-    // 1 OPENING · 2 OPEN · 3 CLOSING: seguir la altura real.
-    // Cualquier otro estado (o altura heredada): inset normal, sin hueco.
-    const activo = tecladoVisto.value && (s === 1 || s === 2 || s === 3);
-    return {
-      paddingBottom: activo
-        ? Math.max(insets.bottom, keyboard.height.value)
-        : insets.bottom,
-    };
+  const alturaConfiable = useSharedValue(false);
+
+  // Escribir un shared value va en useDerivedValue, NUNCA dentro de
+  // useAnimatedStyle: ahí provoca recálculos encadenados del estilo.
+  useDerivedValue(() => {
+    if (keyboard.height.value === 0) alturaConfiable.value = true;
   });
+
+  const kbAnimStyle = useAnimatedStyle(() => ({
+    paddingBottom: alturaConfiable.value
+      ? Math.max(insets.bottom, keyboard.height.value)
+      : insets.bottom,
+  }));
 
 
   // ── Cargar historial guardado al abrir ──
@@ -363,6 +370,14 @@ export default function ChatIAScreen() {
             multiline
             maxLength={1000}
             editable={!enviando}
+            onFocus={() => {
+              // Segundo destrabe: con el campo enfocado el teclado va a
+              // subir sí o sí, así que de aquí en adelante la altura que
+              // reporte es de esta pantalla. Cubre el caso en que la altura
+              // heredada nunca llega a 0.
+              alturaConfiable.value = true;
+              scrollAlFinal();
+            }}
           />
           <TouchableOpacity
             style={[styles.sendBtn, (!texto.trim() || enviando) && styles.sendBtnDisabled]}

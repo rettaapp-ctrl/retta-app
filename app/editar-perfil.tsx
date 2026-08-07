@@ -265,11 +265,17 @@ export default function EditarPerfilScreen() {
           </View>
           <View style={styles.fieldDivider}/>
           <View style={{ paddingVertical: 14, paddingHorizontal: 16 }}>
-            <View style={styles.chipGroup}>
-              {GENERO_OPCIONES.map(g => (
+            {/* Género en dos renglones parejos (Rafael 2026-08-07): los tres
+                chips no caben en una sola fila porque "Prefiero no decir" es
+                muy largo, y al envolverse quedaban encimados y disparejos.
+                Arriba los dos cortos a mitad y mitad; abajo el largo a todo
+                lo ancho. Mismo chip, mismo tipo de letra: solo cambia el
+                acomodo. */}
+            <View style={styles.generoFila}>
+              {GENERO_OPCIONES.slice(0, 2).map(g => (
                 <TouchableOpacity
                   key={g.code}
-                  style={[styles.chip, genero === g.code && styles.chipActive]}
+                  style={[styles.chip, styles.chipFlex, genero === g.code && styles.chipActive]}
                   onPress={() => setGenero(g.code)}
                 >
                   <Text style={[styles.chipTxt, genero === g.code && styles.chipTxtActive]}>
@@ -278,6 +284,17 @@ export default function EditarPerfilScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            {GENERO_OPCIONES.slice(2).map(g => (
+              <TouchableOpacity
+                key={g.code}
+                style={[styles.chip, styles.chipFlex, genero === g.code && styles.chipActive]}
+                onPress={() => setGenero(g.code)}
+              >
+                <Text style={[styles.chipTxt, genero === g.code && styles.chipTxtActive]}>
+                  {g.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -324,6 +341,11 @@ const styles = StyleSheet.create({
   toggleBtnTxt:     { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.bodyMed },
   toggleBtnTxtActive: { color: '#fff', fontFamily: FONTS.bodyBold },
   chipGroup:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Fila de género: los dos chips cortos se reparten el ancho a la mitad.
+  generoFila:       { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  // chipFlex estira el chip y centra su texto (los de posición NO lo usan:
+  // esos son cortos y se ven bien pegados a la izquierda).
+  chipFlex:         { flex: 1, alignItems: 'center' },
   chip:             { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder },
   chipActive:       { backgroundColor: DT.primaryContainer, borderColor: DT.primaryContainer },
   chipTxt:          { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.bodyMed },

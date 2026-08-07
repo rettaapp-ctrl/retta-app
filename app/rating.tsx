@@ -19,6 +19,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import BalonIcon from '@/components/BalonIcon';
 
 const CHART_AMPLIADA_H = 210;
 
@@ -30,15 +31,8 @@ function BackIcon() {
   );
 }
 
-function BalonMini() {
-  return (
-    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9.2" stroke={DT.primary} strokeWidth="1.6"/>
-      <Path d="M12 7.2l3.4 2.5-1.3 4h-4.2l-1.3-4L12 7.2z" stroke={DT.primary} strokeWidth="1.5" strokeLinejoin="round"/>
-      <Path d="M12 2.8v4.4M20.8 9.4l-5.4.3M18.4 19l-3-3.3M5.6 19l3-3.3M3.2 9.4l5.4.3" stroke={DT.primary} strokeWidth="1.2"/>
-    </Svg>
-  );
-}
+// El balón de SISTEMA DE NIVEL RETTA es el mismo del perfil
+// (Rafael 2026-08-07): un solo balón en toda la app.
 
 function fechaCorta(d: Date): string {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '');
@@ -159,7 +153,7 @@ export default function RatingScreen() {
 
           {/* ─── Sistema de nivel Retta ─────────────────────────── */}
           <View style={st.sectionHead}>
-            <BalonMini />
+            <BalonIcon size={18} />
             <Text style={st.sectionTitle}>SISTEMA DE NIVEL RETTA</Text>
           </View>
 
