@@ -91,10 +91,13 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor:   DT.primary,
         tabBarInactiveTintColor: DT.outline,
+        // Etiquetas en SemiBold (Rafael 2026-08-07): en Medium se veían
+        // delgaditas contra el degradado oscuro de la barra. Mismo tipo de
+        // letra y mismo tamaño del manual, solo con más cuerpo.
         tabBarLabelStyle: {
           fontSize: 11,
-          fontFamily: FONTS.bodyMed,
-          letterSpacing: 0.1,
+          fontFamily: FONTS.bodySemi,
+          letterSpacing: 0.2,
           marginTop: 2,
         },
       }}

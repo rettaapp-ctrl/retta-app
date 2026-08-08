@@ -59,6 +59,8 @@ export const GRADIENTS = {
   dayActive: ['#8B7BFF', '#6E65EA'] as const,
   // Barra de progreso de cupo — violeta a lavanda
   progress:  ['#6E65EA', '#ADA8F5'] as const,
+  // Cupo cuando el partido ya alcanzó el mínimo para jugarse
+  confirmado:['#34D399', '#6EE7B7'] as const,
   // Texto de acento (para títulos con gradiente vía MaskedView si se usa)
   text:      ['#ADA8F5', '#6E65EA'] as const,
 } as const;
@@ -77,6 +79,7 @@ export const FONTS = {
   heading:   'Sora_600SemiBold',    // headlines de cards
   body:      'Inter_400Regular',    // texto corrido
   bodyMed:   'Inter_500Medium',
+  bodySemi:  'Inter_600SemiBold',   // etiquetas que necesitan cuerpo sobre fondo oscuro
   bodyBold:  'Inter_700Bold',
   // Labels en mayúsculas — antes JetBrains Mono, ahora Inter según manual.
   mono:      'Inter_500Medium',

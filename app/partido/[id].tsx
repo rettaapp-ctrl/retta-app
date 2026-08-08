@@ -56,6 +56,9 @@ interface Partido {
   descuento_porcentaje?: number;
   jugadores_confirmados: number;
   max_jugadores: number;
+  // Mínimo para que el partido se confirme. Llega NULL cuando el complejo
+  // no puso un override; en ese caso manda el default (80% del cupo).
+  min_jugadores?: number | null;
   status: string;
   notas?: string;
   jugadores?: Jugador[];
@@ -567,6 +570,23 @@ export default function PartidoDetailScreen() {
   const slotsB = getJugadoresByEquipo('B');
   const pct = (partido.jugadores_confirmados || 0) / partido.max_jugadores;
 
+  // Mínimo para que el partido se juegue. Es EXACTAMENTE la misma regla del
+  // backend (services/confirmacionPartido.js → minimoParaConfirmar): el
+  // override del complejo si existe, y si no, el 80% del cupo redondeado
+  // hacia arriba. Si los dos lados no calcularan igual, la pantalla
+  // prometería algo que el sistema no va a cumplir.
+  const minimoParaJugar = Math.min(
+    Number.isInteger(partido.min_jugadores) && (partido.min_jugadores as number) > 0
+      ? (partido.min_jugadores as number)
+      : Math.ceil((partido.max_jugadores || 14) * 0.8),
+    partido.max_jugadores,
+  );
+  const faltanParaJugar = Math.max(minimoParaJugar - (partido.jugadores_confirmados || 0), 0);
+  const yaSeJuega       = faltanParaJugar === 0;
+  const textoYaSeJuega  = libres === 0
+    ? 'Ya se juega · partido lleno'
+    : `Ya se juega · ${libres === 1 ? 'queda 1 lugar' : `quedan ${libres} lugares`}`;
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
@@ -614,14 +634,34 @@ export default function PartidoDetailScreen() {
                 <Text style={styles.progressCountSub}>  jugadores</Text>
               </Text>
             </View>
+            {/* Mínimo para que se juegue (Rafael 2026-08-07). La barra sola
+                medía contra el cupo, y llenar el cupo NO es la meta: la meta
+                es el mínimo. Ahora la marquita enseña dónde está esa meta y
+                la línea de abajo dice qué significa, sin ambigüedad — un
+                "faltan 7" suelto se confunde con "quedan 7 lugares", que es
+                otro número. Al alcanzarlo, la barra se pone verde. */}
             {!partidoYaPaso && (
-              <View style={styles.progressBar}>
-                <LinearGradient
-                  colors={GRADIENTS.progress}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
-                />
-              </View>
+              <>
+                <View style={[styles.progressBar, styles.progressBarMin]}>
+                  <LinearGradient
+                    colors={yaSeJuega ? GRADIENTS.confirmado : GRADIENTS.progress}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
+                  />
+                  {minimoParaJugar < partido.max_jugadores && (
+                    <View style={[styles.progressMinTick, { left: `${(minimoParaJugar / partido.max_jugadores) * 100}%` }]} />
+                  )}
+                </View>
+                <Text style={[styles.progressNota, yaSeJuega && styles.progressNotaOk]}>
+                  {yaSeJuega ? textoYaSeJuega : (
+                    <>
+                      {faltanParaJugar === 1 ? 'Falta ' : 'Faltan '}
+                      <Text style={styles.progressNotaFuerte}>{faltanParaJugar}</Text>
+                      {' para que el partido se juegue'}
+                    </>
+                  )}
+                </Text>
+              </>
             )}
 
             <View style={styles.heroPills}>
@@ -1081,6 +1121,13 @@ const styles = StyleSheet.create({
   progressCount:      { fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading },
   progressCountSub:   { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.body },
   progressBar:        { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden', marginBottom: 18 },
+  // Variante con marca: sin overflow hidden, si no la marquita se recorta.
+  // El relleno ya trae su propio radio, así que no hace falta recortar.
+  progressBarMin:     { overflow: 'visible', marginBottom: 10 },
+  progressMinTick:    { position: 'absolute', top: -4, width: 2, height: 14, marginLeft: -1, borderRadius: 1, backgroundColor: DT.onBg, opacity: 0.75 },
+  progressNota:       { fontSize: 11.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginBottom: 16 },
+  progressNotaFuerte: { color: DT.onBg, fontFamily: FONTS.bodyBold },
+  progressNotaOk:     { color: DT.success, fontFamily: FONTS.bodySemi },
   progressFill:       { height: '100%', borderRadius: 3 },
   heroPills:          { flexDirection: 'row', gap: 10 },
   heroPill:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, padding: 12, flex: 1 },
@@ -1159,16 +1206,16 @@ const styles = StyleSheet.create({
   cancelInscTxt:      { fontSize: 12, color: DT.error, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
   // Preview slot
   slotPreviewRing:    { position: 'absolute', inset: 0, borderRadius: 25, borderWidth: 2.5, borderColor: DT.primary },
-  slotPreviewTag:     { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.5, marginTop: 1 },
+  slotPreviewTag:     { fontSize: 8.5, color: DT.primary, fontFamily: FONTS.bodySemi, letterSpacing: 0.4, marginTop: 1 },
   slotAvatarMiInvitado:{ borderWidth: 2, borderColor: DT.primary },
   slotAvatarOtroInvitado:{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', borderStyle: 'dashed' },
   slotInvitadoBadge:  { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: DT.bg },
   slotInvitadoBadgeTxt:{ fontSize: 12, color: '#5a0006', fontFamily: FONTS.bodyBold, lineHeight: 14 },
-  slotInvitadoTag:    { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0, marginTop: 1 },
-  slotOtroInvitadoTag:{ fontSize: 8, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 0, marginTop: 1, fontStyle: 'italic' },
+  slotInvitadoTag:    { fontSize: 8.5, color: DT.primary, fontFamily: FONTS.bodySemi, letterSpacing: 0.2, marginTop: 1 },
+  slotOtroInvitadoTag:{ fontSize: 8.5, color: DT.outline, fontFamily: FONTS.bodySemi, letterSpacing: 0.2, marginTop: 1 },
   slotAvatarYo:       { borderWidth: 2.5, borderColor: DT.primary, overflow: 'hidden' },
   slotNameYo:         { color: DT.primary, fontFamily: FONTS.bodyBold },
-  slotYoTag:          { fontSize: 8, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 1, marginTop: 1 },
+  slotYoTag:          { fontSize: 8.5, color: DT.primary, fontFamily: FONTS.bodySemi, letterSpacing: 0.8, marginTop: 1 },
   cancelBtn:          { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginLeft: 10 },
   cancelBtnTxt:       { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.bodyMed, lineHeight: 14 },
   // Modal invitado
