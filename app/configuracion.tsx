@@ -162,6 +162,21 @@ export default function ConfiguracionScreen() {
             />
           </View>
 
+          {/* Eliminar cuenta (Google Play + Apple 5.1.1(v)): ambas tiendas
+              exigen que la opción viva en la configuración de la cuenta y
+              sea fácil de encontrar. */}
+          <Text style={styles.sectionLabel}>CUENTA</Text>
+          <View style={styles.section}>
+            <SettingsRow
+              last
+              iconBg="rgba(255,180,171,0.12)"
+              icon={<Svg width="18" height="18" viewBox="0 0 24 24" fill="none"><Path d="M3 6h18M8 6V4c0-.6.4-1 1-1h6c.6 0 1 .4 1 1v2M19 6v14c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1V6M10 11v6M14 11v6" stroke={DT.error} strokeWidth="1.8" strokeLinecap="round"/></Svg>}
+              title="Eliminar cuenta"
+              sub="Borra tu cuenta y tus datos de forma permanente"
+              onPress={() => router.push('/eliminar-cuenta')}
+            />
+          </View>
+
           <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout}>
             <LogoutIcon />
             <Text style={styles.logoutTxt}>CERRAR SESIÓN</Text>
