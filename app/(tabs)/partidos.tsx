@@ -195,20 +195,24 @@ const PartidoCard = React.memo(function PartidoCard({ p, inscrito, onPress }: Pa
         {/* Barra de progreso con gradiente. Verde en cuanto se alcanza el
             mínimo (igual que el detalle); el rojo de "casi lleno" solo
             aplica mientras el partido aún no se asegura. */}
-        <View style={styles.progressBar}>
+        <View style={[styles.progressBar, styles.progressBarMin]}>
           <LinearGradient
             colors={yaSeJuega ? GRADIENTS.confirmado : pct >= 0.9 ? ['#E24B4A', '#ffb4ab'] : GRADIENTS.progress}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
           />
+          {/* La misma rayita del detalle: marca dónde está el mínimo. */}
+          {minimoParaJugar < p.max_jugadores && (
+            <View style={[styles.progressMinTick, { left: `${(minimoParaJugar / p.max_jugadores) * 100}%` }]} />
+          )}
         </View>
 
         {/* Contador del mínimo (Rafael 2026-08-07): visible desde afuera,
             sin entrar al partido. Misma frase del detalle, en corto. */}
         <Text style={[styles.minNota, yaSeJuega && styles.minNotaOk]} numberOfLines={1}>
           {yaSeJuega
-            ? (lleno ? 'Ya se juega · lleno' : 'Ya se juega')
+            ? (lleno ? 'Ya se juega · lleno' : `Ya se juega · ${libres === 1 ? 'queda 1 lugar' : `quedan ${libres} lugares`}`)
             : `${faltanParaJugar === 1 ? 'Falta 1' : `Faltan ${faltanParaJugar}`} para que se juegue`}
         </Text>
 
@@ -575,6 +579,9 @@ const styles = StyleSheet.create({
   statTxt:           { fontSize: 12, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.3 },
   statFormat:        { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
   progressBar:       { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden' },
+  // La marca necesita asomarse fuera de la barra; el relleno trae su radio.
+  progressBarMin:    { overflow: 'visible' },
+  progressMinTick:   { position: 'absolute', top: -3, width: 2, height: 12, marginLeft: -1, borderRadius: 1, backgroundColor: DT.onBg, opacity: 0.75 },
   minNota:           { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 6 },
   minNotaOk:         { color: DT.success, fontFamily: FONTS.bodySemi },
   progressFill:      { height: '100%', borderRadius: 3 },

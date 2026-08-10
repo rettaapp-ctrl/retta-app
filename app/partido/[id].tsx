@@ -601,8 +601,10 @@ export default function PartidoDetailScreen() {
   );
   const faltanParaJugar = Math.max(minimoParaJugar - (partido.jugadores_confirmados || 0), 0);
   const yaSeJuega       = faltanParaJugar === 0;
+  // Texto IDÉNTICO al de las cards de Explorar (Rafael 2026-08-07): que la
+  // card y el detalle nunca digan la misma cosa con palabras distintas.
   const textoYaSeJuega  = libres === 0
-    ? 'Ya se juega · partido lleno'
+    ? 'Ya se juega · lleno'
     : `Ya se juega · ${libres === 1 ? 'queda 1 lugar' : `quedan ${libres} lugares`}`;
 
   return (
@@ -675,7 +677,7 @@ export default function PartidoDetailScreen() {
                     <>
                       {faltanParaJugar === 1 ? 'Falta ' : 'Faltan '}
                       <Text style={styles.progressNotaFuerte}>{faltanParaJugar}</Text>
-                      {' para que el partido se juegue'}
+                      {' para que se juegue'}
                     </>
                   )}
                 </Text>
