@@ -30,6 +30,7 @@ interface Partido {
   descuento_porcentaje?: number;
   jugadores_confirmados: number;
   max_jugadores: number;
+  min_jugadores?: number | null;
   status: string;
   complejo_id: string;
   complejo_foto_url?: string;
@@ -117,6 +118,16 @@ const PartidoCard = React.memo(function PartidoCard({ p, inscrito, onPress }: Pa
   const libres   = p.max_jugadores - (p.jugadores_confirmados || 0);
   const pct      = (p.jugadores_confirmados || 0) / p.max_jugadores;
   const lleno    = libres <= 0;
+  // Misma regla del backend (confirmacionPartido.js) y del detalle del
+  // partido: override del complejo o 80% del cupo hacia arriba.
+  const minimoParaJugar = Math.min(
+    Number.isInteger(p.min_jugadores) && (p.min_jugadores as number) > 0
+      ? (p.min_jugadores as number)
+      : Math.ceil((p.max_jugadores || 14) * 0.8),
+    p.max_jugadores,
+  );
+  const faltanParaJugar = Math.max(minimoParaJugar - (p.jugadores_confirmados || 0), 0);
+  const yaSeJuega       = faltanParaJugar === 0;
   const tieneDescuento = !inscrito && (p.descuento_porcentaje || 0) > 0;
 
   return (
@@ -181,15 +192,25 @@ const PartidoCard = React.memo(function PartidoCard({ p, inscrito, onPress }: Pa
           <Text style={styles.statFormat}>{p.tipo}</Text>
         </View>
 
-        {/* Barra de progreso con gradiente */}
+        {/* Barra de progreso con gradiente. Verde en cuanto se alcanza el
+            mínimo (igual que el detalle); el rojo de "casi lleno" solo
+            aplica mientras el partido aún no se asegura. */}
         <View style={styles.progressBar}>
           <LinearGradient
-            colors={pct >= 0.9 ? ['#E24B4A', '#ffb4ab'] : GRADIENTS.progress}
+            colors={yaSeJuega ? GRADIENTS.confirmado : pct >= 0.9 ? ['#E24B4A', '#ffb4ab'] : GRADIENTS.progress}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: `${Math.min(pct * 100, 100)}%` }]}
           />
         </View>
+
+        {/* Contador del mínimo (Rafael 2026-08-07): visible desde afuera,
+            sin entrar al partido. Misma frase del detalle, en corto. */}
+        <Text style={[styles.minNota, yaSeJuega && styles.minNotaOk]} numberOfLines={1}>
+          {yaSeJuega
+            ? (lleno ? 'Ya se juega · lleno' : 'Ya se juega')
+            : `${faltanParaJugar === 1 ? 'Falta 1' : `Faltan ${faltanParaJugar}`} para que se juegue`}
+        </Text>
 
         {/* Hora + botón */}
         <View style={styles.cardFooter}>
@@ -554,6 +575,8 @@ const styles = StyleSheet.create({
   statTxt:           { fontSize: 12, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.3 },
   statFormat:        { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.mono },
   progressBar:       { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden' },
+  minNota:           { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 6 },
+  minNotaOk:         { color: DT.success, fontFamily: FONTS.bodySemi },
   progressFill:      { height: '100%', borderRadius: 3 },
   cardFooter:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
   timeRow:           { flexDirection: 'row', alignItems: 'center', gap: 6 },

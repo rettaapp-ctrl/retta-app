@@ -568,6 +568,24 @@ export default function PartidoDetailScreen() {
     : `UNIRME AL PARTIDO · $${partido.precio_jugador}`;
   const slotsA = getJugadoresByEquipo('A');
   const slotsB = getJugadoresByEquipo('B');
+
+  // Filas balanceadas (Rafael 2026-08-07): antes el grid envolvía solo por
+  // ancho y un fut7 quedaba 5 arriba y 2 abajo. Ahora las filas se reparten
+  // parejo con tope de 4 por fila: 7 → 4+3, 11 → 4+4+3, 5 → 3+2. Aplica a
+  // todo partido, nuevo o ya jugado, porque es el mismo render.
+  function filasBalanceadas<T>(slots: T[]): T[][] {
+    const filas = Math.max(Math.ceil(slots.length / 4), 1);
+    const base  = Math.floor(slots.length / filas);
+    const extra = slots.length % filas; // las primeras `extra` filas llevan uno más
+    const out: T[][] = [];
+    let i = 0;
+    for (let f = 0; f < filas; f++) {
+      const n = base + (f < extra ? 1 : 0);
+      out.push(slots.slice(i, i + n));
+      i += n;
+    }
+    return out;
+  }
   const pct = (partido.jugadores_confirmados || 0) / partido.max_jugadores;
 
   // Mínimo para que el partido se juegue. Es EXACTAMENTE la misma regla del
@@ -756,7 +774,11 @@ export default function PartidoDetailScreen() {
                 <Text style={styles.equipoTitle}>EQUIPO A</Text>
               </View>
               <View style={styles.slotsGrid}>
-                {slotsA.map((jugador, i) => renderSlot(jugador, i, 'A'))}
+                {filasBalanceadas(slotsA.map((j, i) => [j, i] as const)).map((fila, f) => (
+                  <View key={f} style={styles.slotsFila}>
+                    {fila.map(([jugador, i]) => renderSlot(jugador, i, 'A'))}
+                  </View>
+                ))}
               </View>
             </View>
 
@@ -772,7 +794,11 @@ export default function PartidoDetailScreen() {
                 <Text style={styles.equipoTitle}>EQUIPO B</Text>
               </View>
               <View style={styles.slotsGrid}>
-                {slotsB.map((jugador, i) => renderSlot(jugador, i, 'B'))}
+                {filasBalanceadas(slotsB.map((j, i) => [j, i] as const)).map((fila, f) => (
+                  <View key={f} style={styles.slotsFila}>
+                    {fila.map(([jugador, i]) => renderSlot(jugador, i, 'B'))}
+                  </View>
+                ))}
               </View>
             </View>
           </View>
@@ -1170,7 +1196,11 @@ const styles = StyleSheet.create({
   equipoHeader:       { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 14 },
   equipoDot:          { width: 8, height: 8, borderRadius: 4 },
   equipoTitle:        { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.mono, letterSpacing: 1.5 },
-  slotsGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  // Columna de filas; cada fila reparte sus slots. El índice `i` que llega a
+  // renderSlot sigue siendo el ABSOLUTO del equipo (se preserva en el map de
+  // arriba), así que la selección de lugar y los colores no cambian.
+  slotsGrid:          { gap: 14 },
+  slotsFila:          { flexDirection: 'row', gap: 16 },
   slotItem:           { alignItems: 'center', width: 54 },
   slotAvatar:         { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   slotAvatarEmpty:    { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
