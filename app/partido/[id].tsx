@@ -258,6 +258,29 @@ export default function PartidoDetailScreen() {
     return slots;
   }
 
+  // ── Emparejar equipos (Rafael 2026-08-07) ──
+  // El balance NO se puede arreglar en cancha: si alguien se cambia de lado
+  // ahí, el marcador del árbitro se aplica a equipos que no fueron los
+  // reales y ensucia rating y partidos ganados de los 12. Así que el
+  // desbalance se mata aquí, al inscribirse. Dos reglas, las mismas que
+  // valida el servidor (unirse_partido, migración 037):
+  //   1) No entras al equipo que ya le lleva 2 al otro.
+  //   2) El lugar que LLENARÍA un equipo solo se toma si el otro ya está a
+  //      uno de llenarse — sin esta, un 6-5 todavía podía cerrar en 7-5.
+  // Con las dos, lo más chueco que puede terminar un fut7 es 7-6.
+  function motivoDesbalance(equipo: 'A' | 'B'): string | null {
+    if (!partido) return null;
+    const teamMax = getEquipoSize();
+    const nA = (partido.jugadores || []).filter(j => j.equipo === 'A').length;
+    const nB = (partido.jugadores || []).filter(j => j.equipo === 'B').length;
+    const mio  = equipo === 'A' ? nA : nB;
+    const otro = equipo === 'A' ? nB : nA;
+    if (mio >= teamMax) return 'Ese equipo ya está completo. Únete al otro.';
+    if (mio - otro >= 2) return 'Ese equipo va adelante. Únete al otro para emparejar.';
+    if (mio + 1 === teamMax && otro < teamMax - 1) return 'Ese lugar dejaría los equipos disparejos. Únete al otro.';
+    return null;
+  }
+
   function handleSlotPress(equipo: 'A' | 'B', index: number, jugador: Jugador | null) {
     // Si el partido ya pasó, sólo permitimos navegar al perfil de otro jugador.
     // No se puede cancelar invitados ni agregar nadie a algo que ya terminó.
@@ -276,6 +299,14 @@ export default function PartidoDetailScreen() {
       return;
     }
     if (jugador) return;
+    // Lugar vacío: antes de cualquier flujo (unirse o invitado), la regla
+    // de emparejar. El servidor la vuelve a validar; esto es para avisar
+    // aquí mismo y no hasta el pago.
+    const motivo = motivoDesbalance(equipo);
+    if (motivo) {
+      AppAlert.alert('Empareja los equipos', motivo);
+      return;
+    }
     if (desde === 'reservas' || yaInscrito) {
       setEquipoInvitado(equipo);
       setPosicionInvitado('MED');
