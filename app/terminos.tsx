@@ -41,7 +41,7 @@ export default function TerminosScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>RETTA</Text>
-            <Text style={styles.headerSub}>Última actualización: 19 de mayo de 2026</Text>
+            <Text style={styles.headerSub}>Última actualización: 12 de agosto de 2026</Text>
           </View>
         </View>
 

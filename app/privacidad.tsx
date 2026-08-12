@@ -40,12 +40,12 @@ export default function PrivacidadScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>RETTA</Text>
-            <Text style={styles.headerSub}>Última actualización: 19 de mayo de 2026</Text>
+            <Text style={styles.headerSub}>Última actualización: 12 de agosto de 2026</Text>
           </View>
         </View>
 
         <Text style={styles.intro}>
-          En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP), su Reglamento y los Lineamientos del Aviso de Privacidad, RETTA pone a tu disposición el presente Aviso de Privacidad Integral.
+          En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares vigente y demás disposiciones aplicables, ORGANIZACIÓN DEPORTIVA DINÁMICA EN LÍNEA, S.A. de C.V. pone a tu disposición el presente Aviso de Privacidad Integral.
         </Text>
 
         {PRIVACIDAD_SECCIONES.map((s, i) => (
