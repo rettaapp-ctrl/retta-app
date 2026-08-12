@@ -391,7 +391,7 @@ export default function ChatIAScreen() {
 
         {/* Disclaimer */}
         <Text style={styles.disclaimer}>
-          Retta IA puede equivocarse. Para casos importantes contacta a rettaapp@gmail.com.
+          Retta IA puede equivocarse. Para casos importantes contacta a soporte@rettaapp.com.
         </Text>
       </Animated.View>
     </SafeAreaView>

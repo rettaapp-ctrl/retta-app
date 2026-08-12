@@ -143,7 +143,7 @@ export default function AceptarLegalScreen() {
 
           <Text style={styles.cierre}>
             Al tocar "Acepto y continúo" confirmas que has leído y aceptas ambos documentos en su versión {LEGAL_VERSION}.{'\n'}
-            Si tienes dudas escríbenos a rettaapp@gmail.com.
+            Si tienes dudas escríbenos a soporte@rettaapp.com.
           </Text>
         </ScrollView>
 

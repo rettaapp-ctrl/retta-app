@@ -16,7 +16,7 @@ import { DT, GRADIENTS, FONTS, RADIUS } from '@/constants/designTokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 
-const SOPORTE_EMAIL = 'rettaapp@gmail.com';
+const SOPORTE_EMAIL = 'soporte@rettaapp.com';
 
 function BackIcon() {
   return (

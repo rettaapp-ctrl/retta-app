@@ -59,7 +59,7 @@ export default function TerminosScreen() {
           </View>
         ))}
 
-        <Text style={styles.footer}>Al usar RETTA aceptas estos términos.{'\n'}Para dudas escríbenos a rettaapp@gmail.com</Text>
+        <Text style={styles.footer}>Al usar RETTA aceptas estos términos.{'\n'}Para dudas escríbenos a soporte@rettaapp.com</Text>
       </ScrollView>
       </SafeAreaView>
     </View>
