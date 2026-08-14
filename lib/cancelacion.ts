@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────
 // Helper para cancelación de inscripción a un partido.
-// La política viene de los Términos de la app:
-//   > 12h antes  → reembolso 100%
-//   3-12h antes  → reembolso 60% (se retiene 40%)
-//   < 3h antes   → sin reembolso
+// La política viene de los Términos de la app (modelo de apartados:
+// el dinero se aparta al inscribirse y se cobra 30 min antes):
+//   > 12h antes  → se libera el apartado completo (no se cobra nada)
+//   3-12h antes  → se cobra el 40%, el 60% se libera
+//   < 3h antes   → se cobra el lugar completo
 // ─────────────────────────────────────────────────────────────
 import { AppAlert } from '@/lib/appAlert';
 
@@ -65,8 +66,8 @@ export function calcularReembolso(
   return {
     porcentaje: 0,
     monto: 0,
-    mensaje: 'Cancelar a menos de 3 horas del inicio NO aplica reembolso. El cargo es definitivo.',
-    tooltip: 'Sin reembolso',
+    mensaje: 'Cancelar a menos de 3 horas del inicio cobra tu lugar completo. El cargo es definitivo.',
+    tooltip: 'Se cobra completo',
     puedeCancelar: true,
   };
 }

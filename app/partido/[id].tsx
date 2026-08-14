@@ -847,7 +847,7 @@ export default function PartidoDetailScreen() {
                   'Portar ropa deportiva adecuada. Prohibido jugar con tenis de calle.',
                   'Juego limpio obligatorio. Tarjeta roja implica expulsión inmediata sin reembolso.',
                   'Esta es una reta entre amigos: venimos a disfrutar, hacer deporte y pasarla bien. Mantén siempre las buenas vibras.',
-                  'El partido podrá cancelarse hasta 2 horas antes del inicio si no se completa el mínimo de jugadores. En ese caso se reembolsa a los inscritos.',
+                  'Tu pago solo se aparta al inscribirte: el cobro se hace 30 min antes, cuando el partido se confirma. Si no se junta el mínimo, el partido se cancela y nadie es cobrado — el apartado se libera solo.',
                 ].map((r, i, arr) => (
                   <View key={i} style={[styles.ruleRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
                     <View style={styles.ruleDot} />
@@ -859,9 +859,9 @@ export default function PartidoDetailScreen() {
               <Text style={[styles.sectionLabel, { marginTop: 10 }]}>POLÍTICA DE CANCELACIÓN</Text>
               <View style={[styles.rulesCard, { marginBottom: 12 }]}>
                 {[
-                  { color: DT.success, label: 'Más de 12 horas antes', detail: 'Cancelación sin costo · Reembolso completo' },
-                  { color: DT.warning, label: 'Entre 3 y 12 horas antes', detail: 'Se retiene el 40% · Se reembolsa el 60%' },
-                  { color: DT.error,   label: 'Menos de 3 horas antes', detail: 'Sin reembolso · Cargo definitivo' },
+                  { color: DT.success, label: 'Más de 12 horas antes', detail: 'Sin cargo · El apartado se libera completo' },
+                  { color: DT.warning, label: 'Entre 3 y 12 horas antes', detail: 'Se cobra el 40% · El resto se libera' },
+                  { color: DT.error,   label: 'Menos de 3 horas antes', detail: 'Se cobra el lugar completo' },
                 ].map((item, i) => (
                   <View key={i} style={[styles.ruleRow, { alignItems: 'center' }, i === 2 && { borderBottomWidth: 0 }]}>
                     <View style={[styles.ruleDot, { backgroundColor: item.color, marginTop: 0 }]} />

@@ -7,7 +7,7 @@
 // CUANDO ACTUALICES EL TEXTO: sube también LEGAL_VERSION en
 // constants/index.ts para forzar re-aceptación de todos los usuarios.
 //
-// Última revisión: 2026-08-12
+// Última revisión: 2026-08-14 (modelo de cobro apartado en §8 y §10)
 //   • Razón social: ORGANIZACIÓN DEPORTIVA DINÁMICA EN LÍNEA, S.A. de C.V.
 //   • Domicilio completo (Av. Acueducto 2100, Guadalajara)
 //   • Stripe ya en vivo (antes decía "próximamente")
@@ -51,7 +51,7 @@ export const TERMINOS_SECCIONES: LegalSeccion[] = [
   },
   {
     num: '6', titulo: 'Reservas y partidos',
-    cuerpo: 'Al inscribirte a un Partido te comprometes a asistir en la fecha y hora indicadas. Tu lugar es individual e intransferible. Un Partido se confirma cuando se alcanza el mínimo de jugadores; si no, RETTA cancela y reembolsa el monto íntegro a los inscritos.\n\nPara mantener partidos justos, la Plataforma equilibra automáticamente los equipos al momento de la inscripción; el lugar que ocupas puede depender del balance entre equipos.\n\nLa información del Partido puede modificarse por causas operativas del Complejo, en cuyo caso se notificará a los Usuarios inscritos.',
+    cuerpo: 'Al inscribirte a un Partido te comprometes a asistir en la fecha y hora indicadas. Tu lugar es individual e intransferible. Un Partido se confirma cuando se alcanza el mínimo de jugadores; si no, RETTA lo cancela y ningún inscrito es cobrado: la preautorización se libera completa (ver secciones 8 y 10).\n\nPara mantener partidos justos, la Plataforma equilibra automáticamente los equipos al momento de la inscripción; el lugar que ocupas puede depender del balance entre equipos.\n\nLa información del Partido puede modificarse por causas operativas del Complejo, en cuyo caso se notificará a los Usuarios inscritos.',
   },
   {
     num: '7', titulo: 'Sistema de invitados',
@@ -59,7 +59,7 @@ export const TERMINOS_SECCIONES: LegalSeccion[] = [
   },
   {
     num: '8', titulo: 'Pagos, precios y reembolsos',
-    cuerpo: 'RETTA podrá ofrecer descuentos a su discreción; los descuentos aplican exclusivamente a inscripciones realizadas después de su activación y no son retroactivos.\n\nTodos los precios mostrados en la Plataforma están expresados en pesos mexicanos (MXN) e incluyen los impuestos correspondientes, incluido el IVA cuando aplique.\n\nLos pagos se procesan a través de Stripe, proveedor externo autorizado que opera conforme a estándares PCI-DSS — RETTA no almacena datos de tarjetas. El cargo se efectúa al confirmar la inscripción.\n\nLos reembolsos se acreditan al mismo método de pago en un plazo de 5 a 10 días hábiles, sujeto a los tiempos del procesador y del banco emisor.',
+    cuerpo: 'RETTA podrá ofrecer descuentos a su discreción; los descuentos aplican exclusivamente a inscripciones realizadas después de su activación y no son retroactivos.\n\nTodos los precios mostrados en la Plataforma están expresados en pesos mexicanos (MXN) e incluyen los impuestos correspondientes, incluido el IVA cuando aplique.\n\nLos pagos se procesan a través de Stripe, proveedor externo autorizado que opera conforme a estándares PCI-DSS — RETTA no almacena datos de tarjetas.\n\nAl inscribirte a un Partido, el monto se preautoriza (se aparta) en tu tarjeta; el cargo definitivo se realiza aproximadamente 30 minutos antes del inicio del Partido, una vez que este se confirma. Si el Partido no alcanza el mínimo de jugadores o se cancela, la preautorización se libera sin realizar cargo alguno; el tiempo en que tu banco deja de mostrar el monto apartado depende del emisor (normalmente el mismo día y hasta 2 o 3 días hábiles).\n\nCuando proceda un reembolso sobre un cargo ya realizado, se acredita al mismo método de pago en un plazo de 5 a 10 días hábiles, sujeto a los tiempos del procesador y del banco emisor.',
   },
   {
     num: '9', titulo: 'Facturación (CFDI)',
@@ -67,7 +67,7 @@ export const TERMINOS_SECCIONES: LegalSeccion[] = [
   },
   {
     num: '10', titulo: 'Política de cancelación',
-    cuerpo: 'Las cancelaciones se calculan con base en la hora del servidor de RETTA (zona horaria América/Ciudad de México), no con la del dispositivo del Usuario.\n\n• Más de 12 horas antes — Reembolso del 100%.\n• Entre 3 y 12 horas antes — Reembolso del 60% (RETTA retiene 40% por costos operativos y afectación al Complejo).\n• Menos de 3 horas antes o no asistencia — Sin reembolso.\n\nSi RETTA o el Complejo cancelan el Partido por falta de cupo, fuerza mayor o causas operativas, el reembolso es del 100% para todos los inscritos.',
+    cuerpo: 'Las cancelaciones se calculan con base en la hora del servidor de RETTA (zona horaria América/Ciudad de México), no con la del dispositivo del Usuario.\n\n• Más de 12 horas antes — Sin cargo: la preautorización se libera completa.\n• Entre 3 y 12 horas antes — Se realiza el cargo del 40% del monto (por costos operativos y afectación al Complejo) y el 60% restante se libera sin cobrarse.\n• Menos de 3 horas antes o no asistencia — Se realiza el cargo del 100% del monto.\n\nSi el cargo ya se hubiera realizado al momento de la cancelación, los porcentajes anteriores se aplican mediante reembolso.\n\nSi RETTA o el Complejo cancelan el Partido por falta de cupo, fuerza mayor o causas operativas, ningún Usuario es cobrado: las preautorizaciones se liberan completas (y cualquier cargo ya realizado se reembolsa al 100%).',
   },
   {
     num: '11', titulo: 'Improcedencia del derecho de retracto',

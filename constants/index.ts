@@ -25,7 +25,7 @@ export const CHAT_WORKER_TOKEN = process.env.EXPO_PUBLIC_CHAT_WORKER_TOKEN ?? ''
 // aceptar de nuevo para poder usar la app.
 // Convención: fecha ISO de la actualización.
 // ─────────────────────────────────────────────────────────────────
-export const LEGAL_VERSION = '2026-08-12';
+export const LEGAL_VERSION = '2026-08-14';
 
 // Supabase — anon key es público (no es secreto), pero centralizado para
 // que cualquier rotación futura toque un solo lugar.
