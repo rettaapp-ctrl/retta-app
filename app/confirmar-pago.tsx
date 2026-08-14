@@ -250,8 +250,8 @@ export default function ConfirmarPagoScreen() {
             <Text style={styles.successTitle}>¡LISTO!</Text>
             <Text style={styles.successSubtitle}>
               {esInvitado
-                ? `${nombre_invitado} ya tiene su lugar apartado.\nEl cobro se hace al confirmarse el partido.`
-                : `Tu lugar quedó apartado. El cobro se hace\n30 min antes, cuando el partido se confirma.`}
+                ? `${nombre_invitado} ya tiene su lugar.\nSe cobra al confirmarse el partido.`
+                : `Tu lugar está confirmado. ¡Te vemos en la cancha!\nEl cobro se hace 30 min antes del partido.`}
             </Text>
 
             <View style={styles.successCard}>
@@ -350,7 +350,7 @@ export default function ConfirmarPagoScreen() {
           </View>
 
           <Text style={styles.politicaTxt}>
-            Hoy solo se aparta en tu tarjeta: el cobro se hace 30 min antes, cuando el partido se confirma. Si no se arma, se libera solo.{'\n'}Cancela con +12 h sin cargo · entre 3 y 12 h se cobra el 40% · con menos de 3 h se cobra completo.
+            No se te cobra hoy: el cargo se hace 30 min antes, cuando el partido se confirma. Si no se arma, no pagas nada.{'\n'}Cancela con +12 h sin cargo · entre 3 y 12 h se cobra el 40% · con menos de 3 h se cobra completo.
           </Text>
 
         </ScrollView>
@@ -360,7 +360,7 @@ export default function ConfirmarPagoScreen() {
           <TouchableOpacity onPress={handlePagar} disabled={stage !== 'confirm' || !detalle} activeOpacity={0.85}>
             <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.pagarBtn, (stage !== 'confirm' || !detalle) && { opacity: 0.6 }]}>
               <CardIcon />
-              <Text style={styles.pagarBtnTxt}>APARTAR MI LUGAR · ${precio} MXN</Text>
+              <Text style={styles.pagarBtnTxt}>CONFIRMAR MI LUGAR · ${precio} MXN</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
