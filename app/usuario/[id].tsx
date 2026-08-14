@@ -285,6 +285,7 @@ export default function PerfilPublicoScreen() {
             </View>
           </View>
           <Text style={styles.nombre}>{perfil.nombre}{perfil.apellido ? ` ${perfil.apellido}` : ''}</Text>
+          <Text style={styles.amigosLinea}>{perfil.amigos_count ?? 0} {(perfil.amigos_count ?? 0) === 1 ? 'amigo' : 'amigos'} en Retta</Text>
           <View style={styles.actionWrap}>
             {renderActionBtn()}
           </View>
@@ -293,7 +294,7 @@ export default function PerfilPublicoScreen() {
         <StatsRow
           jugados={perfil.partidos_jug ?? 0}
           ganados={perfil.partidos_gan ?? 0}
-          amigos={perfil.amigos_count ?? 0}
+          goles={(perfil as any).goles_total ?? 0}
         />
 
         <PosNivelRow
@@ -344,6 +345,7 @@ const styles = StyleSheet.create({
   avatarTxt:    { fontSize: 42, color: '#fff', fontFamily: FONTS.heading },
   nombre:       { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
 
+  amigosLinea:  { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 4, textAlign: 'center' },
   actionWrap:   { marginTop: 13, alignSelf: 'stretch', alignItems: 'center' },
 
   pillPrimary:    { height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, minWidth: 220 },

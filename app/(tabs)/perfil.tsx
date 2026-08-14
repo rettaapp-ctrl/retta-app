@@ -8,7 +8,7 @@ import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens'
 import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useNotificacionesCount } from '@/hooks/useNotificacionesCount';
-import { StatsRow, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
+import { StatsRow, AmigosChip, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -144,20 +144,21 @@ export default function PerfilScreen() {
             <Text style={styles.profileName}>
               {(user?.nombre || '')} {(user?.apellido || '')}
             </Text>
-            <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/editar-perfil')} activeOpacity={0.75}>
-              <Text style={styles.editBtnTxt}>Editar perfil</Text>
-              <EditIcon />
-            </TouchableOpacity>
+            <View style={styles.accionesRow}>
+              <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/editar-perfil')} activeOpacity={0.75}>
+                <Text style={styles.editBtnTxt}>Editar perfil</Text>
+                <EditIcon />
+              </TouchableOpacity>
+              <AmigosChip count={amigosCount} badge={solicitudesCount} onPress={() => router.push('/amigos')} />
+            </View>
           </View>
 
           <StatsRow
             jugados={user?.partidos_jug ?? 0}
             ganados={user?.partidos_gan ?? 0}
-            amigos={amigosCount}
-            badge={solicitudesCount}
+            goles={(user as any)?.goles_total ?? 0}
             onJugados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'jugados' } })}
             onGanados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'ganados' } })}
-            onAmigos={() => router.push('/amigos')}
           />
 
           <PosNivelRow posicion={user?.posicion} rating={rating} calibrando={calibrando} />
@@ -200,6 +201,7 @@ const styles = StyleSheet.create({
   avatarRing:     { width: 148, height: 148, borderRadius: 74, padding: 4, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: DT.primaryContainer, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 6 },
   avatarInner:    { width: '100%', height: '100%', borderRadius: 70, backgroundColor: DT.surfaceHigh, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileName:    { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
-  editBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 13, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },
+  accionesRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 13 },
+  editBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },
   editBtnTxt:     { fontSize: 13, color: DT.onBg, fontFamily: FONTS.monoMed, letterSpacing: 0.3 },
 });

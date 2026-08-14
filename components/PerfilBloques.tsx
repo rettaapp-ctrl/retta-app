@@ -53,6 +53,17 @@ function TrofeoIcon() {
   );
 }
 
+function GolIcon() {
+  return (
+    <Svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <Path d="M3 20V7h18v13" stroke={DT.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <Path d="M3 7l2.5 2.5M21 7l-2.5 2.5M7.5 7v4M12 7v3M16.5 7v4" stroke={DT.primary} strokeWidth="1.1" strokeLinecap="round" opacity={0.65}/>
+      <Circle cx="12" cy="16.2" r="3.1" stroke={DT.primary} strokeWidth="1.6"/>
+      <Path d="M12 14.2l1.7 1.2-.65 2h-2.1l-.65-2L12 14.2z" stroke={DT.primary} strokeWidth="1.1" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
+
 function AmigosIcon() {
   return (
     <Svg width="26" height="26" viewBox="0 0 24 24" fill="none">
@@ -144,12 +155,14 @@ function mondayOf(d: Date): Date {
 
 // ═══ StatsRow ════════════════════════════════════════════════════
 export function StatsRow({
-  jugados, ganados, amigos, badge = 0,
-  onJugados, onGanados, onAmigos,
+  jugados, ganados, goles,
+  onJugados, onGanados,
 }: {
-  jugados: number; ganados: number; amigos: number; badge?: number;
-  onJugados?: () => void; onGanados?: () => void; onAmigos?: () => void;
+  jugados: number; ganados: number; goles: number;
+  onJugados?: () => void; onGanados?: () => void;
 }) {
+  // Promedio por partido con 1 decimal; solo si ya jugo.
+  const porPartido = jugados > 0 ? (goles / jugados).toFixed(1) : null;
   return (
     <View style={s.statsRow}>
       <TouchableOpacity style={s.statCell} onPress={onJugados} disabled={!onJugados} activeOpacity={0.6}>
@@ -159,20 +172,34 @@ export function StatsRow({
       </TouchableOpacity>
       <TouchableOpacity style={[s.statCell, s.statCellBorder]} onPress={onGanados} disabled={!onGanados} activeOpacity={0.6}>
         <TrofeoIcon />
-        <Text style={s.statLabel}>PARTIDOS{'\n'}GANADOS</Text>
+        <Text style={s.statLabel}>GANADOS</Text>
         <Text style={s.statNum}>{ganados}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[s.statCell, s.statCellBorder]} onPress={onAmigos} disabled={!onAmigos} activeOpacity={0.6}>
-        <AmigosIcon />
-        <Text style={s.statLabel}>AMIGOS</Text>
-        <Text style={s.statNum}>{amigos}</Text>
-        {badge > 0 && (
-          <View style={s.statBadge}>
-            <Text style={s.statBadgeTxt}>{badge}</Text>
-          </View>
+      <View style={[s.statCell, s.statCellBorder]}>
+        <GolIcon />
+        <Text style={s.statLabel}>GOLES</Text>
+        <Text style={s.statNum}>{goles}</Text>
+        {porPartido != null && (
+          <Text style={s.statSub}>{porPartido} por partido</Text>
         )}
-      </TouchableOpacity>
+      </View>
     </View>
+  );
+}
+
+// Chip de amigos: vive junto a "Editar perfil" (rediseño 2026-08-14).
+// El badge naranja son solicitudes pendientes.
+export function AmigosChip({ count, badge = 0, onPress }: { count: number; badge?: number; onPress?: () => void }) {
+  return (
+    <TouchableOpacity style={s.amigosChip} onPress={onPress} activeOpacity={0.75}>
+      <AmigosIcon />
+      <Text style={s.amigosChipTxt}>{count} {count === 1 ? 'amigo' : 'amigos'}</Text>
+      {badge > 0 && (
+        <View style={s.statBadge}>
+          <Text style={s.statBadgeTxt}>{badge}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -407,6 +434,9 @@ const s = StyleSheet.create({
   statBadge:      { position: 'absolute', top: 8, right: 10, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   statBadgeTxt:   { fontSize: 11, color: '#5a0006', fontFamily: FONTS.bodyBold },
   statNum:        { fontSize: 25, color: DT.onBg, fontFamily: FONTS.display, lineHeight: 28 },
+  statSub:        { fontSize: 9.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: -3 },
+  amigosChip:     { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 15 },
+  amigosChipTxt:  { fontSize: 13.5, color: DT.onBg, fontFamily: FONTS.bodySemi },
   statLabel:      { fontSize: 9, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 13, fontFamily: FONTS.mono, letterSpacing: 0.8, minHeight: 26 },
 
   posRow:         { flexDirection: 'row', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 12 },
