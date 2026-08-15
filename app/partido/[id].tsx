@@ -512,7 +512,7 @@ export default function PartidoDetailScreen() {
               {user?.avatar_url ? (
                 <Image
                   source={{ uri: user.avatar_url }}
-                  style={[StyleSheet.absoluteFillObject, { borderRadius: 25, opacity: 0.75 }]}
+                  style={[StyleSheet.absoluteFillObject, { borderRadius: 29, opacity: 0.75 }]}
                 />
               ) : (
                 <Text style={[styles.slotInitials, { opacity: 0.75 }]}>{userInitials}</Text>
@@ -524,7 +524,7 @@ export default function PartidoDetailScreen() {
           ) : esYo && user?.avatar_url ? (
             <Image
               source={{ uri: user.avatar_url }}
-              style={[StyleSheet.absoluteFillObject, { borderRadius: 25 }]}
+              style={[StyleSheet.absoluteFillObject, { borderRadius: 29 }]}
             />
           ) : (
             <Text style={styles.slotInitials}>
@@ -643,7 +643,10 @@ export default function PartidoDetailScreen() {
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }} edges={['top','bottom']}>
-        {/* Topbar */}
+        {/* Topbar — solo sin foto. Con foto del complejo, la imagen es la
+            protagonista a todo lo ancho y los botones flotan encima
+            (Rafael 2026-08-15, referencia screenshot). */}
+        {!partido.complejo_foto_url && (
         <View style={styles.topbar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
             <BackIcon />
@@ -656,8 +659,29 @@ export default function PartidoDetailScreen() {
             <ShareIcon />
           </TouchableOpacity>
         </View>
+        )}
 
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+          {/* Foto del complejo full-bleed, protagonista (Rafael 2026-08-15):
+              a todo lo ancho, más alta, con regresar/compartir flotando
+              encima y el nombre montado sobre el degradado. */}
+          {partido.complejo_foto_url ? (
+            <View style={styles.heroFotoWrap}>
+              <Image source={{ uri: partido.complejo_foto_url }} style={styles.heroFoto} resizeMode="cover" />
+              <LinearGradient colors={['rgba(11,11,20,0.55)', 'rgba(11,11,20,0)', 'rgba(11,11,20,0)', 'rgba(11,11,20,0.96)']} locations={[0, 0.3, 0.55, 1]} style={StyleSheet.absoluteFillObject} />
+              <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, styles.fotoBtnIzq]}>
+                <BackIcon />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => compartirPartido()} style={[styles.iconBtn, styles.fotoBtnDer]}>
+                <ShareIcon />
+              </TouchableOpacity>
+              <View style={styles.heroFotoTxt}>
+                <Text style={styles.heroVenue}>{partido.complejo_nombre}</Text>
+                <Text style={styles.heroCanchaFoto}>{partido.cancha_nombre} · {partido.tipo}</Text>
+              </View>
+            </View>
+          ) : null}
 
           {/* Banner de partido pasado — se muestra siempre arriba del hero
               cuando el partido ya no admite acciones (finalizado / cancelado /
@@ -671,21 +695,8 @@ export default function PartidoDetailScreen() {
             </View>
           )}
 
-          {/* Hero — con la foto del complejo de encabezado cuando existe
-              (Rafael 2026-08-15). El nombre va montado sobre la foto con un
-              degradado para no duplicar renglones; sin foto, queda el texto
-              como antes. */}
+          {/* Hero */}
           <View style={styles.hero}>
-            {partido.complejo_foto_url ? (
-              <View style={styles.heroFotoWrap}>
-                <Image source={{ uri: partido.complejo_foto_url }} style={styles.heroFoto} resizeMode="cover" />
-                <LinearGradient colors={['rgba(11,11,20,0)', 'rgba(11,11,20,0.94)']} style={styles.heroFotoFade} />
-                <View style={styles.heroFotoTxt}>
-                  <Text style={styles.heroVenue}>{partido.complejo_nombre}</Text>
-                  <Text style={styles.heroCanchaFoto}>{partido.cancha_nombre} · {partido.tipo}</Text>
-                </View>
-              </View>
-            ) : null}
             <View style={styles.heroBody}>
             {!partido.complejo_foto_url && (
               <>
@@ -1187,10 +1198,11 @@ const styles = StyleSheet.create({
   hero:               { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, marginBottom: 10, borderWidth: 1, borderColor: DT.glassBorder, overflow: 'hidden' },
   heroBody:           { padding: 16 },
   // Foto del complejo de encabezado del hero (Rafael 2026-08-15)
-  heroFotoWrap:       { height: 132, backgroundColor: DT.surface },
+  heroFotoWrap:       { height: 264, backgroundColor: DT.surface, marginBottom: 12 },
   heroFoto:           { width: '100%', height: '100%' },
-  heroFotoFade:       { position: 'absolute', left: 0, right: 0, bottom: 0, height: 76 },
-  heroFotoTxt:        { position: 'absolute', left: 16, right: 16, bottom: 10 },
+  fotoBtnIzq:         { position: 'absolute', top: 10, left: 16 },
+  fotoBtnDer:         { position: 'absolute', top: 10, right: 16 },
+  heroFotoTxt:        { position: 'absolute', left: 20, right: 20, bottom: 14 },
   heroCanchaFoto:     { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 1 },
 
   // Banner que se muestra arriba del hero cuando el partido ya no admite
@@ -1260,14 +1272,14 @@ const styles = StyleSheet.create({
   // renderSlot sigue siendo el ABSOLUTO del equipo (se preserva en el map de
   // arriba), así que la selección de lugar y los colores no cambian.
   slotsGrid:          { gap: 10 },
-  slotsFila:          { flexDirection: 'row', gap: 12 },
-  slotItem:           { alignItems: 'center', width: 54 },
-  slotAvatar:         { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  slotsFila:          { flexDirection: 'row', gap: 14, justifyContent: 'center' },
+  slotItem:           { alignItems: 'center', width: 64 },
+  slotAvatar:         { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   slotAvatarEmpty:    { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
   slotAvatarSelected: { backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 2.5, borderColor: DT.primary, borderStyle: 'solid', overflow: 'hidden' },
-  slotInitials:       { fontSize: 16, color: '#fff', fontFamily: FONTS.bodyBold },
+  slotInitials:       { fontSize: 18, color: '#fff', fontFamily: FONTS.bodyBold },
   slotPlus:           { fontSize: 22, color: DT.outline, lineHeight: 26 },
-  slotName:           { fontSize: 10, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2, textAlign: 'center' },
+  slotName:           { fontSize: 10.5, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2, textAlign: 'center' },
   slotNameEmpty:      { color: DT.outline },
   slotPos:            { fontSize: 9, color: DT.outline, marginTop: 1, fontFamily: FONTS.mono },
   vsDivider:          { flexDirection: 'row', alignItems: 'center', marginVertical: 12, gap: 10 },
@@ -1295,7 +1307,7 @@ const styles = StyleSheet.create({
   cancelInscBtn:      { height: 48, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,180,171,0.3)', backgroundColor: 'rgba(255,180,171,0.08)' },
   cancelInscTxt:      { fontSize: 12, color: DT.error, fontFamily: FONTS.bodyBold, letterSpacing: 1 },
   // Preview slot
-  slotPreviewRing:    { position: 'absolute', inset: 0, borderRadius: 25, borderWidth: 2.5, borderColor: DT.primary },
+  slotPreviewRing:    { position: 'absolute', inset: 0, borderRadius: 29, borderWidth: 2.5, borderColor: DT.primary },
   slotPreviewTag:     { fontSize: 8.5, color: DT.primary, fontFamily: FONTS.bodySemi, letterSpacing: 0.4, marginTop: 1 },
   slotAvatarMiInvitado:{ borderWidth: 2, borderColor: DT.primary },
   slotAvatarOtroInvitado:{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', borderStyle: 'dashed' },

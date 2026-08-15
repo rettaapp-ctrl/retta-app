@@ -163,11 +163,14 @@ export default function HistorialPartidosScreen() {
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
 
+        {/* Barra superior estilo "Configuración" (Rafael 2026-08-15):
+            título centrado y sutil entre la flecha y el calendario. */}
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <BackIcon />
           </TouchableOpacity>
-          {base.length > 0 && (
+          <Text style={styles.topTitle} numberOfLines={1}>{titulo}</Text>
+          {base.length > 0 ? (
             <TouchableOpacity
               style={[styles.backBtn, mostrarFiltro && styles.calBtnActivo]}
               onPress={() => {
@@ -177,10 +180,11 @@ export default function HistorialPartidosScreen() {
             >
               <CalendarioIcon activo={mostrarFiltro} />
             </TouchableOpacity>
+          ) : (
+            <View style={{ width: 42 }} />
           )}
         </View>
 
-        <Text style={styles.title}>{titulo}</Text>
         {!loading && lista.length > 0 && (
           <Text style={styles.subtitle}>
             {lista.length} {lista.length === 1 ? 'partido' : 'partidos'}
@@ -339,8 +343,8 @@ const styles = StyleSheet.create({
   topBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 14 },
   backBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   calBtnActivo: { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.12)' },
-  title:      { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.6, paddingHorizontal: SPACING.gutter },
-  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: SPACING.gutter, marginTop: 6 },
+  topTitle:   { flex: 1, textAlign: 'center', fontSize: 19, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.3, marginHorizontal: 10 },
+  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', marginTop: 2 },
   scroll:     { padding: SPACING.gutter, paddingTop: 16, paddingBottom: 40 },
 
   mesesWrap:  { marginTop: 14, maxHeight: 40 },

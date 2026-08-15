@@ -93,13 +93,17 @@ export default function GolesScreen() {
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
 
+        {/* Barra superior estilo "Configuración" (Rafael 2026-08-15):
+            título centrado y sutil junto a la flecha de regresar. */}
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <BackIcon />
           </TouchableOpacity>
+          <Text style={styles.topTitle} numberOfLines={1}>
+            {esPropio ? 'Tus goles' : `Goles de ${params.nombre || 'jugador'}`}
+          </Text>
+          <View style={{ width: 42 }} />
         </View>
-
-        <Text style={styles.title}>{esPropio ? 'Tus goles' : `Goles de ${params.nombre || 'jugador'}`}</Text>
         {!loading && totalGoles > 0 && (
           <Text style={styles.subtitle}>
             {totalGoles} {totalGoles === 1 ? 'gol' : 'goles'} en {totalPartidos} {totalPartidos === 1 ? 'partido' : 'partidos'}
@@ -177,8 +181,8 @@ const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: DT.bg },
   topBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14 },
   backBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
-  title:      { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.6, paddingHorizontal: 22 },
-  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: 22, marginTop: 6 },
+  topTitle:   { flex: 1, textAlign: 'center', fontSize: 19, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.3, marginHorizontal: 10 },
+  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', marginTop: 2 },
   scroll:     { padding: 20, paddingTop: 16, paddingBottom: 40 },
 
   card:       { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden' },
