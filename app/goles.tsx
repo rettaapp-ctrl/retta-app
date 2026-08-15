@@ -19,7 +19,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
+import BalonIcon from '@/components/BalonIcon';
 
 interface FilaGol {
   id: string;
@@ -46,16 +47,10 @@ function BackIcon() {
   );
 }
 
-// Portería con balón, en grande y apagado (mismo trazo que el icono
-// de la celda GOLES del perfil).
+// El balón de la app, en grande y apagado (la celda GOLES ahora usa
+// el mismo balón — Rafael 2026-08-15).
 function GolGrande() {
-  return (
-    <Svg width="54" height="54" viewBox="0 0 24 24" fill="none">
-      <Path d="M3 20V7h18v13" stroke={DT.outline} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-      <Path d="M3 7l2.5 2.5M21 7l-2.5 2.5M7.5 7v4M12 7v3M16.5 7v4" stroke={DT.outline} strokeWidth="1" strokeLinecap="round" opacity={0.65}/>
-      <Circle cx="12" cy="16.2" r="3.1" stroke={DT.outline} strokeWidth="1.4"/>
-    </Svg>
-  );
+  return <BalonIcon size={54} color={DT.outline} />;
 }
 
 export default function GolesScreen() {
@@ -180,10 +175,10 @@ export default function GolesScreen() {
 
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: DT.bg },
-  topBar:     { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 8 },
-  backBtn:    { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
-  title:      { fontSize: 26, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.4, paddingHorizontal: 22, marginTop: 14 },
-  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: 22, marginTop: 4 },
+  topBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14 },
+  backBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  title:      { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.6, paddingHorizontal: 22 },
+  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: 22, marginTop: 6 },
   scroll:     { padding: 20, paddingTop: 16, paddingBottom: 40 },
 
   card:       { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden' },

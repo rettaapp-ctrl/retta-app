@@ -13,7 +13,7 @@ import { DT, FONTS, RADIUS } from '@/constants/designTokens';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import BalonIcon from '@/components/BalonIcon';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop, Line as SvgLine } from 'react-native-svg';
 
@@ -53,15 +53,10 @@ function TrofeoIcon() {
   );
 }
 
-function GolIcon() {
-  return (
-    <Svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <Path d="M3 20V7h18v13" stroke={DT.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-      <Path d="M3 7l2.5 2.5M21 7l-2.5 2.5M7.5 7v4M12 7v3M16.5 7v4" stroke={DT.primary} strokeWidth="1.1" strokeLinecap="round" opacity={0.65}/>
-      <Circle cx="12" cy="16.2" r="3.1" stroke={DT.primary} strokeWidth="1.6"/>
-      <Path d="M12 14.2l1.7 1.2-.65 2h-2.1l-.65-2L12 14.2z" stroke={DT.primary} strokeWidth="1.1" strokeLinejoin="round"/>
-    </Svg>
-  );
+// Cancha con portería al centro (Rafael 2026-08-15): icono de
+// PARTIDOS JUGADOS. El balón pasó a la celda de GOLES.
+function CanchaIcon() {
+  return <MaterialCommunityIcons name="soccer-field" size={26} color={DT.primary} />;
 }
 
 function AmigosIcon() {
@@ -164,7 +159,7 @@ export function StatsRow({
   return (
     <View style={s.statsRow}>
       <TouchableOpacity style={s.statCell} onPress={onJugados} disabled={!onJugados} activeOpacity={0.6}>
-        <BalonIcon />
+        <CanchaIcon />
         <Text style={s.statLabel}>PARTIDOS{'\n'}JUGADOS</Text>
         <Text style={s.statNum}>{jugados}</Text>
       </TouchableOpacity>
@@ -174,7 +169,7 @@ export function StatsRow({
         <Text style={s.statNum}>{ganados}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[s.statCell, s.statCellBorder]} onPress={onGoles} disabled={!onGoles} activeOpacity={0.6}>
-        <GolIcon />
+        <BalonIcon />
         <Text style={s.statLabel}>GOLES</Text>
         <Text style={s.statNum}>{goles}</Text>
       </TouchableOpacity>

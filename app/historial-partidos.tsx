@@ -3,9 +3,10 @@
 // Historial de partidos anteriores, abierto desde las stats del
 // perfil (propio O de un amigo vía params usuario_id + nombre).
 // Modos vía param `filtro`:
-//   'jugados' → todos los partidos anteriores. El badge de resultado
-//               y el marcador SOLO aparecen si el árbitro lo reportó.
-//   'ganados' → únicamente los ganados (siempre con badge + marcador).
+//   'jugados' → todos los partidos anteriores. El marcador (badge de
+//               color) SOLO aparece si el árbitro lo reportó:
+//               verde = ganó, rojo = perdió, amarillo = empate.
+//   'ganados' → únicamente los ganados (siempre con marcador).
 // Buscador por fecha (Rafael 2026-08-15): botón de calendario arriba
 // que abre chips de meses para filtrar la lista. Sustituye al viejo
 // botón de "Explorar partidos".
@@ -22,7 +23,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Line } from 'react-native-svg';
-import BalonIcon from '@/components/BalonIcon';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface Inscripcion {
   id: string;
@@ -71,9 +72,10 @@ function TrofeoGrande() {
   );
 }
 
-// Mismo balón que el resto de la app, en grande y apagado.
-function BalonGrande() {
-  return <BalonIcon size={54} color={DT.outline} />;
+// Cancha con portería al centro, en grande y apagado — mismo icono
+// que la celda de PARTIDOS JUGADOS (Rafael 2026-08-15).
+function CanchaGrande() {
+  return <MaterialCommunityIcons name="soccer-field" size={58} color={DT.outline} />;
 }
 
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -221,7 +223,7 @@ export default function HistorialPartidosScreen() {
             <ActivityIndicator color={DT.primary} style={{ marginTop: 60 }} />
           ) : base.length === 0 ? (
             <View style={styles.empty}>
-              {soloGanados ? <TrofeoGrande /> : <BalonGrande />}
+              {soloGanados ? <TrofeoGrande /> : <CanchaGrande />}
               <Text style={styles.emptyTitle}>
                 {soloGanados
                   ? (esPropio ? 'Aún no has ganado partidos' : 'Aún no ha ganado partidos')
@@ -289,14 +291,13 @@ export default function HistorialPartidosScreen() {
                       <Text style={styles.mpVenue} numberOfLines={1}>{p.complejo_nombre} — {p.cancha_nombre}</Text>
                       <Text style={styles.mpDetail}>
                         {p.tipo} · {p.hora_inicio?.slice(0, 5)}
-                        {tieneMarcador && (
-                          <Text style={styles.mpScore}> · {p.goles_a}–{p.goles_b}</Text>
-                        )}
                       </Text>
                     </View>
+                    {/* El marcador ES el badge: verde si ganó, rojo si
+                        perdió, amarillo si empató (Rafael 2026-08-15). */}
                     {resultado && (
                       <View style={[styles.mpResult, { backgroundColor: resultBg }]}>
-                        <Text style={[styles.mpResultTxt, { color: resultColor }]}>{resultado}</Text>
+                        <Text style={[styles.mpResultTxt, { color: resultColor }]}>{p.goles_a}–{p.goles_b}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
   backBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   calBtnActivo: { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.12)' },
   title:      { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.6, paddingHorizontal: SPACING.gutter },
-  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: SPACING.gutter, marginTop: 4 },
+  subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: SPACING.gutter, marginTop: 6 },
   scroll:     { padding: SPACING.gutter, paddingTop: 16, paddingBottom: 40 },
 
   mesesWrap:  { marginTop: 14, maxHeight: 40 },
@@ -358,9 +359,8 @@ const styles = StyleSheet.create({
   mpInfo:     { flex: 1 },
   mpVenue:    { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2 },
   mpDetail:   { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 2, fontFamily: FONTS.body },
-  mpScore:    { color: DT.onBg, fontFamily: FONTS.bodyBold },
-  mpResult:   { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  mpResultTxt:{ fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 0.5 },
+  mpResult:   { minWidth: 52, alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  mpResultTxt:{ fontSize: 13.5, fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
 
   resumen:      { flexDirection: 'row', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, marginTop: 14, overflow: 'hidden' },
   resumenCell:  { flex: 1, alignItems: 'center', paddingVertical: 14, gap: 3 },

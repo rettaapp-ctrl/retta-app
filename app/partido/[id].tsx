@@ -46,6 +46,7 @@ interface Partido {
   complejo_nombre: string;
   complejo_ciudad: string;
   complejo_direccion?: string;
+  complejo_foto_url?: string | null;
   cancha_nombre: string;
   fecha: string;
   hora_inicio: string;
@@ -670,10 +671,28 @@ export default function PartidoDetailScreen() {
             </View>
           )}
 
-          {/* Hero */}
+          {/* Hero — con la foto del complejo de encabezado cuando existe
+              (Rafael 2026-08-15). El nombre va montado sobre la foto con un
+              degradado para no duplicar renglones; sin foto, queda el texto
+              como antes. */}
           <View style={styles.hero}>
-            <Text style={styles.heroVenue}>{partido.complejo_nombre}</Text>
-            <Text style={styles.heroCancha}>{partido.cancha_nombre} · {partido.tipo}</Text>
+            {partido.complejo_foto_url ? (
+              <View style={styles.heroFotoWrap}>
+                <Image source={{ uri: partido.complejo_foto_url }} style={styles.heroFoto} resizeMode="cover" />
+                <LinearGradient colors={['rgba(11,11,20,0)', 'rgba(11,11,20,0.94)']} style={styles.heroFotoFade} />
+                <View style={styles.heroFotoTxt}>
+                  <Text style={styles.heroVenue}>{partido.complejo_nombre}</Text>
+                  <Text style={styles.heroCanchaFoto}>{partido.cancha_nombre} · {partido.tipo}</Text>
+                </View>
+              </View>
+            ) : null}
+            <View style={styles.heroBody}>
+            {!partido.complejo_foto_url && (
+              <>
+                <Text style={styles.heroVenue}>{partido.complejo_nombre}</Text>
+                <Text style={styles.heroCancha}>{partido.cancha_nombre} · {partido.tipo}</Text>
+              </>
+            )}
 
             {/* Progreso de cupo (o resumen si ya pasó) */}
             <View style={styles.progressHeader}>
@@ -730,6 +749,7 @@ export default function PartidoDetailScreen() {
                   <Text style={styles.pillVal}>{formatFecha(partido.fecha)}</Text>
                 </View>
               </View>
+            </View>
             </View>
           </View>
 
@@ -937,7 +957,7 @@ export default function PartidoDetailScreen() {
             </View>
           )}
 
-          <View style={{ height: 30 }} />
+          <View style={{ height: 16 }} />
         </ScrollView>
 
         {/* Modal invitar amigos */}
@@ -1156,7 +1176,7 @@ export default function PartidoDetailScreen() {
 const styles = StyleSheet.create({
   root:               { flex: 1, backgroundColor: DT.bg },
   center:             { flex: 1, backgroundColor: DT.bg, alignItems: 'center', justifyContent: 'center' },
-  topbar:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  topbar:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
   iconBtn:            { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
   mdTitle:            { fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading, letterSpacing: -0.3, lineHeight: 22 },
   mdSubtitle:         { fontSize: 11.5, color: DT.onSurfaceVar, marginTop: 1, fontFamily: FONTS.body },
@@ -1164,17 +1184,24 @@ const styles = StyleSheet.create({
   // Hero
   // Cards más anchas — bajamos margen lateral de 24 (SPACING.gutter) a 16
   // para dar más aire al contenido interno sin llegar a los bordes.
-  hero:               { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: DT.glassBorder },
+  hero:               { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, marginBottom: 10, borderWidth: 1, borderColor: DT.glassBorder, overflow: 'hidden' },
+  heroBody:           { padding: 16 },
+  // Foto del complejo de encabezado del hero (Rafael 2026-08-15)
+  heroFotoWrap:       { height: 132, backgroundColor: DT.surface },
+  heroFoto:           { width: '100%', height: '100%' },
+  heroFotoFade:       { position: 'absolute', left: 0, right: 0, bottom: 0, height: 76 },
+  heroFotoTxt:        { position: 'absolute', left: 16, right: 16, bottom: 10 },
+  heroCanchaFoto:     { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 1 },
 
   // Banner que se muestra arriba del hero cuando el partido ya no admite
   // acciones (finalizado, cancelado, o simplemente su hora ya pasó). Deja
   // muy clara la naturaleza de "sólo lectura" de la pantalla.
-  pastBanner:         { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: SPACING.gutter, marginBottom: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder },
+  pastBanner:         { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 10, paddingHorizontal: 16, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: DT.glassBorder },
   pastBannerDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: DT.outline },
   pastBannerTxt:      { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.mono, letterSpacing: 1.5 },
 
   heroVenue:          { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.8, lineHeight: 30, marginBottom: 3 },
-  heroCancha:         { fontSize: 13, color: DT.onSurfaceVar, marginBottom: 18, fontFamily: FONTS.body },
+  heroCancha:         { fontSize: 13, color: DT.onSurfaceVar, marginBottom: 14, fontFamily: FONTS.body },
   progressHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 },
   progressLabel:      { fontSize: 10, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 1.5 },
   progressCount:      { fontSize: 18, color: DT.onBg, fontFamily: FONTS.heading },
@@ -1184,16 +1211,16 @@ const styles = StyleSheet.create({
   // El relleno ya trae su propio radio, así que no hace falta recortar.
   progressBarMin:     { overflow: 'visible', marginBottom: 10 },
   progressMinTick:    { position: 'absolute', top: -4, width: 2, height: 14, marginLeft: -1, borderRadius: 1, backgroundColor: DT.onBg, opacity: 0.75 },
-  progressNota:       { fontSize: 11.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginBottom: 16 },
+  progressNota:       { fontSize: 11.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginBottom: 12 },
   progressNotaFuerte: { color: DT.onBg, fontFamily: FONTS.bodyBold },
   progressNotaOk:     { color: DT.success, fontFamily: FONTS.bodySemi },
   progressFill:       { height: '100%', borderRadius: 3 },
   heroPills:          { flexDirection: 'row', gap: 10 },
-  heroPill:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, padding: 12, flex: 1 },
+  heroPill:           { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.md, padding: 10, flex: 1 },
   pillLabel:          { fontSize: 9, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 0.5, marginBottom: 1 },
   pillVal:            { fontSize: 14, color: DT.onBg, fontFamily: FONTS.bodyMed },
   // Mapa
-  mapBox:             { marginHorizontal: 16, height: 110, borderRadius: RADIUS.lg, overflow: 'hidden', backgroundColor: DT.surface, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 14, position: 'relative' },
+  mapBox:             { marginHorizontal: 16, height: 104, borderRadius: RADIUS.lg, overflow: 'hidden', backgroundColor: DT.surface, borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 10, position: 'relative' },
   mapPin:             { alignItems: 'center' },
   mapLabel:           { backgroundColor: DT.surfaceHighest, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, marginBottom: 4 },
   mapLabelTxt:        { fontSize: 11, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.3 },
@@ -1203,26 +1230,26 @@ const styles = StyleSheet.create({
   // Banner elegir
   // marginHorizontal 16 (antes 24): así el banner cae exactamente sobre el
   // mismo eje que mapBox y alineacionCard, que ya estaban en 16.
-  elegirBanner:       { marginHorizontal: 16, backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.3)', borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  elegirBanner:       { marginHorizontal: 16, backgroundColor: 'rgba(190,194,255,0.15)', borderWidth: 1, borderColor: 'rgba(190,194,255,0.3)', borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   // Fila del botón de unirse de arriba: botón que se estira + ✕ para soltar.
-  unirseTopRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 14 },
+  unirseTopRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 10 },
   // 52 de alto (el de abajo mide 56): un pelín más bajo porque va entre dos
   // cards y no debe robarles protagonismo. Misma tipografía y mismo radio.
   joinBtnTop:         { height: 52, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
   unirseTopX:         { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: DT.glassBorder, alignItems: 'center', justifyContent: 'center' },
   elegirTxt:          { fontSize: 12, color: DT.primary, fontFamily: FONTS.bodyBold, letterSpacing: 1, textAlign: 'center' },
-  sectionLabel:       { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar, paddingHorizontal: SPACING.gutter, marginBottom: 12, marginTop: 4 },
+  sectionLabel:       { fontSize: 11, fontFamily: FONTS.mono, letterSpacing: 1.5, color: DT.onSurfaceVar, paddingHorizontal: 20, marginBottom: 8, marginTop: 2 },
   // Card contenedora para la sección ALINEACIÓN (equipo A + VS + equipo B).
   // Mismo look que el hero card: mismo borde, mismo bg, mismo radius, mismo
   // marginHorizontal — para que TODOS los bloques de la pantalla queden
   // visualmente alineados y con contornos consistentes.
-  alineacionCard:     { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: DT.glassBorder },
+  alineacionCard:     { backgroundColor: DT.surfaceLow, marginHorizontal: 16, borderRadius: RADIUS.xl, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: DT.glassBorder },
   // ALINEACIÓN ahora es un TÍTULO de sección (Sora SemiBold, más grande y
   // contrastante) en vez de un label mono muted. Así no se confunde
   // visualmente con "EQUIPO A/B" que sí son labels mono chicos. Se separa
   // con un divider sutil para reforzar la jerarquía.
   alineacionLabel:    { fontSize: 16, fontFamily: FONTS.heading, color: DT.onBg, marginBottom: 4, letterSpacing: -0.2 },
-  alineacionDivider:  { height: 1, backgroundColor: DT.glassBorder, marginBottom: 20, marginTop: 8 },
+  alineacionDivider:  { height: 1, backgroundColor: DT.glassBorder, marginBottom: 14, marginTop: 8 },
   equipoBlockInner:   { marginBottom: 8 },
   // Equipos
   equipoBlock:        { marginHorizontal: SPACING.gutter, marginBottom: 8 },
@@ -1232,8 +1259,8 @@ const styles = StyleSheet.create({
   // Columna de filas; cada fila reparte sus slots. El índice `i` que llega a
   // renderSlot sigue siendo el ABSOLUTO del equipo (se preserva en el map de
   // arriba), así que la selección de lugar y los colores no cambian.
-  slotsGrid:          { gap: 14 },
-  slotsFila:          { flexDirection: 'row', gap: 16 },
+  slotsGrid:          { gap: 10 },
+  slotsFila:          { flexDirection: 'row', gap: 12 },
   slotItem:           { alignItems: 'center', width: 54 },
   slotAvatar:         { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   slotAvatarEmpty:    { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
@@ -1243,11 +1270,11 @@ const styles = StyleSheet.create({
   slotName:           { fontSize: 10, color: DT.onBg, fontFamily: FONTS.bodyMed, letterSpacing: 0.2, textAlign: 'center' },
   slotNameEmpty:      { color: DT.outline },
   slotPos:            { fontSize: 9, color: DT.outline, marginTop: 1, fontFamily: FONTS.mono },
-  vsDivider:          { flexDirection: 'row', alignItems: 'center', marginHorizontal: SPACING.gutter, marginVertical: 16, gap: 10 },
+  vsDivider:          { flexDirection: 'row', alignItems: 'center', marginVertical: 12, gap: 10 },
   vsLine:             { flex: 1, height: 1, backgroundColor: DT.glassBorder },
   vsText:             { fontSize: 12, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 2 },
   // Reglas
-  rulesCard:          { marginHorizontal: SPACING.gutter, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 8 },
+  rulesCard:          { marginHorizontal: 16, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 8 },
   ruleRow:            { flexDirection: 'row', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, gap: 10 },
   ruleDot:            { width: 6, height: 6, borderRadius: 3, backgroundColor: DT.primary, marginTop: 6, flexShrink: 0 },
   ruleText:           { flex: 1, fontSize: 12.5, color: DT.onSurfaceVar, lineHeight: 18, fontFamily: FONTS.body },
