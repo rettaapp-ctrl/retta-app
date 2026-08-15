@@ -159,6 +159,7 @@ export default function PerfilScreen() {
             goles={(user as any)?.goles_total ?? 0}
             onJugados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'jugados' } })}
             onGanados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'ganados' } })}
+            onGoles={() => router.push('/goles')}
           />
 
           <PosNivelRow posicion={user?.posicion} rating={rating} calibrando={calibrando} />

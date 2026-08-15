@@ -156,10 +156,10 @@ function mondayOf(d: Date): Date {
 // ═══ StatsRow ════════════════════════════════════════════════════
 export function StatsRow({
   jugados, ganados, goles,
-  onJugados, onGanados,
+  onJugados, onGanados, onGoles,
 }: {
   jugados: number; ganados: number; goles: number;
-  onJugados?: () => void; onGanados?: () => void;
+  onJugados?: () => void; onGanados?: () => void; onGoles?: () => void;
 }) {
   // Promedio por partido con 1 decimal; solo si ya jugo.
   const porPartido = jugados > 0 ? (goles / jugados).toFixed(1) : null;
@@ -175,14 +175,14 @@ export function StatsRow({
         <Text style={s.statLabel}>GANADOS</Text>
         <Text style={s.statNum}>{ganados}</Text>
       </TouchableOpacity>
-      <View style={[s.statCell, s.statCellBorder]}>
+      <TouchableOpacity style={[s.statCell, s.statCellBorder]} onPress={onGoles} disabled={!onGoles} activeOpacity={0.6}>
         <GolIcon />
         <Text style={s.statLabel}>GOLES</Text>
         <Text style={s.statNum}>{goles}</Text>
         {porPartido != null && (
           <Text style={s.statSub}>{porPartido} por partido</Text>
         )}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }

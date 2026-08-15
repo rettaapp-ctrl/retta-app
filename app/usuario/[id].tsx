@@ -295,6 +295,7 @@ export default function PerfilPublicoScreen() {
           jugados={perfil.partidos_jug ?? 0}
           ganados={perfil.partidos_gan ?? 0}
           goles={(perfil as any).goles_total ?? 0}
+          onGoles={() => router.push({ pathname: '/goles', params: { usuario_id: perfil.id, nombre: perfil.nombre } })}
         />
 
         <PosNivelRow
