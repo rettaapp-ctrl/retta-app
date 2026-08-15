@@ -161,8 +161,6 @@ export function StatsRow({
   jugados: number; ganados: number; goles: number;
   onJugados?: () => void; onGanados?: () => void; onGoles?: () => void;
 }) {
-  // Promedio por partido con 1 decimal; solo si ya jugo.
-  const porPartido = jugados > 0 ? (goles / jugados).toFixed(1) : null;
   return (
     <View style={s.statsRow}>
       <TouchableOpacity style={s.statCell} onPress={onJugados} disabled={!onJugados} activeOpacity={0.6}>
@@ -179,9 +177,6 @@ export function StatsRow({
         <GolIcon />
         <Text style={s.statLabel}>GOLES</Text>
         <Text style={s.statNum}>{goles}</Text>
-        {porPartido != null && (
-          <Text style={s.statSub}>{porPartido} por partido</Text>
-        )}
       </TouchableOpacity>
     </View>
   );
@@ -434,7 +429,6 @@ const s = StyleSheet.create({
   statBadge:      { position: 'absolute', top: 8, right: 10, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: DT.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   statBadgeTxt:   { fontSize: 11, color: '#5a0006', fontFamily: FONTS.bodyBold },
   statNum:        { fontSize: 25, color: DT.onBg, fontFamily: FONTS.display, lineHeight: 28 },
-  statSub:        { fontSize: 9.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: -3 },
   amigosChip:     { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 15 },
   amigosChipTxt:  { fontSize: 13.5, color: DT.onBg, fontFamily: FONTS.bodySemi },
   statLabel:      { fontSize: 9, color: DT.onSurfaceVar, textAlign: 'center', lineHeight: 13, fontFamily: FONTS.mono, letterSpacing: 0.8, minHeight: 26 },

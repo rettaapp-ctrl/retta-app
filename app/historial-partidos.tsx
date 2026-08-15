@@ -1,12 +1,14 @@
 // ═══════════════════════════════════════════════════════════════
 // RETTA — app/historial-partidos.tsx
 // Historial de partidos anteriores, abierto desde las stats del
-// perfil. Dos modos vía param `filtro`:
+// perfil (propio O de un amigo vía params usuario_id + nombre).
+// Modos vía param `filtro`:
 //   'jugados' → todos los partidos anteriores. El badge de resultado
-//               y el marcador SOLO aparecen si el árbitro lo reportó;
-//               si no hay marcador, la fila va limpia.
+//               y el marcador SOLO aparecen si el árbitro lo reportó.
 //   'ganados' → únicamente los ganados (siempre con badge + marcador).
-//               Vacío → "Aún no has ganado partidos".
+// Buscador por fecha (Rafael 2026-08-15): botón de calendario arriba
+// que abre chips de meses para filtrar la lista. Sustituye al viejo
+// botón de "Explorar partidos".
 // ═══════════════════════════════════════════════════════════════
 import { DT, GRADIENTS, FONTS, RADIUS, SPACING } from '@/constants/designTokens';
 import { useApi } from '@/hooks/useApi';
@@ -19,7 +21,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path, Rect, Line } from 'react-native-svg';
 import BalonIcon from '@/components/BalonIcon';
 
 interface Inscripcion {
@@ -47,6 +49,18 @@ function BackIcon() {
   );
 }
 
+function CalendarioIcon({ activo = false }: { activo?: boolean }) {
+  const color = activo ? DT.primary : DT.onBg;
+  return (
+    <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <Rect x="3.5" y="5" width="17" height="16" rx="3" stroke={color} strokeWidth="1.8"/>
+      <Line x1="3.5" y1="10" x2="20.5" y2="10" stroke={color} strokeWidth="1.8"/>
+      <Line x1="8" y1="2.8" x2="8" y2="6.5" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+      <Line x1="16" y1="2.8" x2="16" y2="6.5" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+    </Svg>
+  );
+}
+
 function TrofeoGrande() {
   return (
     <Svg width="54" height="54" viewBox="0 0 24 24" fill="none">
@@ -62,25 +76,31 @@ function BalonGrande() {
   return <BalonIcon size={54} color={DT.outline} />;
 }
 
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
 export default function HistorialPartidosScreen() {
   const router = useRouter();
   const { request } = useApi();
-  const params = useLocalSearchParams<{ filtro?: string }>();
+  const params = useLocalSearchParams<{ filtro?: string; usuario_id?: string; nombre?: string }>();
   const soloGanados = params.filtro === 'ganados';
+  const usuarioId   = params.usuario_id || 'me';
+  const esPropio    = usuarioId === 'me';
 
-  const [partidos, setPartidos]     = useState<Inscripcion[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [partidos, setPartidos]           = useState<Inscripcion[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [refreshing, setRefreshing]       = useState(false);
+  const [mostrarFiltro, setMostrarFiltro] = useState(false);
+  const [mesFiltro, setMesFiltro]         = useState<string | null>(null); // 'YYYY-MM' | null = todos
 
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [])
+    }, [usuarioId])
   );
 
   async function load() {
     try {
-      const res = await request('/usuarios/me/partidos').catch(() => ({ partidos: [] }));
+      const res = await request(`/usuarios/${usuarioId}/partidos`).catch(() => ({ partidos: [] }));
       const anteriores = (res.partidos || [])
         .filter((p: Inscripcion) => p.v_partidos != null)
         .filter((p: Inscripcion) => !isPartidoVisible(p.v_partidos.fecha, p.v_partidos.hora_inicio))
@@ -95,7 +115,7 @@ export default function HistorialPartidosScreen() {
     setRefreshing(false);
   }
 
-  const onRefresh = useCallback(() => { setRefreshing(true); load(); }, []);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(); }, [usuarioId]);
 
   function esGanado(item: Inscripcion): boolean {
     const p = item.v_partidos;
@@ -110,7 +130,17 @@ export default function HistorialPartidosScreen() {
     };
   }
 
-  const lista = soloGanados ? partidos.filter(esGanado) : partidos;
+  function labelMes(ym: string) {
+    const [anio, mes] = ym.split('-');
+    return `${MESES_CORTOS[parseInt(mes, 10) - 1]} ${anio}`;
+  }
+
+  const base = soloGanados ? partidos.filter(esGanado) : partidos;
+
+  // Meses disponibles (de lo que SÍ hay en la lista), más reciente primero.
+  const meses = Array.from(new Set(base.map(p => p.v_partidos.fecha.slice(0, 7)))).sort().reverse();
+
+  const lista = mesFiltro ? base.filter(p => p.v_partidos.fecha.slice(0, 7) === mesFiltro) : base;
 
   // Resumen para el pie de la lista (que la parte de abajo no se vea vacía)
   const totalJugados  = partidos.length;
@@ -121,6 +151,11 @@ export default function HistorialPartidosScreen() {
   }).length;
   const efectividad   = conMarcador > 0 ? Math.round((totalGanados / conMarcador) * 100) : null;
 
+  const nombreCorto = (params.nombre || 'jugador').split(' ')[0];
+  const titulo = soloGanados
+    ? (esPropio ? 'Partidos ganados' : `Ganados de ${nombreCorto}`)
+    : (esPropio ? 'Partidos jugados' : `Partidos de ${nombreCorto}`);
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={GRADIENTS.pageBg} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
@@ -130,13 +165,51 @@ export default function HistorialPartidosScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <BackIcon />
           </TouchableOpacity>
+          {base.length > 0 && (
+            <TouchableOpacity
+              style={[styles.backBtn, mostrarFiltro && styles.calBtnActivo]}
+              onPress={() => {
+                if (mostrarFiltro) setMesFiltro(null);
+                setMostrarFiltro(v => !v);
+              }}
+            >
+              <CalendarioIcon activo={mostrarFiltro} />
+            </TouchableOpacity>
+          )}
         </View>
 
-        <Text style={styles.title}>{soloGanados ? 'Partidos ganados' : 'Partidos jugados'}</Text>
+        <Text style={styles.title}>{titulo}</Text>
         {!loading && lista.length > 0 && (
           <Text style={styles.subtitle}>
             {lista.length} {lista.length === 1 ? 'partido' : 'partidos'}
+            {mesFiltro ? ` en ${labelMes(mesFiltro)}` : ''}
           </Text>
+        )}
+
+        {/* Buscador por fecha: chips de meses con lo que hay en el historial */}
+        {mostrarFiltro && base.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.mesesWrap}
+            contentContainerStyle={styles.mesesRow}
+          >
+            <TouchableOpacity
+              style={[styles.mesChip, mesFiltro == null && styles.mesChipOn]}
+              onPress={() => setMesFiltro(null)}
+            >
+              <Text style={[styles.mesChipTxt, mesFiltro == null && styles.mesChipTxtOn]}>Todos</Text>
+            </TouchableOpacity>
+            {meses.map(m => (
+              <TouchableOpacity
+                key={m}
+                style={[styles.mesChip, mesFiltro === m && styles.mesChipOn]}
+                onPress={() => setMesFiltro(mesFiltro === m ? null : m)}
+              >
+                <Text style={[styles.mesChipTxt, mesFiltro === m && styles.mesChipTxtOn]}>{labelMes(m)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         )}
 
         <ScrollView
@@ -146,22 +219,29 @@ export default function HistorialPartidosScreen() {
         >
           {loading ? (
             <ActivityIndicator color={DT.primary} style={{ marginTop: 60 }} />
-          ) : lista.length === 0 ? (
+          ) : base.length === 0 ? (
             <View style={styles.empty}>
               {soloGanados ? <TrofeoGrande /> : <BalonGrande />}
               <Text style={styles.emptyTitle}>
-                {soloGanados ? 'Aún no has ganado partidos' : 'Aún no has jugado partidos'}
+                {soloGanados
+                  ? (esPropio ? 'Aún no has ganado partidos' : 'Aún no ha ganado partidos')
+                  : (esPropio ? 'Aún no has jugado partidos' : 'Aún no ha jugado partidos')}
               </Text>
               <Text style={styles.emptySub}>
                 {soloGanados
-                  ? 'Cuando ganes tu primer partido con marcador reportado, aparecerá aquí.'
-                  : 'Únete a un partido y tu historial empezará a llenarse.'}
+                  ? (esPropio
+                    ? 'Cuando ganes tu primer partido con marcador reportado, aparecerá aquí.'
+                    : 'Cuando gane su primer partido con marcador reportado, aparecerá aquí.')
+                  : (esPropio
+                    ? 'Únete a un partido y tu historial empezará a llenarse.'
+                    : 'Cuando juegue su primer partido, su historial aparecerá aquí.')}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/partidos')} activeOpacity={0.85}>
-                <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyBtn}>
-                  <Text style={styles.emptyBtnTxt}>EXPLORAR PARTIDOS</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+            </View>
+          ) : lista.length === 0 ? (
+            <View style={styles.empty}>
+              <CalendarioIcon activo />
+              <Text style={styles.emptyTitle}>Sin partidos en {mesFiltro ? labelMes(mesFiltro) : 'ese mes'}</Text>
+              <Text style={styles.emptySub}>Prueba con otro mes o vuelve a "Todos".</Text>
             </View>
           ) : (
             <View style={styles.card}>
@@ -175,8 +255,8 @@ export default function HistorialPartidosScreen() {
                 const tieneMarcador =
                   typeof p.goles_a === 'number' && typeof p.goles_b === 'number' && p.equipo_ganador;
                 let resultado: 'GANÓ' | 'EMPATE' | 'PERDIÓ' | null = null;
-                let resultColor = DT.onSurfaceVar;
-                let resultBg    = 'rgba(255,255,255,0.06)';
+                let resultColor: string = DT.onSurfaceVar;
+                let resultBg: string    = 'rgba(255,255,255,0.06)';
                 if (tieneMarcador && item.equipo) {
                   if (p.equipo_ganador === 'EMPATE') {
                     resultado = 'EMPATE';
@@ -225,7 +305,7 @@ export default function HistorialPartidosScreen() {
             </View>
           )}
 
-          {/* Pie: resumen + CTA para que el final de la lista no quede vacío */}
+          {/* Pie: resumen para que el final de la lista no quede vacío */}
           {!loading && lista.length > 0 && (
             <>
               <View style={styles.resumen}>
@@ -242,12 +322,6 @@ export default function HistorialPartidosScreen() {
                   <Text style={styles.resumenLabel}>EFECTIVIDAD</Text>
                 </View>
               </View>
-
-              <TouchableOpacity onPress={() => router.push('/(tabs)/partidos')} activeOpacity={0.85} style={{ marginTop: 14 }}>
-                <LinearGradient colors={GRADIENTS.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.footerBtn}>
-                  <Text style={styles.footerBtnTxt}>EXPLORAR PARTIDOS</Text>
-                </LinearGradient>
-              </TouchableOpacity>
               <Text style={styles.footerHint}>
                 La efectividad cuenta solo partidos con marcador reportado.
               </Text>
@@ -261,11 +335,19 @@ export default function HistorialPartidosScreen() {
 
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: DT.bg },
-  topBar:     { paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 14 },
+  topBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.gutter, paddingTop: 8, paddingBottom: 14 },
   backBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  calBtnActivo: { borderColor: DT.primary, backgroundColor: 'rgba(190,194,255,0.12)' },
   title:      { fontSize: 28, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.6, paddingHorizontal: SPACING.gutter },
   subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, paddingHorizontal: SPACING.gutter, marginTop: 4 },
   scroll:     { padding: SPACING.gutter, paddingTop: 16, paddingBottom: 40 },
+
+  mesesWrap:  { marginTop: 14, maxHeight: 40 },
+  mesesRow:   { paddingHorizontal: SPACING.gutter, gap: 8 },
+  mesChip:    { paddingHorizontal: 16, paddingVertical: 9, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  mesChipOn:  { backgroundColor: 'rgba(190,194,255,0.16)', borderColor: DT.primary },
+  mesChipTxt: { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.bodySemi },
+  mesChipTxtOn: { color: DT.primary },
 
   card:       { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden' },
   matchPrev:  { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, gap: 12 },
@@ -285,13 +367,9 @@ const styles = StyleSheet.create({
   resumenBorder:{ borderLeftWidth: 1, borderColor: DT.glassBorder },
   resumenNum:   { fontSize: 20, color: DT.onBg, fontFamily: FONTS.display, lineHeight: 24 },
   resumenLabel: { fontSize: 9, color: DT.onSurfaceVar, fontFamily: FONTS.mono, letterSpacing: 0.8 },
-  footerBtn:    { height: 50, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
-  footerBtnTxt: { fontSize: 13, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },
   footerHint:   { fontSize: 10.5, color: DT.outline, fontFamily: FONTS.body, textAlign: 'center', marginTop: 10 },
 
   empty:      { alignItems: 'center', paddingTop: 70, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 19, color: DT.onBg, fontFamily: FONTS.heading, marginTop: 20, textAlign: 'center' },
-  emptySub:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 19, marginTop: 8, marginBottom: 26 },
-  emptyBtn:   { height: 50, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  emptyBtnTxt:{ fontSize: 13, color: '#fff', fontFamily: FONTS.bodyBold, letterSpacing: 0.8 },
+  emptySub:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 19, marginTop: 8 },
 });

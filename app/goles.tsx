@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   fDetail:    { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 2 },
   fScore:     { color: DT.onSurfaceVar, fontFamily: FONTS.bodySemi },
   fGoles:     { minWidth: 52, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 10, borderRadius: RADIUS.md, backgroundColor: 'rgba(190,194,255,0.12)' },
-  fGolesNum:  { fontSize: 17, color: DT.primary, fontFamily: FONTS.display, lineHeight: 20 },
+  fGolesNum:  { fontSize: 17, color: DT.onBg, fontFamily: FONTS.display, lineHeight: 20 },
   fGolesLbl:  { fontSize: 8.5, color: DT.primary, fontFamily: FONTS.mono, letterSpacing: 0.8, marginTop: 1 },
 
   empty:      { alignItems: 'center', paddingTop: 70, paddingHorizontal: 30 },

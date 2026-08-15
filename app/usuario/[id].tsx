@@ -295,6 +295,8 @@ export default function PerfilPublicoScreen() {
           jugados={perfil.partidos_jug ?? 0}
           ganados={perfil.partidos_gan ?? 0}
           goles={(perfil as any).goles_total ?? 0}
+          onJugados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'jugados', usuario_id: perfil.id, nombre: perfil.nombre } })}
+          onGanados={() => router.push({ pathname: '/historial-partidos', params: { filtro: 'ganados', usuario_id: perfil.id, nombre: perfil.nombre } })}
           onGoles={() => router.push({ pathname: '/goles', params: { usuario_id: perfil.id, nombre: perfil.nombre } })}
         />
 
