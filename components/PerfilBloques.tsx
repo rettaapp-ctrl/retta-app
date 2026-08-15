@@ -191,7 +191,7 @@ export function StatsRow({
 // El badge naranja son solicitudes pendientes.
 export function AmigosChip({ count, badge = 0, onPress }: { count: number; badge?: number; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={s.amigosChip} onPress={onPress} activeOpacity={0.75}>
+    <TouchableOpacity style={s.amigosChip} onPress={onPress} disabled={!onPress} activeOpacity={0.75}>
       <AmigosIcon />
       <Text style={s.amigosChipTxt}>{count} {count === 1 ? 'amigo' : 'amigos'}</Text>
       {badge > 0 && (

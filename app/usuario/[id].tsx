@@ -26,7 +26,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import ReporteModal from '@/components/ReporteModal';
-import { StatsRow, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
+import { StatsRow, AmigosChip, PosNivelRow, RatingCard, RachaCard, RatingPunto } from '@/components/PerfilBloques';
 
 interface AmistadInfo {
   id: string;
@@ -285,9 +285,9 @@ export default function PerfilPublicoScreen() {
             </View>
           </View>
           <Text style={styles.nombre}>{perfil.nombre}{perfil.apellido ? ` ${perfil.apellido}` : ''}</Text>
-          <Text style={styles.amigosLinea}>{perfil.amigos_count ?? 0} {(perfil.amigos_count ?? 0) === 1 ? 'amigo' : 'amigos'} en Retta</Text>
           <View style={styles.actionWrap}>
             {renderActionBtn()}
+            <AmigosChip count={perfil.amigos_count ?? 0} />
           </View>
         </View>
 
@@ -345,8 +345,7 @@ const styles = StyleSheet.create({
   avatarTxt:    { fontSize: 42, color: '#fff', fontFamily: FONTS.heading },
   nombre:       { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
 
-  amigosLinea:  { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 4, textAlign: 'center' },
-  actionWrap:   { marginTop: 13, alignSelf: 'stretch', alignItems: 'center' },
+  actionWrap:   { marginTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
 
   pillPrimary:    { height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, minWidth: 220 },
   pillPrimaryTxt: { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
