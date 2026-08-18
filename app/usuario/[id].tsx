@@ -348,10 +348,10 @@ const styles = StyleSheet.create({
   avatarTxt:    { fontSize: 42, color: '#fff', fontFamily: FONTS.heading },
   nombre:       { fontSize: 27, color: DT.onBg, fontFamily: FONTS.display, letterSpacing: -0.5, lineHeight: 32, textAlign: 'center' },
 
-  actionWrap:   { marginTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  actionWrap:   { marginTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 20 },
 
-  pillPrimary:    { height: 46, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, minWidth: 220 },
-  pillPrimaryTxt: { fontSize: 13, color: '#fff', letterSpacing: 1, fontFamily: FONTS.bodyBold },
+  pillPrimary:    { height: 44, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  pillPrimaryTxt: { fontSize: 12.5, color: '#fff', letterSpacing: 0.6, fontFamily: FONTS.bodyBold },
 
   pillGlass:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 11, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorderStrong },
   pillGlassTxt: { fontSize: 13, color: DT.onBg, fontFamily: FONTS.monoMed, letterSpacing: 0.3 },

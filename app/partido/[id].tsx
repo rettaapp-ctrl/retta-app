@@ -35,6 +35,7 @@ interface Jugador {
   nombre: string;
   apellido?: string;
   posicion?: string;
+  avatar_url?: string | null;
   equipo?: string;
   es_invitado?: boolean;
   invitado_de?: string;
@@ -521,9 +522,9 @@ export default function PartidoDetailScreen() {
             </>
           ) : isEmpty ? (
             <Text style={styles.slotPlus}>+</Text>
-          ) : esYo && user?.avatar_url ? (
+          ) : (esYo ? user?.avatar_url : jugador?.avatar_url) ? (
             <Image
-              source={{ uri: user.avatar_url }}
+              source={{ uri: (esYo ? user?.avatar_url : jugador?.avatar_url) as string }}
               style={[StyleSheet.absoluteFillObject, { borderRadius: 29 }]}
             />
           ) : (
