@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, TextInput, FlatList,
+  ActivityIndicator, RefreshControl, TextInput, FlatList, Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -268,6 +268,18 @@ export default function PartidosScreen() {
   const partidosRef = useRef<Partido[]>([]);
   partidosRef.current = partidos;
 
+  // Caché por día (Nico 2026-08-18): al cambiar de día, si ese día ya se
+  // visitó, la lista aparece AL INSTANTE desde caché y se refresca en
+  // silencio — el brinco pesado era esperar la red en cada tap.
+  const cacheDias = useRef<Record<string, Partido[]>>({});
+
+  // Transición de entrada al cambiar de día: fade + deslizamiento corto.
+  const listAnim = useRef(new Animated.Value(1)).current;
+  function animarEntrada() {
+    listAnim.setValue(0);
+    Animated.timing(listAnim, { toValue: 1, duration: 240, useNativeDriver: true }).start();
+  }
+
   // `silent`: refresco en segundo plano (polling). No prende el spinner de
   // pantalla completa para no hacer flashear la lista ni perder el scroll.
   // El spinner solo aparece en la PRIMERA carga (cuando aún no hay partidos).
@@ -283,9 +295,9 @@ export default function PartidosScreen() {
       // En Explorar filtramos con isPartidoUnible (sin gracia): un partido
       // que ya empezó no puede unirse (backend rechaza), no tiene sentido
       // mostrarlo aquí. La ventana de 1h de gracia queda solo para Mis Rettas.
-      setPartidos(
-        (partidosData.partidos || []).filter((p: Partido) => isPartidoUnible(p.fecha, p.hora_inicio))
-      );
+      const lista = (partidosData.partidos || []).filter((p: Partido) => isPartidoUnible(p.fecha, p.hora_inicio));
+      cacheDias.current[fecha] = lista;
+      setPartidos(lista);
       const ids = new Set<string>(
         (inscData.partidos || [])
           .filter((i: any) => i.status === 'confirmado')
@@ -329,8 +341,11 @@ export default function PartidosScreen() {
   }, [activeDate]);
 
   function selectDay(iso: string) {
+    if (iso === activeDate) return;
+    setPartidos(cacheDias.current[iso] || []);
     setActiveDate(iso);
     setSearch('');
+    animarEntrada();
   }
 
   const filtered = useMemo(() => {
@@ -437,6 +452,7 @@ export default function PartidosScreen() {
             <ActivityIndicator color={DT.primary} size="large" />
           </View>
         ) : (
+          <Animated.View style={{ flex: 1, opacity: listAnim, transform: [{ translateY: listAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>
           <FlatList
             data={filtered}
             keyExtractor={p => p.id}
@@ -510,6 +526,7 @@ export default function PartidosScreen() {
               </View>
             }
           />
+          </Animated.View>
         )}
       </SafeAreaView>
     </View>
