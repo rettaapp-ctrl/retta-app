@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { API_URL, LEGAL_VERSION } from '@/constants';
 import { TUTORIAL_SEEN_KEY } from '@/app/tutorial';
 import { identify, resetAnalytics, track } from '@/lib/analytics';
+import * as Sentry from '@sentry/react-native';
 import {
   isInfraOutage,
   isNetworkError,
@@ -349,6 +350,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleUnauthorized = useCallback(async () => {
     // Token expirado y refresh falló — limpiar sesión, mandar al login,
     // y marcar el flag para que login muestre el mensaje friendly.
+    // Evento de monitoreo (Rafael 2026-08-18): cada expulsión queda en
+    // Sentry (visible en admin → Salud app) y en PostHog. Si esto sube,
+    // hay un problema de sesiones que atender.
+    try {
+      Sentry.captureMessage('Sesión expulsada: refresh inválido', {
+        level: 'warning',
+        tags: { evento: 'sesion_expulsada' },
+      });
+    } catch {}
+    try { track('sesion_expulsada'); } catch {}
     await clearLocalSession();
     setSessionExpired(true);
   }, [clearLocalSession]);
