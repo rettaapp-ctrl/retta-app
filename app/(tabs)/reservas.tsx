@@ -33,6 +33,9 @@ interface Inscripcion {
     cancha_nombre: string;
     status: string;
     precio_jugador: number;
+    goles_a?: number | null;
+    goles_b?: number | null;
+    equipo_ganador?: 'A' | 'B' | 'EMPATE' | null;
   };
 }
 
@@ -346,6 +349,19 @@ export default function ReservasScreen() {
                 const p = item.v_partidos;
                 if (!p) return null;
                 const f = formatFecha(p.fecha);
+                // El chip ES el marcador cuando el árbitro lo reportó:
+                // verde si ganó, rojo si perdió, amarillo si empató —
+                // mismo modelo que el historial del perfil. Sin marcador
+                // (o sin equipo), cae al "JUGADO" de siempre.
+                const tieneMarcador =
+                  typeof p.goles_a === 'number' && typeof p.goles_b === 'number' && p.equipo_ganador;
+                let resColor: string = DT.outline;
+                let resBg: string    = 'rgba(255,255,255,0.06)';
+                if (tieneMarcador && item.equipo) {
+                  if (p.equipo_ganador === 'EMPATE')            { resColor = DT.warning; resBg = 'rgba(250,199,117,0.12)'; }
+                  else if (p.equipo_ganador === item.equipo)    { resColor = DT.success; resBg = 'rgba(159,225,203,0.12)'; }
+                  else                                          { resColor = DT.error;   resBg = 'rgba(255,180,171,0.10)'; }
+                }
                 return (
                   <TouchableOpacity
                     key={`past-${item.id}`}
@@ -366,9 +382,15 @@ export default function ReservasScreen() {
                           <Text style={[styles.upMetaTxt, styles.upMetaTxtPast]}>{p.tipo}</Text>
                         </View>
                       </View>
-                      <View style={styles.pastChip}>
-                        <Text style={styles.pastChipTxt}>JUGADO</Text>
-                      </View>
+                      {tieneMarcador && item.equipo ? (
+                        <View style={[styles.pastChip, { backgroundColor: resBg, borderColor: 'transparent' }]}>
+                          <Text style={[styles.pastChipMarcador, { color: resColor }]}>{p.goles_a}–{p.goles_b}</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.pastChip}>
+                          <Text style={styles.pastChipTxt}>JUGADO</Text>
+                        </View>
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -449,6 +471,7 @@ const styles = StyleSheet.create({
   upMetaDotPast:    { backgroundColor: 'rgba(255,255,255,0.15)' },
   pastChip:         { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   pastChipTxt:      { fontSize: 9, color: DT.outline, fontFamily: FONTS.mono, letterSpacing: 1 },
+  pastChipMarcador: { fontSize: 12.5, fontFamily: FONTS.bodyBold, letterSpacing: 0.5 },
   pastHint:         { fontSize: 12, color: DT.outline, textAlign: 'center', marginTop: 32, fontFamily: FONTS.body, fontStyle: 'italic' },
   upRow:            { flexDirection: 'row', alignItems: 'center', gap: 14 },
   upMapsRow:        { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: DT.glassBorder },
