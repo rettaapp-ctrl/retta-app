@@ -347,11 +347,11 @@ const styles = StyleSheet.create({
   subtitle:   { fontSize: 13, color: DT.onSurfaceVar, fontFamily: FONTS.body, textAlign: 'center', marginTop: 2 },
   scroll:     { padding: SPACING.gutter, paddingTop: 16, paddingBottom: 40 },
 
-  mesesWrap:  { marginTop: 14, maxHeight: 40 },
+  mesesWrap:  { marginTop: 14, flexGrow: 0 },
   mesesRow:   { paddingHorizontal: SPACING.gutter, gap: 8 },
-  mesChip:    { paddingHorizontal: 16, paddingVertical: 9, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder },
+  mesChip:    { paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.full, backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, justifyContent: 'center' },
   mesChipOn:  { backgroundColor: 'rgba(190,194,255,0.16)', borderColor: DT.primary },
-  mesChipTxt: { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.bodySemi },
+  mesChipTxt: { fontSize: 12.5, lineHeight: 17, color: DT.onSurfaceVar, fontFamily: FONTS.bodySemi },
   mesChipTxtOn: { color: DT.primary },
 
   card:       { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden' },
