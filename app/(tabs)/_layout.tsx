@@ -69,6 +69,12 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Cambio de pestaña sin trabón (Rafael 2026-08-18): con lazy, la
+        // pestaña se construía al entrar por primera vez y la pantalla
+        // anterior se quedaba congelada un instante. Ahora las 4 se montan
+        // al arrancar y se congelan cuando no están visibles.
+        lazy: false,
+        freezeOnBlur: true,
         tabBarBackground: () => <TabBarBackground />,
         // Fondo oscuro sólido detrás del gradiente: así las esquinas
         // curveadas revelan oscuro (no el blanco default de iOS).
