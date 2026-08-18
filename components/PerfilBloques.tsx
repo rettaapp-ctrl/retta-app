@@ -31,7 +31,7 @@ export const CALIB_PARTIDOS = 3;
 
 export function nivelDeRating(rating: number): string {
   if (rating < 4.5) return 'Principiante';
-  if (rating < 6.5) return 'Intermedio';
+  if (rating < 7.5) return 'Intermedio';
   return 'Avanzado';
 }
 
