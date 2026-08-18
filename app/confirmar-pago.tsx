@@ -265,7 +265,7 @@ export default function ConfirmarPagoScreen() {
               )}
               <View style={styles.successEquipoBadge}>
                 <View style={styles.successEquipoDot} />
-                <Text style={styles.successEquipoTxt}>EQUIPO {equipo?.toUpperCase()}</Text>
+                <Text style={styles.successEquipoTxt}>PLAYERA {equipo?.toUpperCase() === 'A' ? 'BLANCA' : 'NEGRA'}</Text>
               </View>
             </View>
 

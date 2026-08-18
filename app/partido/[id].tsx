@@ -342,7 +342,7 @@ export default function PartidoDetailScreen() {
       if (tieneMarcador) {
         mensaje =
           `Resultado en Retta\n\n${partido.complejo_nombre} · ${partido.cancha_nombre}\n` +
-          `${fechaTxt}\n\nEquipo A ${partido.goles_a} - ${partido.goles_b} Equipo B\n\n${url}`;
+          `${fechaTxt}\n\nPlayera blanca ${partido.goles_a} - ${partido.goles_b} Playera negra\n\n${url}`;
         title = 'Resultado del partido';
       } else {
         mensaje =
@@ -834,8 +834,8 @@ export default function PartidoDetailScreen() {
 
             <View style={styles.equipoBlockInner}>
               <View style={styles.equipoHeader}>
-                <View style={[styles.equipoDot, { backgroundColor: '#3A86FF' }]} />
-                <Text style={styles.equipoTitle}>EQUIPO A</Text>
+                <View style={[styles.equipoDot, { backgroundColor: '#F3F2FB' }]} />
+                <Text style={styles.equipoTitle}>PLAYERA BLANCA</Text>
               </View>
               <View style={styles.slotsGrid}>
                 {filasBalanceadas(slotsA.map((j, i) => [j, i] as const)).map((fila, f) => (
@@ -854,8 +854,8 @@ export default function PartidoDetailScreen() {
 
             <View style={styles.equipoBlockInner}>
               <View style={styles.equipoHeader}>
-                <View style={[styles.equipoDot, { backgroundColor: '#2A9D8F' }]} />
-                <Text style={styles.equipoTitle}>EQUIPO B</Text>
+                <View style={[styles.equipoDot, { backgroundColor: '#0B0B14', borderWidth: 1, borderColor: 'rgba(243,242,251,0.5)' }]} />
+                <Text style={styles.equipoTitle}>PLAYERA NEGRA</Text>
               </View>
               <View style={styles.slotsGrid}>
                 {filasBalanceadas(slotsB.map((j, i) => [j, i] as const)).map((fila, f) => (
@@ -1095,12 +1095,12 @@ export default function PartidoDetailScreen() {
               </View>
               <View style={styles.invEquipoRow}>
                 <TouchableOpacity style={[styles.invEquipoBtn, equipoInvitado === 'A' && styles.invEquipoBtnSel]} onPress={() => setEquipoInvitado('A')} activeOpacity={0.7}>
-                  <View style={[styles.invEquipoDot, { backgroundColor: '#3A86FF' }]} />
-                  <Text style={[styles.invEquipoTxt, equipoInvitado === 'A' && styles.invEquipoTxtSel]}>EQUIPO A</Text>
+                  <View style={[styles.invEquipoDot, { backgroundColor: '#F3F2FB' }]} />
+                  <Text style={[styles.invEquipoTxt, equipoInvitado === 'A' && styles.invEquipoTxtSel]}>PLAYERA BLANCA</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.invEquipoBtn, equipoInvitado === 'B' && styles.invEquipoBtnSel]} onPress={() => setEquipoInvitado('B')} activeOpacity={0.7}>
-                  <View style={[styles.invEquipoDot, { backgroundColor: '#2A9D8F' }]} />
-                  <Text style={[styles.invEquipoTxt, equipoInvitado === 'B' && styles.invEquipoTxtSel]}>EQUIPO B</Text>
+                  <View style={[styles.invEquipoDot, { backgroundColor: '#0B0B14', borderWidth: 1, borderColor: 'rgba(243,242,251,0.5)' }]} />
+                  <Text style={[styles.invEquipoTxt, equipoInvitado === 'B' && styles.invEquipoTxtSel]}>PLAYERA NEGRA</Text>
                 </TouchableOpacity>
               </View>
 
