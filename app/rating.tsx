@@ -38,6 +38,51 @@ function fechaCorta(d: Date): string {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '');
 }
 
+// ─── Desglose del historial ──────────────────────────────────────
+// Título, subtítulo e icono de cada movimiento del rating. La info
+// del partido llega enriquecida desde el backend (complejo, cancha,
+// marcador); si no viene, cae a textos genéricos.
+function infoMovimiento(h: RatingPunto) {
+  const f = new Date(h.created_at);
+  const fecha = f.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '');
+  if (h.fuente === 'inicial') {
+    return { titulo: 'Punto de partida', sub: `${fecha} · todos arrancan en 5.0`, tipo: 'inicio' as const };
+  }
+  const pj = h.partidos;
+  const lugar = pj?.complejos?.nombre
+    ? `${pj.complejos.nombre}${pj.canchas?.nombre ? ` · ${pj.canchas.nombre}` : ''}`
+    : null;
+  const marcador = (pj && typeof pj.goles_a === 'number' && typeof pj.goles_b === 'number')
+    ? ` · ${pj.goles_a}–${pj.goles_b}` : '';
+  if (h.fuente === 'calificacion') {
+    return {
+      titulo: 'Calificación de compañeros',
+      sub: lugar ? `${fecha} · ${lugar}` : `${fecha} · estrellas al final del partido`,
+      tipo: 'estrellas' as const,
+    };
+  }
+  return {
+    titulo: lugar || 'Partido',
+    sub: `${fecha}${marcador}`,
+    tipo: 'partido' as const,
+  };
+}
+
+function EstrellaIcon() {
+  return (
+    <Svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8L12 3z" stroke={DT.primary} strokeWidth="1.6" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
+function BanderaIcon() {
+  return (
+    <Svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <Path d="M5 21V4M5 4h13l-2.5 4L18 12H5" stroke={DT.primary} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+    </Svg>
+  );
+}
+
 export default function RatingScreen() {
   const { usuario_id, nombre } = useLocalSearchParams<{ usuario_id?: string; nombre?: string }>();
   const { user } = useAuth();
@@ -52,8 +97,9 @@ export default function RatingScreen() {
   const [calibrando, setCalibrando] = useState(false);
   const [partidosCalib, setPartidosCalib] = useState(0);
   const [chartW, setChartW]       = useState(0);
+  const [selIdx, setSelIdx]       = useState<number | null>(null);
 
-  useEffect(() => { load(); }, [usuario_id]);
+  useEffect(() => { setSelIdx(null); load(); }, [usuario_id]);
 
   async function load() {
     setLoading(true);
@@ -139,16 +185,92 @@ export default function RatingScreen() {
 
                   {chartW > 0 && (
                     <View style={{ marginTop: 16 }}>
-                      <RatingChart historial={datosChart} width={chartW} height={CHART_AMPLIADA_H} strokeWidth={2.5} />
+                      <RatingChart
+                        historial={datosChart}
+                        width={chartW}
+                        height={CHART_AMPLIADA_H}
+                        strokeWidth={2.5}
+                        selected={selIdx}
+                        onSelect={setSelIdx}
+                      />
                     </View>
                   )}
                   <View style={st.heroScale}>
                     <Text style={st.heroScaleTxt}>{primerPunto}</Text>
                     <Text style={st.heroScaleTxt}>hoy</Text>
                   </View>
+
+                  {/* Detalle del punto tocado en la gráfica */}
+                  {selIdx != null && datosChart[selIdx] ? (() => {
+                    const h = datosChart[selIdx];
+                    const inf = infoMovimiento(h);
+                    return (
+                      <View style={st.selBar}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={st.selTitulo} numberOfLines={1}>{inf.titulo}</Text>
+                          <Text style={st.selSub} numberOfLines={1}>{inf.sub}</Text>
+                        </View>
+                        {h.delta !== 0 && (
+                          <Text style={[st.selDelta, { color: h.delta > 0 ? DT.success : DT.error }]}>
+                            {h.delta > 0 ? '+' : ''}{h.delta.toFixed(2)}
+                          </Text>
+                        )}
+                        <Text style={st.selRating}>{h.rating.toFixed(2)}</Text>
+                      </View>
+                    );
+                  })() : (
+                    historial.length > 1 && <Text style={st.selHint}>Toca la gráfica para ver cada movimiento</Text>
+                  )}
                 </>
               )}
             </View>
+          )}
+
+          {/* ─── Desglose: cuánto sumó cada partido ─────────────── */}
+          {!loading && !calibrando && historial.length > 1 && (
+            <>
+              <View style={st.sectionHead}>
+                <Text style={st.sectionTitle}>DESGLOSE · MOVIMIENTO POR MOVIMIENTO</Text>
+              </View>
+              <View style={st.desgloseCard}>
+                {[...historial].map((h, i) => ({ h, i })).reverse().map(({ h, i }, k, arr) => {
+                  const inf = infoMovimiento(h);
+                  const activo = selIdx === i;
+                  const esUltimaFila = k === arr.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[st.movRow, esUltimaFila && { borderBottomWidth: 0 }, activo && st.movRowActiva]}
+                      activeOpacity={0.7}
+                      onPress={() => setSelIdx(activo ? null : i)}
+                    >
+                      <View style={st.movIcono}>
+                        {inf.tipo === 'partido' ? <BalonIcon size={15} /> : inf.tipo === 'estrellas' ? <EstrellaIcon /> : <BanderaIcon />}
+                      </View>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={st.movTitulo} numberOfLines={1}>{inf.titulo}</Text>
+                        <Text style={st.movSub} numberOfLines={1}>{inf.sub}</Text>
+                      </View>
+                      {h.delta !== 0 ? (
+                        <View style={[st.movDeltaChip, { backgroundColor: h.delta > 0 ? 'rgba(52,211,153,0.12)' : 'rgba(255,138,115,0.12)' }]}>
+                          <Text style={[st.movDeltaTxt, { color: h.delta > 0 ? DT.success : DT.error }]}>
+                            {h.delta > 0 ? '+' : ''}{h.delta.toFixed(2)}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={st.movDeltaChip}>
+                          <Text style={[st.movDeltaTxt, { color: DT.onSurfaceVar }]}>{h.fuente === 'inicial' ? '5.0' : '0.00'}</Text>
+                        </View>
+                      )}
+                      <Text style={st.movRating}>{h.rating.toFixed(2)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={st.desgloseHint}>
+                El número de la derecha es el rating con el que quedó después de ese movimiento.
+              </Text>
+            </>
           )}
 
           {/* ─── Sistema de nivel Retta ─────────────────────────── */}
@@ -278,6 +400,24 @@ const st = StyleSheet.create({
   viaBadgeTxt:  { fontSize: 12.5, color: DT.primary, fontFamily: FONTS.bodyBold },
   viaTitle:     { fontSize: 13.5, color: DT.onBg, fontFamily: FONTS.bodyBold, marginBottom: 3 },
   viaBody:      { fontSize: 12.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, lineHeight: 19 },
+
+  selBar:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, backgroundColor: 'rgba(110,101,234,0.10)', borderWidth: 1, borderColor: 'rgba(173,168,245,0.3)', borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 9 },
+  selTitulo:    { fontSize: 12.5, color: DT.onBg, fontFamily: FONTS.bodySemi },
+  selSub:       { fontSize: 11, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 1 },
+  selDelta:     { fontSize: 13, fontFamily: FONTS.bodyBold },
+  selRating:    { fontSize: 13, color: DT.onBg, fontFamily: FONTS.display },
+  selHint:      { fontSize: 10.5, color: DT.outline, fontFamily: FONTS.body, textAlign: 'center', marginTop: 10 },
+
+  desgloseCard: { backgroundColor: DT.glassBg, borderWidth: 1, borderColor: DT.glassBorder, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 8 },
+  movRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 13, borderBottomWidth: 1, borderBottomColor: DT.glassBorder, gap: 10 },
+  movRowActiva: { backgroundColor: 'rgba(110,101,234,0.10)' },
+  movIcono:     { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(110,101,234,0.14)', alignItems: 'center', justifyContent: 'center' },
+  movTitulo:    { fontSize: 12.5, color: DT.onBg, fontFamily: FONTS.bodyMed },
+  movSub:       { fontSize: 10.5, color: DT.onSurfaceVar, fontFamily: FONTS.body, marginTop: 1 },
+  movDeltaChip: { minWidth: 52, alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
+  movDeltaTxt:  { fontSize: 11.5, fontFamily: FONTS.bodyBold },
+  movRating:    { fontSize: 12, color: DT.onSurfaceVar, fontFamily: FONTS.mono, minWidth: 34, textAlign: 'right' },
+  desgloseHint: { fontSize: 10.5, color: DT.outline, fontFamily: FONTS.body, textAlign: 'center', marginBottom: 16, paddingHorizontal: 10 },
 
   reglaCard:    { backgroundColor: 'rgba(110,101,234,0.12)', borderWidth: 1, borderColor: 'rgba(173,168,245,0.3)', borderRadius: RADIUS.lg, padding: 16, marginBottom: 12 },
   reglaTxt:     { fontSize: 13, color: DT.primary, fontFamily: FONTS.bodyMed, textAlign: 'center', lineHeight: 19 },

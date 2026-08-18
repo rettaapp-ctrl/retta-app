@@ -252,7 +252,11 @@ export default function PartidoDetailScreen() {
   function getJugadoresByEquipo(equipo: 'A' | 'B'): (Jugador | null)[] {
     if (!partido) return [];
     const size = getEquipoSize();
-    const jugadores = (partido.jugadores || []).filter(j => j.equipo === equipo);
+    // Orden ESTABLE por inscripción: el backend ya lo manda ordenado, pero
+    // esto garantiza que los círculos no se reacomoden entre recargas.
+    const jugadores = (partido.jugadores || [])
+      .filter(j => j.equipo === equipo)
+      .sort((a, b) => String(a.inscripcion_id || '').localeCompare(String(b.inscripcion_id || '')));
     const slots: (Jugador | null)[] = [];
     for (let i = 0; i < size; i++) {
       slots.push(jugadores[i] || null);

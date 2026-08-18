@@ -22,6 +22,17 @@ export interface RatingPunto {
   delta: number;
   fuente: string;
   created_at: string;
+  // Partido vinculado (solo llega en /rating-historial enriquecido)
+  partido_id?: string | null;
+  partidos?: {
+    fecha?: string;
+    hora_inicio?: string;
+    goles_a?: number | null;
+    goles_b?: number | null;
+    equipo_ganador?: string | null;
+    complejos?: { nombre?: string } | null;
+    canchas?: { nombre?: string } | null;
+  } | null;
 }
 
 // ─── Sistema de rating v2 (escala 1-10) ──────────────────────────
@@ -133,7 +144,7 @@ function computeChart(historial: RatingPunto[], width: number, height: number = 
   const linePath = buildSmoothPath(pts);
   const areaPath = `${linePath} L${x1.toFixed(1)} ${(yBot + 2).toFixed(1)} L${x0} ${(yBot + 2).toFixed(1)} Z`;
 
-  return { linePath, areaPath, lastX: xs[xs.length - 1], lastY: ys[ys.length - 1], baseY: ys[0] };
+  return { linePath, areaPath, lastX: xs[xs.length - 1], lastY: ys[ys.length - 1], baseY: ys[0], pts };
 }
 
 function fechaCorta(d: Date): string {
@@ -224,13 +235,37 @@ export function PosNivelRow({
 // La gráfica sola (línea suavizada + área). Exportada para que la
 // pantalla /rating la dibuje ampliada con la MISMA curva del perfil.
 export function RatingChart({
-  historial, width, height = CHART_H, strokeWidth = 2,
+  historial, width, height = CHART_H, strokeWidth = 2, selected = null, onSelect,
 }: {
   historial: RatingPunto[]; width: number; height?: number; strokeWidth?: number;
+  // Modo interactivo (pantalla de rating): toca la curva para inspeccionar
+  // un movimiento. `selected` marca el punto activo con guía vertical.
+  selected?: number | null;
+  onSelect?: (i: number | null) => void;
 }) {
   if (width <= 0) return null;
   const chart = computeChart(historial, width, height);
+  const interactivo = !!onSelect && historial.length >= 2;
+
+  // Toque → punto más cercano en X (toda la banda vertical cuenta)
+  const handleTouch = (evt: any) => {
+    if (!interactivo) return;
+    const x = evt.nativeEvent.locationX;
+    let mejor = 0; let dist = Infinity;
+    chart.pts.forEach((pt, i) => {
+      const d = Math.abs(pt.x - x);
+      if (d < dist) { dist = d; mejor = i; }
+    });
+    onSelect!(mejor === selected ? null : mejor);
+  };
+
+  const sel = interactivo && selected != null && chart.pts[selected] ? chart.pts[selected] : null;
+
   return (
+    <View
+      onStartShouldSetResponder={() => interactivo}
+      onResponderRelease={handleTouch}
+    >
     <Svg width={width} height={height}>
       <Defs>
         <SvgGradient id="pbLineGrad" x1="0" y1="0" x2="1" y2="0">
@@ -250,7 +285,18 @@ export function RatingChart({
       <Path d={chart.linePath} fill="none" stroke="url(#pbLineGrad)" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
       <Circle cx={chart.lastX} cy={chart.lastY} r="7" fill="none" stroke="rgba(110,101,234,0.35)" strokeWidth="4" />
       <Circle cx={chart.lastX} cy={chart.lastY} r="4.5" fill="#fff" stroke={DT.primaryStrong} strokeWidth="3" />
+      {interactivo && chart.pts.map((pt, i) => (
+        <Circle key={i} cx={pt.x} cy={pt.y} r="3" fill={DT.bg} stroke={DT.primary} strokeWidth="1.5" opacity={selected == null || selected === i ? 0.9 : 0.35} />
+      ))}
+      {sel && (
+        <>
+          <SvgLine x1={sel.x} y1={8} x2={sel.x} y2={height - 6} stroke="rgba(173,168,245,0.45)" strokeWidth="1" strokeDasharray="3 3" />
+          <Circle cx={sel.x} cy={sel.y} r="8" fill="none" stroke="rgba(139,123,255,0.4)" strokeWidth="5" />
+          <Circle cx={sel.x} cy={sel.y} r="5" fill="#fff" stroke={DT.primaryStrong} strokeWidth="3" />
+        </>
+      )}
     </Svg>
+    </View>
   );
 }
 
